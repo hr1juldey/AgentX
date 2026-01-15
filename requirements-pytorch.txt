@@ -1,0 +1,48 @@
+# =============================================================================
+# PYTORCH WITH CUDA 13.0 SUPPORT
+# =============================================================================
+#
+# This file contains PyTorch and related packages that require CUDA support.
+# Install this file FIRST before requirements-core.txt
+#
+# Installation:
+#   pip install -r requirements-pytorch.txt
+#
+# IMPORTANT: This uses PyTorch's CUDA wheel index, not PyPI
+#
+# =============================================================================
+
+# Use PyTorch's CUDA 13.0 wheel repository
+--extra-index-url https://download.pytorch.org/whl/cu130
+
+# =============================================================================
+# CORE PYTORCH PACKAGES
+# =============================================================================
+
+# PyTorch with CUDA 13.0 support
+# NOTE: Commented out if already installed to prevent reinstallation
+# torch>=2.5.0
+
+# TorchVision (computer vision utilities)
+torchvision>=0.20.0
+
+# TorchAudio (audio processing for TTS/STT)
+torchaudio>=2.5.0
+
+# =============================================================================
+# PYTORCH-ECOSYSTEM PACKAGES
+# =============================================================================
+
+# HuggingFace Transformers (for STT models)
+transformers>=4.30.0
+
+# Diffusers (if using diffusion models)
+diffusers>=0.30.0
+
+# Accelerate (for distributed training)
+accelerate>=1.0.0
+
+# =============================================================================
+# BACK TO PYPI FOR REMAINING PACKAGES
+# =============================================================================
+--extra-index-url https://pypi.org/simple/
