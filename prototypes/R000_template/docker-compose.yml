@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agentx-prototype-backend
+    ports:
+      - "8001:8001"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8001
+      - DATABASE_URL=sqlite:///./data/database.db
+      - FRONTEND_URL=http://localhost:3000
+    volumes:
+      - ./backend/data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agentx-prototype-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8001
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+# Optional: Add Redis for Level 3+ prototypes
+#   redis:
+#     image: redis:7-alpine
+#     container_name: agentx-prototype-redis
+#     ports:
+#       - "6379:6379"
+#     restart: unless-stopped
