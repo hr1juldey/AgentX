@@ -55,15 +55,11 @@ class VoiceMemoService:
             self.stt_model = stt_result[0]
             self.stt_decoder = stt_result[1]
 
-            # Create a utils object from the tuple of functions
+            # Store utils functions directly
             # Tuple order: read_batch, split_into_batches, read_audio, prepare_model_input
             utils_tuple = stt_result[2]
-            self.stt_utils = type('STTUtils', (), {
-                'read_batch': utils_tuple[0],
-                'split_into_batches': utils_tuple[1],
-                'read_audio': utils_tuple[2],
-                'prepare_model_input': utils_tuple[3],
-            })()
+            self._stt_read_batch = utils_tuple[0]
+            self._stt_prepare_model_input = utils_tuple[3]
 
             logger.info("STT model loaded")
 
@@ -119,23 +115,67 @@ class VoiceMemoService:
 
                 # Resample if not 16kHz
                 if sr != self.STT_SAMPLE_RATE:
-                    from scipy.signal import resample_poly
-                    # Calculate resampling ratio
-                    target_sr = self.STT_SAMPLE_RATE
-                    number_of_samples = round(len(audio_data) * target_sr / sr)
-                    audio_data = resample_poly(audio_data, sr, target_sr)[:(number_of_samples * sr // target_sr)]
-                    sr = target_sr
+                    import torchaudio.transforms as T
+                    # Convert to tensor if needed
+                    if audio_data.dtype == np.float32 or audio_data.dtype == np.float64:
+                        audio_tensor = torch.from_numpy(audio_data).float()
+                    else:
+                        audio_tensor = torch.from_numpy(audio_data).float() / 32768.0
 
-                    # Save resampled audio
-                    with open(temp_path, 'wb') as f:
-                        wavfile.write(f, sr, audio_data.astype(np.int16))
+                    # Add batch dimension if needed
+                    if audio_tensor.dim() == 1:
+                        audio_tensor = audio_tensor.unsqueeze(0)
+
+                    # Resample using torchaudio
+                    resampler = T.Resample(sr, self.STT_SAMPLE_RATE, dtype=audio_tensor.dtype)
+                    audio_tensor = resampler(audio_tensor)
+
+                    # Convert back to numpy
+                    audio_data = audio_tensor.squeeze().numpy()
+                    sr = self.STT_SAMPLE_RATE
+
+                # Save audio with proper format conversion
+                # If float, scale to int16 range
+                if audio_data.dtype == np.float32 or audio_data.dtype == np.float64:
+                    # Float audio is in [-1, 1], scale to int16 range [-32768, 32767]
+                    audio_data = np.clip(audio_data, -1.0, 1.0)  # Clip to prevent overflow
+                    audio_data = (audio_data * 32768).astype(np.int16)
+                elif audio_data.dtype != np.int16:
+                    # Convert other types to int16
+                    audio_data = audio_data.astype(np.int16)
+
+                with open(temp_path, 'wb') as f:
+                    wavfile.write(f, sr, audio_data)
 
             except Exception as e:
                 logger.warning(f"Could not resample audio: {e}, using original")
 
+            # GUARDRAIL: Validate audio format before STT (Silero is very sensitive)
+            # This is the exact checkpoint from the debugging checklist
+            try:
+                validate_sr, validate_audio = wavfile.read(temp_path)
+                logger.info(
+                    f"STT input WAV: sr={validate_sr}, dtype={validate_audio.dtype}, "
+                    f"shape={validate_audio.shape}, min={validate_audio.min()}, max={validate_audio.max()}"
+                )
+
+                # FAIL FAST: Assert Silero requirements
+                assert validate_sr == 16000, f"Invalid sample rate: {validate_sr}, expected 16000"
+                assert validate_audio.dtype == np.int16, f"Invalid dtype: {validate_audio.dtype}, expected int16"
+                assert validate_audio.ndim == 1, f"Audio must be mono, got shape {validate_audio.shape}"
+
+                logger.info("STT audio validation passed")
+            except AssertionError as e:
+                logger.error(f"STT audio validation failed: {e}")
+                return TranscriptionResponse(
+                    text=f"[Audio format error: {str(e)}]",
+                    confidence=0.0,
+                    language=request.language
+                )
+
             # Prepare audio for STT
-            input_batch = self.stt_utils.prepare_model_input(
-                self.stt_utils.read_batch([temp_path]),
+            input_batch = self._stt_prepare_model_input(
+                self._stt_read_batch([temp_path]),
                 device=self.device
             )
 

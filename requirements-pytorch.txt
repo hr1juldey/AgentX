@@ -28,7 +28,7 @@ torchvision>=0.20.0
 
 # TorchAudio (audio processing for TTS/STT)
 torchaudio>=2.5.0
-
+torchcodec>=0.9.1
 # =============================================================================
 # PYTORCH-ECOSYSTEM PACKAGES
 # =============================================================================

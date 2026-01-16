@@ -41,13 +41,23 @@ class MeetingNotesService:
         try:
             # STT Model (Speech-to-Text) via torch.hub
             # Note: First run downloads ~130MB from GitHub (cached locally after)
-            self.stt_model, self.stt_decoder, self.stt_utils = torch.hub.load(
+            # Returns: (model, decoder, (read_batch, split_into_batches, read_audio, prepare_model_input))
+            stt_result = torch.hub.load(
                 repo_or_dir='snakers4/silero-models',
                 model='silero_stt',
                 language='en',
                 device=self.device,
                 trust_repo=True  # Suppress download prompt
             )
+
+            self.stt_model = stt_result[0]
+            self.stt_decoder = stt_result[1]
+
+            # Store utils functions directly
+            utils_tuple = stt_result[2]
+            self._stt_read_batch = utils_tuple[0]
+            self._stt_prepare_model_input = utils_tuple[3]
+
             logger.info("STT model loaded")
 
             # TTS Model (Text-to-Speech) using silero package
@@ -95,9 +105,27 @@ class MeetingNotesService:
             import scipy.io.wavfile as wavfile
             wavfile.write(temp_path, 16000, (audio_np * 32768).astype(np.int16))
 
+            # GUARDRAIL: Validate audio format before STT
+            try:
+                validate_sr, validate_audio = wavfile.read(temp_path)
+                logger.info(
+                    f"STT input WAV: sr={validate_sr}, dtype={validate_audio.dtype}, "
+                    f"shape={validate_audio.shape}, min={validate_audio.min()}, max={validate_audio.max()}"
+                )
+
+                # FAIL FAST: Assert Silero requirements
+                assert validate_sr == 16000, f"Invalid sample rate: {validate_sr}, expected 16000"
+                assert validate_audio.dtype == np.int16, f"Invalid dtype: {validate_audio.dtype}, expected int16"
+                assert validate_audio.ndim == 1, f"Audio must be mono, got shape {validate_audio.shape}"
+
+                logger.info("STT audio validation passed")
+            except AssertionError as e:
+                logger.error(f"STT audio validation failed: {e}")
+                return "", False
+
             # Prepare audio for STT
-            input_batch = self.stt_utils.prepare_model_input(
-                self.stt_utils.read_batch([temp_path]),
+            input_batch = self._stt_prepare_model_input(
+                self._stt_read_batch([temp_path]),
                 device=self.device
             )
 
