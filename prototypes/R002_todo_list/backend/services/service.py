@@ -4,7 +4,7 @@
 # Business logic for todo management with in-memory storage
 # =============================================================================
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from models.schemas import Priority, Status, TodoCreate, TodoResponse, TodoUpdate
 

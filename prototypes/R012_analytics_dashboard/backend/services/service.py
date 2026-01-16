@@ -2,10 +2,10 @@
 import logging
 import random
 from datetime import datetime, timedelta
-from typing import List
+
 import numpy as np
 
-from models.schemas import DashboardMetrics, TimeSeriesData, ChartData
+from models.schemas import ChartData, DashboardMetrics, TimeSeriesData
 
 logger = logging.getLogger(__name__)
 

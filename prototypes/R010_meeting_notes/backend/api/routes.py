@@ -7,15 +7,11 @@ This module provides REST endpoints for:
 - Health checks
 """
 
-from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import Response
 import base64
 
-from models.schemas import (
-    TranscriptionRequest,
-    RealTimeTranscription,
-    HealthResponse
-)
+from fastapi import APIRouter, HTTPException, status
+
+from models.schemas import HealthResponse, RealTimeTranscription, TranscriptionRequest
 from services.service import meeting_notes_service
 
 router = APIRouter(

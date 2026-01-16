@@ -5,21 +5,17 @@
 # =============================================================================
 
 import asyncio
-import json
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
 
 from models.schemas import (
     SessionCreate,
-    SessionListResponse,
     SessionResponse,
     SessionStatus,
     SessionUpdate,
 )
 from services.service import get_pomodoro_service
-
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 

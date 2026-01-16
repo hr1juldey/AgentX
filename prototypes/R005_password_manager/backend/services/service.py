@@ -3,7 +3,6 @@ import base64
 import hashlib
 from datetime import datetime, timedelta
 from typing import Optional, List
-import secrets
 
 from passlib.context import CryptContext
 from cryptography.fernet import Fernet

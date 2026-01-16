@@ -1,12 +1,13 @@
 """Smart search service with Qdrant and FastEmbed."""
 import logging
 from typing import List, Optional
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter
+
 import fastembed
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from config.settings import settings
-from models.schemas import DocumentCreate, SearchResult, SearchRequest
+from models.schemas import DocumentCreate, SearchRequest, SearchResult
 
 logger = logging.getLogger(__name__)
 

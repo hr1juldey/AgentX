@@ -1,7 +1,8 @@
 """Application settings."""
-from pydantic_settings import BaseSettings
 from pathlib import Path
 from typing import List
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):

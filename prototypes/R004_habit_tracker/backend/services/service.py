@@ -5,7 +5,7 @@
 # =============================================================================
 
 from collections import defaultdict
-from datetime import date, datetime, timedelta, UTC
+from datetime import UTC, date, datetime, timedelta
 
 from models.schemas import (
     HabitCompletionCreate,

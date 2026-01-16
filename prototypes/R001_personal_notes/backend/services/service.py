@@ -4,8 +4,7 @@
 # Business logic for note management with in-memory storage
 # =============================================================================
 
-from datetime import datetime, UTC
-from typing import AsyncGenerator
+from datetime import UTC, datetime
 
 from models.schemas import NoteCreate, NoteResponse, NoteUpdate
 

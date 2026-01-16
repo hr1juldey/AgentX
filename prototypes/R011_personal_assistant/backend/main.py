@@ -1,8 +1,9 @@
 """Main application entry point."""
+import logging
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-import logging
 
 from config.settings import settings
 
@@ -14,6 +15,7 @@ app = FastAPI(title=settings.app_name, version=settings.version, debug=settings.
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 from api.routes import router
+
 app.include_router(router)
 
 

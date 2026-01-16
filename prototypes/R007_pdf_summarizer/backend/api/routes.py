@@ -2,16 +2,13 @@
 API routes for PDF Summarizer.
 """
 import logging
-from typing import List
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from fastapi.responses import StreamingResponse
-from pydantic import ValidationError
 
 from models.schemas import (
     DocumentResponse,
     DocumentListResponse,
     SummaryResponse,
-    SummaryRequest,
     SummaryType,
     DocumentStatus,
 )

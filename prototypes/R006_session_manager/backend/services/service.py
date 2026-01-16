@@ -1,13 +1,15 @@
 """Session service with Redis storage and fallback to in-memory."""
-import redis
-from redis.exceptions import RedisError, ConnectionError
-from typing import Optional, List
-from datetime import datetime, timedelta
 import json
-import secrets
 import logging
+import secrets
+from datetime import datetime, timedelta
+from typing import List, Optional
+
+import redis
+from redis.exceptions import ConnectionError, RedisError
+
 from config.settings import settings
-from models.schemas import SessionCreate, SessionResponse, DeviceType
+from models.schemas import SessionCreate, SessionResponse
 
 logger = logging.getLogger(__name__)
 

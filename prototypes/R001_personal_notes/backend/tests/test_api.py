@@ -7,7 +7,6 @@
 from fastapi.testclient import TestClient
 
 from main import app
-from models.schemas import NoteCreate
 
 
 def test_root() -> None:

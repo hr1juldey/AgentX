@@ -5,9 +5,10 @@ This module provides Pydantic models for all API endpoints with enhanced
 Swagger documentation including examples and clear descriptions.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
 class VoiceMemo(BaseModel):

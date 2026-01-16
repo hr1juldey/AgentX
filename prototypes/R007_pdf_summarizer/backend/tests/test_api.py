@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 from io import BytesIO
 
 from main import app
-from services.service import pdf_service
 
 client = TestClient(app)
 

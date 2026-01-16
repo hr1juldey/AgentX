@@ -8,7 +8,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
 
-from models.schemas import ErrorResponse, ItemCreate, ItemResponse
+from models.schemas import ItemCreate, ItemResponse
 from services.service import get_item_service
 
 router = APIRouter()

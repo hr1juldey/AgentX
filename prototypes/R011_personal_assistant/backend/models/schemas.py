@@ -4,9 +4,10 @@ Request and response schemas for Personal Assistant API with enhanced Swagger do
 This module provides schemas for AI chat assistant with tool calling capabilities.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional, List, Literal
 from datetime import datetime
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, Field
 
 
 class ToolCall(BaseModel):

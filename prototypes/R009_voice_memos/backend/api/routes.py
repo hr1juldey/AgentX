@@ -7,16 +7,16 @@ This module provides REST endpoints for:
 - Health checks
 """
 
-from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import Response
 import base64
 
+from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import Response
+
 from models.schemas import (
+    HealthResponse,
     TranscriptionRequest,
     TranscriptionResponse,
     TTSSynthesisRequest,
-    TTSSynthesisResponse,
-    HealthResponse
 )
 from services.service import voice_memo_service
 

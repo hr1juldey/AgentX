@@ -4,9 +4,10 @@ Request and response schemas for Smart Search API with enhanced Swagger document
 This module provides schemas for semantic document search using Qdrant vector database.
 """
 
-from pydantic import BaseModel, Field
-from typing import List, Optional
 from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class Document(BaseModel):

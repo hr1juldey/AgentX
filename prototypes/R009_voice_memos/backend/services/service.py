@@ -1,15 +1,15 @@
 """Voice memo service with Silero STT/TTS."""
-import torch
-import logging
 import base64
 import io
+import logging
 import uuid
-from typing import Optional
 from pathlib import Path
-import numpy as np
+from typing import Optional
 
+import numpy as np
+import torch
 from silero import silero_tts
-from silero_vad import load_silero_vad, read_audio
+from silero_vad import load_silero_vad
 
 from config.settings import settings
 from models.schemas import TranscriptionRequest, TranscriptionResponse, TTSSynthesisRequest

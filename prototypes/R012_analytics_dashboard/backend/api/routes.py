@@ -1,6 +1,7 @@
 """API routes."""
 from fastapi import APIRouter
-from models.schemas import DashboardMetrics, ChartData
+
+from models.schemas import ChartData, DashboardMetrics
 from services.service import analytics_service
 
 router = APIRouter(tags=["analytics"])

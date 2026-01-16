@@ -8,7 +8,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query
 
-from models.schemas import ErrorResponse, NoteCreate, NoteResponse, NoteUpdate
+from models.schemas import NoteCreate, NoteResponse, NoteUpdate
 from services.service import get_note_service
 
 router = APIRouter(prefix="/notes", tags=["notes"])

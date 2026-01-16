@@ -4,7 +4,6 @@
 # Business logic layer for data processing
 # =============================================================================
 
-from typing import AsyncGenerator
 
 from models.schemas import ItemCreate, ItemResponse
 

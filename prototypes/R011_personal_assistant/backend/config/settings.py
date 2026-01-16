@@ -1,6 +1,7 @@
 """Application settings."""
-from pydantic_settings import BaseSettings
 from typing import List
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -10,7 +11,7 @@ class Settings(BaseSettings):
     debug: bool = True
     cors_origins: List[str] = ["*"]
     llm_api_url: str = "http://localhost:11434"
-    llm_model: str = "llama3.2"
+    llm_model: str = "gemma3:4b"
     max_tokens: int = 1000
 
     class Config:

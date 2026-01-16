@@ -1,16 +1,15 @@
 """Meeting notes service with Silero STT/TTS and WebSocket streaming."""
-import torch
-import logging
-import base64
 import io
+import logging
 import uuid
-import numpy as np
-from typing import Optional, Tuple
-from pathlib import Path
 from collections import deque
+from pathlib import Path
+from typing import Optional, Tuple
 
+import numpy as np
+import torch
 from silero import silero_tts
-from silero_vad import load_silero_vad, VADIterator
+from silero_vad import VADIterator, load_silero_vad
 
 from config.settings import settings
 

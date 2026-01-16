@@ -5,9 +5,10 @@ This module provides Pydantic models for real-time meeting transcription
 with enhanced Swagger documentation.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional, List
 from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class TranscriptionSegment(BaseModel):

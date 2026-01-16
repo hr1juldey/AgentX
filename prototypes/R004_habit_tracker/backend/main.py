@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     # Startup
     print(f"🚀 {settings.app_name} v{settings.app_version} starting...")
-    print(f"📊 Streak tracking and time-series aggregation enabled")
+    print("📊 Streak tracking and time-series aggregation enabled")
     yield
     # Shutdown
     print(f"👋 {settings.app_name} shutting down...")

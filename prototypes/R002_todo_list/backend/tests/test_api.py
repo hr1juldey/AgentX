@@ -9,7 +9,6 @@ from datetime import datetime
 from fastapi.testclient import TestClient
 
 from main import app
-from models.schemas import Priority, Status
 
 
 def test_root() -> None:

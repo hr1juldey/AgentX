@@ -4,7 +4,7 @@
 # Tests for Habit Tracker API endpoints
 # =============================================================================
 
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient

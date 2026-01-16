@@ -1,7 +1,7 @@
 """API tests for session manager."""
+
 import pytest
 from fastapi.testclient import TestClient
-from datetime import datetime
 
 from main import app
 from services.service import session_service

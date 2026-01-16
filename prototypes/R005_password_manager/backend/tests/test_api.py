@@ -3,7 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
-from services.service import users_db, password_entries_db, user_id_counter, entry_id_counter
+from services.service import users_db, password_entries_db
 
 
 # Reset databases before each test

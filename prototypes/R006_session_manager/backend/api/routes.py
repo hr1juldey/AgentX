@@ -1,17 +1,16 @@
 """API routes for session management."""
-from fastapi import APIRouter, HTTPException, status, Header
-from typing import Optional
 import logging
+from typing import Optional
+
+from fastapi import APIRouter, Header, HTTPException, status
 
 from models.schemas import (
     SessionCreate,
+    SessionListResponse,
     SessionResponse,
     SessionUpdate,
-    SessionListResponse,
-    ErrorResponse,
 )
 from services.service import session_service
-from config.settings import settings
 
 logger = logging.getLogger(__name__)
 

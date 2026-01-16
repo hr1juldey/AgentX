@@ -20,7 +20,6 @@ from models.schemas import (
 )
 from services.service import get_habit_service
 
-
 router = APIRouter(prefix="/habits", tags=["habits"])
 
 # Service instance

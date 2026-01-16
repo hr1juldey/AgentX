@@ -1,11 +1,12 @@
 """Main application entry point."""
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 import logging
 
-from config.settings import settings
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from api.routes import router
+from config.settings import settings
 
 # Configure logging
 logging.basicConfig(

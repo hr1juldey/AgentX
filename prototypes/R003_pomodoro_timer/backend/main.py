@@ -11,8 +11,8 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from config.settings import settings
 from api.routes import router
+from config.settings import settings
 
 
 @asynccontextmanager
@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     # Startup
     print(f"🚀 {settings.app_name} v{settings.app_version} starting...")
-    print(f"📡 WebSocket support enabled for real-time timer updates")
+    print("📡 WebSocket support enabled for real-time timer updates")
     yield
     # Shutdown
     print(f"👋 {settings.app_name} shutting down...")

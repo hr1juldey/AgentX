@@ -4,9 +4,10 @@ Request and response schemas for Analytics Dashboard API with enhanced Swagger d
 This module provides schemas for dashboard metrics and chart data.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional, List
 from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class MetricData(BaseModel):

@@ -1,14 +1,13 @@
 """API routes."""
+
 from fastapi import APIRouter, HTTPException
-from typing import List
 
 from models.schemas import (
-    DocumentCreate,
     Document,
+    DocumentCreate,
+    HealthResponse,
     SearchRequest,
     SearchResponse,
-    SearchResult,
-    HealthResponse
 )
 from services.service import search_service
 
