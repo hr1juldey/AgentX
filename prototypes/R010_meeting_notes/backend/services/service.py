@@ -1,0 +1,208 @@
+"""Meeting notes service with Silero STT/TTS and WebSocket streaming."""
+import torch
+import logging
+import base64
+import io
+import uuid
+import numpy as np
+from typing import Optional, Tuple
+from pathlib import Path
+from collections import deque
+
+from silero import silero_tts
+from silero_vad import load_silero_vad, VADIterator
+
+from config.settings import settings
+
+logger = logging.getLogger(__name__)
+
+
+class MeetingNotesService:
+    """Service for meeting notes with Silero STT/TTS and real-time streaming."""
+
+    def __init__(self):
+        """Initialize the service with GPU/CPU detection."""
+        # Device detection: GPU first, CPU fallback
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if self.device.type == 'cuda':
+            logger.info(f"Using GPU: {torch.cuda.get_device_name()}")
+        else:
+            logger.info("Using CPU")
+            torch.set_num_threads(1)  # Optimize for CPU
+
+        # Audio buffer for streaming
+        self.audio_buffer = deque(maxlen=16000 * 5)  # 5 seconds buffer
+
+        # Initialize Silero models
+        self._initialize_models()
+
+    def _initialize_models(self):
+        """Initialize Silero models with GPU/CPU support."""
+        try:
+            # STT Model (Speech-to-Text) via torch.hub
+            # Note: First run downloads ~130MB from GitHub (cached locally after)
+            self.stt_model, self.stt_decoder, self.stt_utils = torch.hub.load(
+                repo_or_dir='snakers4/silero-models',
+                model='silero_stt',
+                language='en',
+                device=self.device,
+                trust_repo=True  # Suppress download prompt
+            )
+            logger.info("STT model loaded")
+
+            # TTS Model (Text-to-Speech) using silero package
+            # Available speakers for English: v3_en, lj_v2, lj_8khz, lj_16khz, v3_en_indic
+            self.tts_model, self.tts_example_text = silero_tts(
+                language='en',
+                speaker=settings.tts_speaker
+            )
+            self.tts_model.to(self.device)
+            self.tts_speaker = settings.tts_speaker
+            logger.info(f"TTS model loaded (speaker: {self.tts_speaker})")
+
+            # VAD Model (Voice Activity Detection) with iterator
+            self.vad_model = load_silero_vad()
+            self.vad_iterator = VADIterator(
+                self.vad_model,
+                sampling_rate=16000,
+                threshold=0.5,
+                min_silence_duration_ms=500,
+                speech_pad_ms=30
+            )
+            logger.info("VAD model loaded")
+
+        except Exception as e:
+            logger.error(f"Failed to initialize Silero models: {e}")
+            raise
+
+    async def transcribe_audio(self, audio_data: bytes) -> Tuple[str, bool]:
+        """Transcribe audio and detect speech activity."""
+        try:
+            # Decode bytes to numpy array (assuming 16-bit PCM, 16kHz mono)
+            audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+
+            # Check for speech using VAD
+            speech_prob = self.vad_model(
+                torch.tensor(audio_np).float().to(self.device)
+            ).item()
+            has_speech = speech_prob > 0.5
+
+            if not has_speech or len(audio_np) < 1600:  # Need at least 0.1 seconds
+                return "", False
+
+            # Save to temp file for STT
+            temp_path = f"/tmp/temp_audio_{uuid.uuid4().hex}.wav"
+            import scipy.io.wavfile as wavfile
+            wavfile.write(temp_path, 16000, (audio_np * 32768).astype(np.int16))
+
+            # Prepare audio for STT
+            input_batch = self.stt_utils.prepare_model_input(
+                self.stt_utils.read_batch([temp_path]),
+                device=self.device
+            )
+
+            # Perform transcription
+            with torch.no_grad():
+                output = self.stt_model(input_batch)
+
+            # Decode output
+            text = self.stt_decoder(output[0].cpu())
+
+            # Clean up temp file
+            Path(temp_path).unlink(missing_ok=True)
+
+            logger.info(f"Transcription: {text[:50]}...")
+
+            return text, True
+
+        except Exception as e:
+            logger.error(f"Transcription error: {e}")
+            return "", False
+
+    # TTS Sample Rate Configuration (SINGLE SOURCE OF TRUTH)
+    TTS_SAMPLE_RATE = 24000  # 24kHz - high quality, standard for TTS
+
+    async def synthesize_speech(self, text: str) -> bytes:
+        """
+        Convert text to speech using Silero TTS with strict sample-rate contract.
+
+        GUARANTEES:
+        - Silero generates at exactly TTS_SAMPLE_RATE (24kHz)
+        - WAV file is encoded at exactly TTS_SAMPLE_RATE
+        - Playback will respect the WAV header
+        """
+        target_rate = self.TTS_SAMPLE_RATE
+
+        try:
+            # Generate audio at EXACT target sample rate
+            try:
+                # v3_en API
+                audio = self.tts_model.apply_tts(
+                    text=text,
+                    speaker='en_0',
+                    sample_rate=target_rate
+                )
+            except TypeError:
+                # lj_v2 API: texts (plural)
+                audio_list = self.tts_model.apply_tts(
+                    texts=text,
+                    sample_rate=target_rate
+                )
+                audio = audio_list[0]
+
+            # Validate audio
+            if not hasattr(audio, 'shape'):
+                raise ValueError(f"Generated audio is not a tensor, got {type(audio)}")
+
+            # Save to WAV at EXACT same sample rate
+            import scipy.io.wavfile as wavfile
+            audio_buffer = io.BytesIO()
+            wavfile.write(audio_buffer, target_rate, audio.cpu().numpy())
+            audio_buffer.seek(0)
+
+            logger.info(f"TTS synthesis successful: {text[:50]}... (rate={target_rate}Hz)")
+
+            return audio_buffer.read()
+
+        except Exception as e:
+            logger.error(f"TTS synthesis error: {e}")
+            raise
+
+    def process_audio_chunk(self, audio_chunk: np.ndarray) -> Optional[dict]:
+        """Process audio chunk for streaming (WebSocket)."""
+        try:
+            # Convert to tensor if needed
+            if isinstance(audio_chunk, np.ndarray):
+                audio_chunk = torch.tensor(audio_chunk).float()
+
+            # Use VAD iterator to detect speech boundaries
+            speech_dict = self.vad_iterator(audio_chunk.to(self.device), return_seconds=True)
+
+            return speech_dict
+
+        except Exception as e:
+            logger.error(f"Audio chunk processing error: {e}")
+            return None
+
+    def reset_vad_iterator(self):
+        """Reset the VAD iterator state (for new meetings)."""
+        self.vad_iterator.reset_states()
+        logger.info("VAD iterator reset")
+
+    async def check_health(self) -> dict:
+        """Check service health and model status."""
+        return {
+            "stt_available": True,
+            "tts_available": True,
+            "vad_available": True,
+            "device": self.device.type,
+            "models_loaded": all([
+                hasattr(self, 'stt_model'),
+                hasattr(self, 'tts_model'),
+                hasattr(self, 'vad_model')
+            ])
+        }
+
+
+# Global service instance
+meeting_notes_service = MeetingNotesService()
