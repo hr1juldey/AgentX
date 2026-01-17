@@ -18,6 +18,14 @@ from models.schemas import TranscriptionRequest, TranscriptionResponse, TTSSynth
 logger = logging.getLogger(__name__)
 
 
+# Lazy import torchaudio.transforms for conditional use
+def _get_resampler(orig_freq: int, new_freq: int, dtype: torch.dtype):
+    """Get resampler from torchaudio.transforms."""
+    from torchaudio.transforms import Resample
+
+    return Resample(orig_freq, new_freq, dtype=dtype)
+
+
 class VoiceMemoService:
     """Service for voice recording, transcription, and synthesis using Silero models."""
 
@@ -116,8 +124,6 @@ class VoiceMemoService:
 
                 # Resample if not 16kHz
                 if sr != self.STT_SAMPLE_RATE:
-                    import torchaudio.transforms as T
-
                     # Convert to tensor if needed
                     if audio_data.dtype == np.float32 or audio_data.dtype == np.float64:
                         audio_tensor = torch.from_numpy(audio_data).float()
@@ -129,7 +135,7 @@ class VoiceMemoService:
                         audio_tensor = audio_tensor.unsqueeze(0)
 
                     # Resample using torchaudio
-                    resampler = T.Resample(sr, self.STT_SAMPLE_RATE, dtype=audio_tensor.dtype)
+                    resampler = _get_resampler(sr, self.STT_SAMPLE_RATE, dtype=audio_tensor.dtype)
                     audio_tensor = resampler(audio_tensor)
 
                     # Convert back to numpy
@@ -203,7 +209,7 @@ class VoiceMemoService:
             # Clean up temp file if it exists
             try:
                 Path(temp_path).unlink(missing_ok=True)
-            except:
+            except OSError:
                 pass
             return TranscriptionResponse(
                 text="[Transcription failed - see logs]", confidence=0.0, language=request.language
@@ -311,7 +317,7 @@ class VoiceMemoService:
         try:
             speech_prob = self.vad_model(torch.tensor(audio_chunk).float().to(self.device)).item()
             return speech_prob > 0.5
-        except:
+        except (OSError, RuntimeError, ValueError):
             return False
 
     def get_audio_duration(self, audio_data: bytes) -> float:

@@ -2,11 +2,11 @@
 
 import asyncio
 import logging
-import requests
 from datetime import UTC, datetime
 from typing import AsyncIterator, Dict, List
 
 import dspy
+import requests
 
 from config.settings import settings
 
@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 # ============ TOOLS ============
+
 
 def calculator(expression: str) -> str:
     """Evaluate a mathematical expression safely."""
@@ -34,9 +35,7 @@ def searxng_search(query: str) -> str:
     logger.info(f"SearXNG search called with: {query}")
     try:
         response = requests.get(
-            "http://localhost:8080/search",
-            params={"q": query, "format": "json"},
-            timeout=10
+            "http://localhost:8080/search", params={"q": query, "format": "json"}, timeout=10
         )
         response.raise_for_status()
         data = response.json()
@@ -53,7 +52,7 @@ def searxng_search(query: str) -> str:
         for i, r in enumerate(results, 1):
             formatted += f"\n{i}. {r.get('title', 'No title')}\n"
             formatted += f"   {r.get('url', 'No URL')}\n"
-            if r.get('content'):
+            if r.get("content"):
                 formatted += f"   {r['content'][:200]}...\n"
 
         logger.info(f"SearXNG formatted response: {formatted[:200]}...")
@@ -68,13 +67,14 @@ def tavily_search(query: str) -> str:
     try:
         # Use Tavily via MCP
         from mcp__tavily__tavily_search import tavily_search as mcp_tavily
+
         results = mcp_tavily(query=query, max_results=3)
 
         formatted = f"Tavily search results for '{query}':\n"
         for i, r in enumerate(results.get("results", [])[:3], 1):
             formatted += f"\n{i}. {r.get('title', 'No title')}\n"
             formatted += f"   {r.get('url', 'No URL')}\n"
-            if r.get('content'):
+            if r.get("content"):
                 formatted += f"   {r['content'][:200]}...\n"
 
         return formatted
@@ -88,6 +88,7 @@ def tavily_search(query: str) -> str:
 
 # ============ ASSISTANT SERVICE ============
 
+
 class AssistantService:
     """Service for Personal Assistant with DSPy ReAct + tools."""
 
@@ -98,9 +99,7 @@ class AssistantService:
         # Configure DSPy with Ollama (built-in support)
         logger.info(f"Initializing DSPy with model: {settings.llm_model}")
         self.lm = dspy.LM(
-            f"ollama_chat/{settings.llm_model}",
-            api_base=settings.llm_api_url,
-            api_key=""
+            f"ollama_chat/{settings.llm_model}", api_base=settings.llm_api_url, api_key=""
         )
         dspy.configure(lm=self.lm)
 

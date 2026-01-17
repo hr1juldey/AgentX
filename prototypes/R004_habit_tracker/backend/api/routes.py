@@ -117,7 +117,7 @@ async def record_completion(
     try:
         return await habit_service.record_completion(completion)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 @router.get("/{habit_id}/completions", response_model=list[HabitCompletionResponse])

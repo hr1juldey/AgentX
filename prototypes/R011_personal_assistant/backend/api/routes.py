@@ -17,12 +17,14 @@ router = APIRouter(tags=["assistant"])
 
 class TTSRequest(BaseModel):
     """Text-to-speech request."""
+
     text: str
     language: str = "en"
 
 
 class TTSResponse(BaseModel):
     """Text-to-speech response with base64-encoded audio."""
+
     audio_data: str
 
 
@@ -191,5 +193,5 @@ async def websocket_voice(websocket: WebSocket):
         logger.error(f"WebSocket error: {e}")
         try:
             await websocket.send_json({"type": "error", "message": str(e)})
-        except:
+        except (WebSocketDisconnect, RuntimeError, OSError):
             pass

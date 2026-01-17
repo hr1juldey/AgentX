@@ -10,6 +10,14 @@ import torch
 logger = logging.getLogger(__name__)
 
 
+# Lazy import torchaudio.transforms for conditional use
+def _get_resampler(orig_freq: int, new_freq: int, dtype: torch.dtype):
+    """Get resampler from torchaudio.transforms."""
+    from torchaudio.transforms import Resample
+
+    return Resample(orig_freq, new_freq, dtype=dtype)
+
+
 class STTService:
     """Speech-to-Text service using Silero STT with GPU/CPU support."""
 
@@ -78,8 +86,6 @@ class STTService:
 
             # Resample if not 16kHz
             if sr != self.STT_SAMPLE_RATE:
-                import torchaudio.transforms as T
-
                 if audio_data.dtype == np.float32 or audio_data.dtype == np.float64:
                     audio_tensor = torch.from_numpy(audio_data).float()
                 else:
@@ -88,7 +94,7 @@ class STTService:
                 if audio_tensor.dim() == 1:
                     audio_tensor = audio_tensor.unsqueeze(0)
 
-                resampler = T.Resample(sr, self.STT_SAMPLE_RATE, dtype=audio_tensor.dtype)
+                resampler = _get_resampler(sr, self.STT_SAMPLE_RATE, dtype=audio_tensor.dtype)
                 audio_tensor = resampler(audio_tensor)
                 audio_data = audio_tensor.squeeze().numpy()
                 sr = self.STT_SAMPLE_RATE

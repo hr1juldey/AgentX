@@ -133,7 +133,7 @@ def test_list_sessions_with_status_filter() -> None:
     session_id_1 = response1.json()["id"]
 
     response2 = client.post("/api/v1/sessions", json={"title": "Session 2"})
-    session_id_2 = response2.json()["id"]
+    _session_id_2 = response2.json()["id"]
 
     # Pause one session
     client.put(f"/api/v1/sessions/{session_id_1}", json={"status": "paused"})
@@ -290,8 +290,8 @@ def test_session_workflow() -> None:
 
 def test_websocket_connection_invalid_session() -> None:
     """Test WebSocket connection to non-existent session."""
-    client = TestClient(app)
     # Note: TestClient doesn't fully support WebSocket testing
     # This is a placeholder for proper WebSocket testing
     # In production, use a WebSocket testing library
+    _client = TestClient(app)
     pass
