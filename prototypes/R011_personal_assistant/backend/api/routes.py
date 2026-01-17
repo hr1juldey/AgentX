@@ -5,6 +5,7 @@ import logging
 import uuid
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
 
 from models.schemas import ChatRequest, ChatResponse, ToolSchema
 from services.service import assistant_service
@@ -12,6 +13,32 @@ from services.service import assistant_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["assistant"])
+
+
+class TTSRequest(BaseModel):
+    """Text-to-speech request."""
+    text: str
+    language: str = "en"
+
+
+class TTSResponse(BaseModel):
+    """Text-to-speech response with base64-encoded audio."""
+    audio_data: str
+
+
+@router.post("/tts", response_model=TTSResponse)
+async def text_to_speech(request: TTSRequest):
+    """Convert text to speech using Silero TTS.
+
+    Returns base64-encoded WAV audio.
+    """
+    try:
+        audio = await assistant_service.tts.synthesize(request.text)
+        audio_b64 = base64.b64encode(audio).decode()
+        return TTSResponse(audio_data=audio_b64)
+    except Exception as e:
+        logger.error(f"TTS error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/chat", response_model=ChatResponse)

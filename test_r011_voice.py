@@ -23,7 +23,7 @@ async def test_voice_websocket():
     print(f"Connecting to {WS_URL}...")
 
     try:
-        async with websockets.connect(WS_URL) as ws:
+        async with websockets.connect(WS_URL, max_size=20000000) as ws:
             # Wait for connection message
             msg = json.loads(await ws.recv())
             print(f"Connected: {msg}")

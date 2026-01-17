@@ -1,7 +1,8 @@
-"""Personal Assistant service with DSPy ReAct + streaming."""
+"""Personal Assistant service with DSPy ReAct + tools."""
 
 import asyncio
 import logging
+import requests
 from datetime import UTC, datetime
 from typing import AsyncIterator, Dict, List
 
@@ -12,28 +13,83 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 
-# Simple tools for DSPy
+# ============ TOOLS ============
+
 def calculator(expression: str) -> str:
-    """Evaluate a mathematical expression."""
+    """Evaluate a mathematical expression safely."""
+    logger.info(f"Calculator called with: {expression}")
     try:
-        result = eval(expression, {"__builtins__": {}}, {})
-        return str(result)
+        # Safe evaluation - only allow basic math operations
+        allowed_names = {}
+        result = eval(expression, {"__builtins__": {}}, allowed_names)
+        logger.info(f"Calculator result: {result}")
+        return f"The result is: {result}"
     except Exception as e:
-        return f"Error: {str(e)}"
+        logger.error(f"Calculator error: {e}")
+        return f"Calculator error: {str(e)}"
 
 
-def search(query: str) -> str:
-    """Mock search implementation."""
-    return f"Search results for: {query}\n- Result 1: Mock data\n- Result 2: Mock data"
+def searxng_search(query: str) -> str:
+    """Search using local SearXNG instance."""
+    logger.info(f"SearXNG search called with: {query}")
+    try:
+        response = requests.get(
+            "http://localhost:8080/search",
+            params={"q": query, "format": "json"},
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        logger.info(f"SearXNG returned {len(data.get('results', []))} results")
+
+        if not data.get("results"):
+            logger.warning(f"No results found for '{query}'")
+            return f"No results found for '{query}'"
+
+        # Format top 3 results
+        results = data["results"][:3]
+        formatted = f"Search results for '{query}':\n"
+        for i, r in enumerate(results, 1):
+            formatted += f"\n{i}. {r.get('title', 'No title')}\n"
+            formatted += f"   {r.get('url', 'No URL')}\n"
+            if r.get('content'):
+                formatted += f"   {r['content'][:200]}...\n"
+
+        logger.info(f"SearXNG formatted response: {formatted[:200]}...")
+        return formatted
+    except Exception as e:
+        logger.error(f"SearXNG search error: {e}", exc_info=True)
+        return f"SearXNG search error: {str(e)}"
 
 
-def weather(location: str) -> str:
-    """Mock weather implementation."""
-    return f"Weather in {location}: 22°C, Partly cloudy"
+def tavily_search(query: str) -> str:
+    """Search using Tavily API."""
+    try:
+        # Use Tavily via MCP
+        from mcp__tavily__tavily_search import tavily_search as mcp_tavily
+        results = mcp_tavily(query=query, max_results=3)
 
+        formatted = f"Tavily search results for '{query}':\n"
+        for i, r in enumerate(results.get("results", [])[:3], 1):
+            formatted += f"\n{i}. {r.get('title', 'No title')}\n"
+            formatted += f"   {r.get('url', 'No URL')}\n"
+            if r.get('content'):
+                formatted += f"   {r['content'][:200]}...\n"
+
+        return formatted
+    except ImportError:
+        # Fallback to direct API if MCP not available
+        return "Tavily search not available - using SearXNG instead"
+    except Exception as e:
+        logger.error(f"Tavily error: {e}")
+        return f"Tavily search error: {str(e)}"
+
+
+# ============ ASSISTANT SERVICE ============
 
 class AssistantService:
-    """Service for Personal Assistant with DSPy ReAct + streaming."""
+    """Service for Personal Assistant with DSPy ReAct + tools."""
 
     def __init__(self):
         """Initialize the assistant service."""
@@ -42,7 +98,9 @@ class AssistantService:
         # Configure DSPy with Ollama (built-in support)
         logger.info(f"Initializing DSPy with model: {settings.llm_model}")
         self.lm = dspy.LM(
-            f"ollama_chat/{settings.llm_model}", api_base=settings.llm_api_url, api_key=""
+            f"ollama_chat/{settings.llm_model}",
+            api_base=settings.llm_api_url,
+            api_key=""
         )
         dspy.configure(lm=self.lm)
 
@@ -53,17 +111,18 @@ class AssistantService:
         self.stt = stt_service
         self.tts = tts_service
 
-        # Initialize ReAct
+        # Initialize ReAct with tools
         self.react = dspy.ReAct(
             "question->answer",
             tools=[
                 dspy.Tool(calculator, name="calculator"),
-                dspy.Tool(search, name="search"),
-                dspy.Tool(weather, name="weather"),
+                dspy.Tool(searxng_search, name="searxng_search"),
+                dspy.Tool(tavily_search, name="tavily_search"),
             ],
         )
 
         logger.info(f"Personal Assistant initialized with model: {settings.llm_model}")
+        logger.info("Tools available: calculator, searxng_search, tavily_search")
 
     async def chat_stream(self, message: str, history: List[Dict]) -> AsyncIterator[str]:
         """
@@ -72,28 +131,53 @@ class AssistantService:
         Yields: Text chunks as they arrive
         """
         try:
-            # Run DSPy in thread pool to avoid async issues
+            logger.info(f"Processing message: {message[:100]}...")
+
+            # Run DSPy ReAct in thread pool to avoid async issues
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(None, lambda: self.react(question=message))
+
+            def run_react():
+                result = self.react(question=message)
+
+                # Log intermediate steps for debugging
+                if hasattr(result, "trace"):
+                    logger.info(f"ReAct trace: {result.trace}")
+                if hasattr(result, "reasoning"):
+                    logger.info(f"ReAct reasoning: {result.reasoning}")
+                if hasattr(result, "tool_calls"):
+                    logger.info(f"ReAct tool_calls: {result.tool_calls}")
+
+                return result
+
+            result = await loop.run_in_executor(None, run_react)
+
+            # Log the full result for debugging
+            logger.info(f"ReAct result type: {type(result)}")
+            logger.info(f"ReAct result: {result}")
 
             # Yield the answer
             if hasattr(result, "answer"):
+                logger.info(f"Answer: {result.answer}")
                 yield result.answer
             else:
+                logger.info(f"String result: {str(result)}")
                 yield str(result)
 
         except Exception as e:
-            logger.error(f"DSPy streaming error: {e}")
-            yield "I'm sorry, I encountered an error."
+            logger.error(f"DSPy ReAct error: {e}", exc_info=True)
+            yield f"I'm sorry, I encountered an error: {str(e)}"
 
     async def process_message(self, request) -> Dict:
         """Process a chat message (non-streaming for REST API)."""
         conversation_id = getattr(request, "conversation_id", None) or "default"
         message = getattr(request, "message", "")
 
+        # Get conversation history
+        history = self._conversations.get(conversation_id, [])
+
         # Collect full response
         response_text = ""
-        async for chunk in self.chat_stream(message, []):
+        async for chunk in self.chat_stream(message, history):
             response_text += chunk
 
         # Store in conversation history

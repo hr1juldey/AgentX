@@ -34,7 +34,7 @@ class TTSService:
             logger.error(f"Failed to initialize TTS model: {e}")
             raise
 
-    TTS_SAMPLE_RATE = 24000
+    TTS_SAMPLE_RATE = 48000
 
     async def synthesize(self, text: str) -> bytes:
         """
@@ -50,7 +50,7 @@ class TTSService:
 
         try:
             # Generate audio
-            audio = self.tts_model.apply_tts(text=text, speaker="en_0", sample_rate=target_rate)
+            audio = self.tts_model.apply_tts(text=text, speaker="en_5", sample_rate=target_rate)
 
             # Validate audio
             if not hasattr(audio, "shape"):

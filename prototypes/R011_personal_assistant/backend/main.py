@@ -43,4 +43,10 @@ async def health():
 
 if __name__ == "__main__":
     logger.info(f"Starting {settings.app_name} v{settings.version}")
-    uvicorn.run("main:app", host="0.0.0.0", port=settings.port, reload=settings.debug)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=settings.port,
+        reload=settings.debug,
+        ws_max_size=20_000_000,
+    )

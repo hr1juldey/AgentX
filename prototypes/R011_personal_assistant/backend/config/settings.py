@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     cors_origins: List[str] = ["*"]
     llm_api_url: str = "http://localhost:11434"
     llm_model: str = "gemma3:4b"
-    max_tokens: int = 1000
+    max_tokens: int = 5000
 
     class Config:
         env_file = ".env"
