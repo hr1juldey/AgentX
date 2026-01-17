@@ -1,4 +1,5 @@
 """Main application entry point."""
+
 import logging
 
 import uvicorn
@@ -55,6 +56,7 @@ async def root() -> dict:
 async def health_check() -> dict:
     """Health check endpoint."""
     from services.service import search_service
+
     info = await search_service.get_collection_info()
     return {
         "status": "healthy",

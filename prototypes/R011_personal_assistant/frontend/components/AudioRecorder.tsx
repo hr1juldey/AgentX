@@ -41,24 +41,55 @@ export function AudioRecorder({ isConnected, isListening, onAudioData }: AudioRe
       });
 
       mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start();
 
-      // Send audio chunks every 1 second
-      mediaRecorder.ondataavailable = async (event) => {
+      // Accumulate audio chunks and send every 3 seconds
+      const audioChunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          const arrayBuffer = await event.data.arrayBuffer();
-
-          // Convert to WAV format for Silero STT
-          const audioContext = new AudioContext();
-          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-          const wavBytes = audioBufferToWav(audioBuffer);
-          const base64Audio = btoa(String.fromCharCode(...new Uint8Array(wavBytes)));
-
-          onAudioData(base64Audio);
+          audioChunks.push(event.data);
         }
       };
 
+      // Send accumulated audio every 3 seconds
+      const sendInterval = setInterval(async () => {
+        if (audioChunks.length > 0 && isRecording) {
+          // Combine all chunks
+          const combinedBlob = new Blob(audioChunks, { type: "audio/webm" });
+          audioChunks.length = 0; // Clear array
+
+          try {
+            const arrayBuffer = await combinedBlob.arrayBuffer();
+
+            // Convert to WAV format for Silero STT
+            const audioContext = new AudioContext();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+            // Only send if we have enough audio (at least 2 seconds)
+            if (audioBuffer.duration >= 2.0) {
+              const wavBytes = audioBufferToWav(audioBuffer);
+              const uint8Array = new Uint8Array(wavBytes);
+
+              // Convert to base64 using chunks to avoid stack overflow
+              let binary = '';
+              const chunkSize = 0x8000;
+              for (let i = 0; i < uint8Array.length; i += chunkSize) {
+                binary += String.fromCharCode.apply(null, Array.from(uint8Array.subarray(i, i + chunkSize)));
+              }
+              const base64Audio = btoa(binary);
+
+              onAudioData(base64Audio);
+            }
+          } catch (error) {
+            console.error("Error processing audio:", error);
+          }
+        }
+      }, 3000);
+
+      // Store interval for cleanup
+      (mediaRecorder as any)._sendInterval = sendInterval;
+
+      mediaRecorder.start(1000); // Request chunks every 1 second
       setIsRecording(true);
       updateAudioLevel();
 
@@ -70,6 +101,10 @@ export function AudioRecorder({ isConnected, isListening, onAudioData }: AudioRe
   // Stop recording
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      // Clear the send interval
+      const interval = (mediaRecorderRef.current as any)._sendInterval;
+      if (interval) clearInterval(interval);
+
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
     }
@@ -182,7 +217,7 @@ export function AudioRecorder({ isConnected, isListening, onAudioData }: AudioRe
               style={{ width: `${audioLevel * 100}%` }}
             />
           </div>
-          <Badge variant="secondary">Recording</Badge>
+          <Badge variant="secondary">Recording (sends every 3s)</Badge>
         </div>
       )}
 

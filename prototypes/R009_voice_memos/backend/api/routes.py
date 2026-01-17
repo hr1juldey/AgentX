@@ -24,8 +24,8 @@ router = APIRouter(
     tags=["Voice Memos"],
     responses={
         400: {"description": "Invalid request", "model": dict},
-        500: {"description": "Internal server error", "model": dict}
-    }
+        500: {"description": "Internal server error", "model": dict},
+    },
 )
 
 
@@ -69,12 +69,12 @@ router = APIRouter(
                     "example": {
                         "text": "Hello world, this is a test",
                         "confidence": 0.95,
-                        "language": "en"
+                        "language": "en",
                     }
                 }
-            }
+            },
         }
-    }
+    },
 )
 async def transcribe_audio(request: TranscriptionRequest) -> TranscriptionResponse:
     """Transcribe audio to text using speech recognition."""
@@ -83,13 +83,12 @@ async def transcribe_audio(request: TranscriptionRequest) -> TranscriptionRespon
         return result
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid audio data: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid audio data: {str(e)}"
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Transcription failed: {str(e)}"
+            detail=f"Transcription failed: {str(e)}",
         )
 
 
@@ -110,9 +109,9 @@ async def transcribe_audio(request: TranscriptionRequest) -> TranscriptionRespon
                 "text/plain": {
                     "example": "UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="
                 }
-            }
+            },
         }
-    }
+    },
 )
 async def synthesize_speech(request: TTSSynthesisRequest) -> Response:
     """Convert text to speech audio, returned as Base64 string."""
@@ -123,19 +122,16 @@ async def synthesize_speech(request: TTSSynthesisRequest) -> Response:
         return Response(
             content=audio_base64,
             media_type="text/plain",
-            headers={
-                "Content-Disposition": "attachment; filename=speech.wav"
-            }
+            headers={"Content-Disposition": "attachment; filename=speech.wav"},
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid text input: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid text input: {str(e)}"
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"TTS synthesis failed: {str(e)}"
+            detail=f"TTS synthesis failed: {str(e)}",
         )
 
 
@@ -168,16 +164,9 @@ async def synthesize_speech(request: TTSSynthesisRequest) -> Response:
     responses={
         200: {
             "description": "WAV audio file",
-            "content": {
-                "audio/mpeg": {
-                    "schema": {
-                        "type": "string",
-                        "format": "binary"
-                    }
-                }
-            }
+            "content": {"audio/mpeg": {"schema": {"type": "string", "format": "binary"}}},
         }
-    }
+    },
 )
 async def download_speech(request: TTSSynthesisRequest) -> Response:
     """Download speech as WAV file."""
@@ -187,19 +176,16 @@ async def download_speech(request: TTSSynthesisRequest) -> Response:
         return Response(
             content=audio_data,
             media_type="audio/mpeg",
-            headers={
-                "Content-Disposition": "attachment; filename=speech.wav"
-            }
+            headers={"Content-Disposition": "attachment; filename=speech.wav"},
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid text input: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid text input: {str(e)}"
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"TTS synthesis failed: {str(e)}"
+            detail=f"TTS synthesis failed: {str(e)}",
         )
 
 
@@ -214,7 +200,7 @@ async def download_speech(request: TTSSynthesisRequest) -> Response:
     - Speech-to-Text (STT) model
     - Text-to-Speech (TTS) model
     - Voice Activity Detection (VAD) model
-    """
+    """,
 )
 async def health_check() -> HealthResponse:
     """Health check endpoint."""
@@ -223,5 +209,5 @@ async def health_check() -> HealthResponse:
     return HealthResponse(
         status="healthy" if health["models_loaded"] else "unhealthy",
         stt_available=health["stt_available"],
-        tts_available=health["tts_available"]
+        tts_available=health["tts_available"],
     )

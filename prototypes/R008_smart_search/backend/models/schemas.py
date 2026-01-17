@@ -19,21 +19,20 @@ class Document(BaseModel):
     id: str = Field(
         ...,
         description="Unique document identifier (UUID)",
-        examples=["550e8400-e29b-41d4-a716-446655440000"]
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
     content: str = Field(
         ...,
         description="Document text content (searchable)",
-        examples=["This is a document about machine learning..."]
+        examples=["This is a document about machine learning..."],
     )
     metadata: Optional[dict] = Field(
         None,
         description="Optional metadata (tags, category, etc.)",
-        examples=[{"category": "tech", "tags": ["ai", "ml"]}]
+        examples=[{"category": "tech", "tags": ["ai", "ml"]}],
     )
     created_at: datetime = Field(
-        default_factory=datetime.now,
-        description="When the document was created"
+        default_factory=datetime.now, description="When the document was created"
     )
 
 
@@ -47,20 +46,22 @@ class DocumentCreate(BaseModel):
         ...,
         description="Document text content (will be vectorized)",
         min_length=1,
-        examples=["This is a document about machine learning..."]
+        examples=["This is a document about machine learning..."],
     )
     metadata: Optional[dict] = Field(
         None,
         description="Optional metadata for filtering",
-        examples=[{"category": "tech", "tags": ["ai", "ml"]}]
+        examples=[{"category": "tech", "tags": ["ai", "ml"]}],
     )
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "content": "This is a document about machine learning and neural networks...",
-                "metadata": {"category": "tech", "tags": ["ai", "ml"]}
-            }]
+            "examples": [
+                {
+                    "content": "This is a document about machine learning and neural networks...",
+                    "metadata": {"category": "tech", "tags": ["ai", "ml"]},
+                }
+            ]
         }
     }
 
@@ -72,26 +73,17 @@ class SearchResult(BaseModel):
     """
 
     id: str = Field(
-        ...,
-        description="Document ID",
-        examples=["550e8400-e29b-41d4-a716-446655440000"]
+        ..., description="Document ID", examples=["550e8400-e29b-41d4-a716-446655440000"]
     )
     content: str = Field(
         ...,
         description="Document content (may be truncated)",
-        examples=["This is a document about machine..."]
+        examples=["This is a document about machine..."],
     )
     score: float = Field(
-        ...,
-        description="Relevance score (0-1, higher is better)",
-        examples=[0.92],
-        ge=0.0,
-        le=1.0
+        ..., description="Relevance score (0-1, higher is better)", examples=[0.92], ge=0.0, le=1.0
     )
-    metadata: Optional[dict] = Field(
-        None,
-        description="Document metadata"
-    )
+    metadata: Optional[dict] = Field(None, description="Document metadata")
 
 
 class SearchRequest(BaseModel):
@@ -104,30 +96,18 @@ class SearchRequest(BaseModel):
         ...,
         description="Search query (natural language)",
         min_length=1,
-        examples=["machine learning papers", "how to optimize neural networks"]
+        examples=["machine learning papers", "how to optimize neural networks"],
     )
     top_k: Optional[int] = Field(
-        None,
-        description="Maximum number of results (default: 10)",
-        ge=1,
-        le=20,
-        examples=[5, 10]
+        None, description="Maximum number of results (default: 10)", ge=1, le=20, examples=[5, 10]
     )
     score_threshold: Optional[float] = Field(
-        None,
-        description="Minimum relevance score (0-1)",
-        ge=0.0,
-        le=1.0,
-        examples=[0.7]
+        None, description="Minimum relevance score (0-1)", ge=0.0, le=1.0, examples=[0.7]
     )
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "query": "machine learning papers",
-                "top_k": 10,
-                "score_threshold": 0.7
-            }]
+            "examples": [{"query": "machine learning papers", "top_k": 10, "score_threshold": 0.7}]
         }
     }
 
@@ -139,19 +119,12 @@ class SearchResponse(BaseModel):
     """
 
     query: str = Field(
-        ...,
-        description="Original search query",
-        examples=["machine learning papers"]
+        ..., description="Original search query", examples=["machine learning papers"]
     )
     results: List[SearchResult] = Field(
-        default_factory=list,
-        description="List of matching documents (ranked by score)"
+        default_factory=list, description="List of matching documents (ranked by score)"
     )
-    total: int = Field(
-        ...,
-        description="Total number of results",
-        examples=[42]
-    )
+    total: int = Field(..., description="Total number of results", examples=[42])
 
 
 class HealthResponse(BaseModel):
@@ -160,29 +133,17 @@ class HealthResponse(BaseModel):
     Returns service and database connection status.
     """
 
-    status: str = Field(
-        ...,
-        description="Service health status",
-        examples=["healthy", "unhealthy"]
-    )
+    status: str = Field(..., description="Service health status", examples=["healthy", "unhealthy"])
     qdrant_connected: bool = Field(
-        ...,
-        description="Whether Qdrant vector database is connected",
-        examples=[True]
+        ..., description="Whether Qdrant vector database is connected", examples=[True]
     )
     collection_exists: bool = Field(
-        ...,
-        description="Whether the search collection exists",
-        examples=[True]
+        ..., description="Whether the search collection exists", examples=[True]
     )
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{
-                "status": "healthy",
-                "qdrant_connected": True,
-                "collection_exists": True
-            }]
+            "examples": [{"status": "healthy", "qdrant_connected": True, "collection_exists": True}]
         }
     }
 
@@ -190,17 +151,10 @@ class HealthResponse(BaseModel):
 class ErrorResponse(BaseModel):
     """Schema for error response."""
 
-    error: str = Field(
-        ...,
-        description="Error type",
-        examples=["ValidationError", "SearchError"]
-    )
+    error: str = Field(..., description="Error type", examples=["ValidationError", "SearchError"])
     message: str = Field(
         ...,
         description="Error message",
-        examples=["Query is required", "Database connection failed"]
+        examples=["Query is required", "Database connection failed"],
     )
-    detail: Optional[str] = Field(
-        None,
-        description="Additional technical details"
-    )
+    detail: Optional[str] = Field(None, description="Additional technical details")

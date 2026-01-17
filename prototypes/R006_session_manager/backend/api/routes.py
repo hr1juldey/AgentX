@@ -1,4 +1,5 @@
 """API routes for session management."""
+
 import logging
 from typing import Optional
 

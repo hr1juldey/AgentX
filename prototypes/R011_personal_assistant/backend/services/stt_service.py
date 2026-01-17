@@ -1,4 +1,5 @@
 """Speech-to-Text service using Silero STT."""
+
 import logging
 import uuid
 from pathlib import Path
@@ -14,8 +15,8 @@ class STTService:
 
     def __init__(self):
         """Initialize STT service with GPU/CPU detection."""
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        if self.device.type == 'cuda':
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device.type == "cuda":
             logger.info(f"STT using GPU: {torch.cuda.get_device_name()}")
         else:
             logger.info("STT using CPU")
@@ -27,11 +28,11 @@ class STTService:
         """Initialize Silero STT model."""
         try:
             stt_result = torch.hub.load(
-                repo_or_dir='snakers4/silero-models',
-                model='silero_stt',
-                language='en',
+                repo_or_dir="snakers4/silero-models",
+                model="silero_stt",
+                language="en",
                 device=self.device,
-                trust_repo=True
+                trust_repo=True,
             )
 
             self.stt_model = stt_result[0]
@@ -63,11 +64,12 @@ class STTService:
 
         try:
             # Save to temp file
-            with open(temp_path, 'wb') as f:
+            with open(temp_path, "wb") as f:
                 f.write(audio_bytes)
 
             # Resample if needed
             import scipy.io.wavfile as wavfile
+
             sr, audio_data = wavfile.read(temp_path)
 
             # Convert to mono if stereo
@@ -77,6 +79,7 @@ class STTService:
             # Resample if not 16kHz
             if sr != self.STT_SAMPLE_RATE:
                 import torchaudio.transforms as T
+
                 if audio_data.dtype == np.float32 or audio_data.dtype == np.float64:
                     audio_tensor = torch.from_numpy(audio_data).float()
                 else:
@@ -97,7 +100,7 @@ class STTService:
             elif audio_data.dtype != np.int16:
                 audio_data = audio_data.astype(np.int16)
 
-            with open(temp_path, 'wb') as f:
+            with open(temp_path, "wb") as f:
                 wavfile.write(f, sr, audio_data)
 
             # Validate audio format
@@ -108,8 +111,7 @@ class STTService:
 
             # Prepare audio for STT
             input_batch = self._stt_prepare_model_input(
-                self._stt_read_batch([temp_path]),
-                device=self.device
+                self._stt_read_batch([temp_path]), device=self.device
             )
 
             # Perform transcription

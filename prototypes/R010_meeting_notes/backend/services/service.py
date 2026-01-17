@@ -1,4 +1,5 @@
 """Meeting notes service with Silero STT/TTS and WebSocket streaming."""
+
 import io
 import logging
 import uuid
@@ -22,8 +23,8 @@ class MeetingNotesService:
     def __init__(self):
         """Initialize the service with GPU/CPU detection."""
         # Device detection: GPU first, CPU fallback
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        if self.device.type == 'cuda':
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device.type == "cuda":
             logger.info(f"Using GPU: {torch.cuda.get_device_name()}")
         else:
             logger.info("Using CPU")
@@ -42,11 +43,11 @@ class MeetingNotesService:
             # Note: First run downloads ~130MB from GitHub (cached locally after)
             # Returns: (model, decoder, (read_batch, split_into_batches, read_audio, prepare_model_input))
             stt_result = torch.hub.load(
-                repo_or_dir='snakers4/silero-models',
-                model='silero_stt',
-                language='en',
+                repo_or_dir="snakers4/silero-models",
+                model="silero_stt",
+                language="en",
                 device=self.device,
-                trust_repo=True  # Suppress download prompt
+                trust_repo=True,  # Suppress download prompt
             )
 
             self.stt_model = stt_result[0]
@@ -62,8 +63,7 @@ class MeetingNotesService:
             # TTS Model (Text-to-Speech) using silero package
             # Available speakers for English: v3_en, lj_v2, lj_8khz, lj_16khz, v3_en_indic
             self.tts_model, self.tts_example_text = silero_tts(
-                language='en',
-                speaker=settings.tts_speaker
+                language="en", speaker=settings.tts_speaker
             )
             self.tts_model.to(self.device)
             self.tts_speaker = settings.tts_speaker
@@ -76,7 +76,7 @@ class MeetingNotesService:
                 sampling_rate=16000,
                 threshold=0.5,
                 min_silence_duration_ms=500,
-                speech_pad_ms=30
+                speech_pad_ms=30,
             )
             logger.info("VAD model loaded")
 
@@ -91,9 +91,7 @@ class MeetingNotesService:
             audio_np = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
 
             # Check for speech using VAD
-            speech_prob = self.vad_model(
-                torch.tensor(audio_np).float().to(self.device)
-            ).item()
+            speech_prob = self.vad_model(torch.tensor(audio_np).float().to(self.device)).item()
             has_speech = speech_prob > 0.5
 
             if not has_speech or len(audio_np) < 1600:  # Need at least 0.1 seconds
@@ -102,6 +100,7 @@ class MeetingNotesService:
             # Save to temp file for STT
             temp_path = f"/tmp/temp_audio_{uuid.uuid4().hex}.wav"
             import scipy.io.wavfile as wavfile
+
             wavfile.write(temp_path, 16000, (audio_np * 32768).astype(np.int16))
 
             # GUARDRAIL: Validate audio format before STT
@@ -114,8 +113,12 @@ class MeetingNotesService:
 
                 # FAIL FAST: Assert Silero requirements
                 assert validate_sr == 16000, f"Invalid sample rate: {validate_sr}, expected 16000"
-                assert validate_audio.dtype == np.int16, f"Invalid dtype: {validate_audio.dtype}, expected int16"
-                assert validate_audio.ndim == 1, f"Audio must be mono, got shape {validate_audio.shape}"
+                assert validate_audio.dtype == np.int16, (
+                    f"Invalid dtype: {validate_audio.dtype}, expected int16"
+                )
+                assert validate_audio.ndim == 1, (
+                    f"Audio must be mono, got shape {validate_audio.shape}"
+                )
 
                 logger.info("STT audio validation passed")
             except AssertionError as e:
@@ -124,8 +127,7 @@ class MeetingNotesService:
 
             # Prepare audio for STT
             input_batch = self._stt_prepare_model_input(
-                self._stt_read_batch([temp_path]),
-                device=self.device
+                self._stt_read_batch([temp_path]), device=self.device
             )
 
             # Perform transcription
@@ -164,25 +166,19 @@ class MeetingNotesService:
             # Generate audio at EXACT target sample rate
             try:
                 # v3_en API
-                audio = self.tts_model.apply_tts(
-                    text=text,
-                    speaker='en_0',
-                    sample_rate=target_rate
-                )
+                audio = self.tts_model.apply_tts(text=text, speaker="en_0", sample_rate=target_rate)
             except TypeError:
                 # lj_v2 API: texts (plural)
-                audio_list = self.tts_model.apply_tts(
-                    texts=text,
-                    sample_rate=target_rate
-                )
+                audio_list = self.tts_model.apply_tts(texts=text, sample_rate=target_rate)
                 audio = audio_list[0]
 
             # Validate audio
-            if not hasattr(audio, 'shape'):
+            if not hasattr(audio, "shape"):
                 raise ValueError(f"Generated audio is not a tensor, got {type(audio)}")
 
             # Save to WAV at EXACT same sample rate
             import scipy.io.wavfile as wavfile
+
             audio_buffer = io.BytesIO()
             wavfile.write(audio_buffer, target_rate, audio.cpu().numpy())
             audio_buffer.seek(0)
@@ -223,11 +219,9 @@ class MeetingNotesService:
             "tts_available": True,
             "vad_available": True,
             "device": self.device.type,
-            "models_loaded": all([
-                hasattr(self, 'stt_model'),
-                hasattr(self, 'tts_model'),
-                hasattr(self, 'vad_model')
-            ])
+            "models_loaded": all(
+                [hasattr(self, "stt_model"), hasattr(self, "tts_model"), hasattr(self, "vad_model")]
+            ),
         }
 
 

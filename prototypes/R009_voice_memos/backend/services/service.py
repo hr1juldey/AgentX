@@ -1,4 +1,5 @@
 """Voice memo service with Silero STT/TTS."""
+
 import base64
 import io
 import logging
@@ -26,8 +27,8 @@ class VoiceMemoService:
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
         # Device detection: GPU first, CPU fallback
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        if self.device.type == 'cuda':
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device.type == "cuda":
             logger.info(f"Using GPU: {torch.cuda.get_device_name()}")
         else:
             logger.info("Using CPU")
@@ -43,11 +44,11 @@ class VoiceMemoService:
             # Note: First run downloads ~112MB from GitHub (cached locally after)
             # Returns: (model, decoder, (read_batch, prepare_model_input, ...))
             stt_result = torch.hub.load(
-                repo_or_dir='snakers4/silero-models',
-                model='silero_stt',
-                language='en',
+                repo_or_dir="snakers4/silero-models",
+                model="silero_stt",
+                language="en",
                 device=self.device,
-                trust_repo=True  # Suppress download prompt
+                trust_repo=True,  # Suppress download prompt
             )
 
             # Silero STT returns: (model, decoder, tuple_of_functions)
@@ -66,8 +67,7 @@ class VoiceMemoService:
             # TTS Model (Text-to-Speech) using silero package
             # Available speakers for English: v3_en, lj_v2, lj_8khz, lj_16khz
             self.tts_model, self.tts_example_text = silero_tts(
-                language='en',
-                speaker=settings.tts_speaker
+                language="en", speaker=settings.tts_speaker
             )
             self.tts_model.to(self.device)
             self.tts_speaker = settings.tts_speaker
@@ -101,11 +101,12 @@ class VoiceMemoService:
             temp_path = f"/tmp/temp_stt_{uuid.uuid4().hex}.wav"
 
             # Try to use the audio directly first
-            with open(temp_path, 'wb') as f:
+            with open(temp_path, "wb") as f:
                 f.write(audio_bytes)
 
             # Check if we need to resample
             import scipy.io.wavfile as wavfile
+
             try:
                 sr, audio_data = wavfile.read(temp_path)
 
@@ -116,6 +117,7 @@ class VoiceMemoService:
                 # Resample if not 16kHz
                 if sr != self.STT_SAMPLE_RATE:
                     import torchaudio.transforms as T
+
                     # Convert to tensor if needed
                     if audio_data.dtype == np.float32 or audio_data.dtype == np.float64:
                         audio_tensor = torch.from_numpy(audio_data).float()
@@ -144,7 +146,7 @@ class VoiceMemoService:
                     # Convert other types to int16
                     audio_data = audio_data.astype(np.int16)
 
-                with open(temp_path, 'wb') as f:
+                with open(temp_path, "wb") as f:
                     wavfile.write(f, sr, audio_data)
 
             except Exception as e:
@@ -161,8 +163,12 @@ class VoiceMemoService:
 
                 # FAIL FAST: Assert Silero requirements
                 assert validate_sr == 16000, f"Invalid sample rate: {validate_sr}, expected 16000"
-                assert validate_audio.dtype == np.int16, f"Invalid dtype: {validate_audio.dtype}, expected int16"
-                assert validate_audio.ndim == 1, f"Audio must be mono, got shape {validate_audio.shape}"
+                assert validate_audio.dtype == np.int16, (
+                    f"Invalid dtype: {validate_audio.dtype}, expected int16"
+                )
+                assert validate_audio.ndim == 1, (
+                    f"Audio must be mono, got shape {validate_audio.shape}"
+                )
 
                 logger.info("STT audio validation passed")
             except AssertionError as e:
@@ -170,13 +176,12 @@ class VoiceMemoService:
                 return TranscriptionResponse(
                     text=f"[Audio format error: {str(e)}]",
                     confidence=0.0,
-                    language=request.language
+                    language=request.language,
                 )
 
             # Prepare audio for STT
             input_batch = self._stt_prepare_model_input(
-                self._stt_read_batch([temp_path]),
-                device=self.device
+                self._stt_read_batch([temp_path]), device=self.device
             )
 
             # Perform transcription
@@ -191,11 +196,7 @@ class VoiceMemoService:
 
             logger.info(f"Transcription successful: {text}")
 
-            return TranscriptionResponse(
-                text=text,
-                confidence=0.95,
-                language=request.language
-            )
+            return TranscriptionResponse(text=text, confidence=0.95, language=request.language)
 
         except Exception as e:
             logger.error(f"Transcription error: {e}")
@@ -205,9 +206,7 @@ class VoiceMemoService:
             except:
                 pass
             return TranscriptionResponse(
-                text="[Transcription failed - see logs]",
-                confidence=0.0,
-                language=request.language
+                text="[Transcription failed - see logs]", confidence=0.0, language=request.language
             )
 
     # TTS Sample Rate Configuration (SINGLE SOURCE OF TRUTH)
@@ -236,27 +235,24 @@ class VoiceMemoService:
                 # v3_en API: text + speaker parameter
                 audio = self.tts_model.apply_tts(
                     text=request.text,
-                    speaker='en_0',
-                    sample_rate=target_rate  # MUST match our target rate
+                    speaker="en_0",
+                    sample_rate=target_rate,  # MUST match our target rate
                 )
             except TypeError:
                 try:
                     # lj_v2 API: texts (plural)
                     audio_list = self.tts_model.apply_tts(
                         texts=request.text,
-                        sample_rate=target_rate  # MUST match our target rate
+                        sample_rate=target_rate,  # MUST match our target rate
                     )
                     audio = audio_list[0]
                 except TypeError:
                     # Fallback: no explicit sample_rate (use model default)
                     # But this is risky - we should validate
-                    audio = self.tts_model.apply_tts(
-                        text=request.text,
-                        speaker='en_0'
-                    )
+                    audio = self.tts_model.apply_tts(text=request.text, speaker="en_0")
 
             # STEP 2: Validate audio tensor
-            if not hasattr(audio, 'shape'):
+            if not hasattr(audio, "shape"):
                 raise ValueError(f"Generated audio is not a tensor, got {type(audio)}")
 
             expected_samples_per_char = target_rate * 0.1  # heuristic: ~100ms per char
@@ -273,11 +269,12 @@ class VoiceMemoService:
             # STEP 3: Save to WAV at EXACT same sample rate
             # This is CRITICAL - the WAV header MUST match generation rate
             import scipy.io.wavfile as wavfile
+
             audio_buffer = io.BytesIO()
             wavfile.write(
                 audio_buffer,
                 target_rate,  # EXACT same rate used for generation
-                audio.cpu().numpy()
+                audio.cpu().numpy(),
             )
             audio_buffer.seek(0)
 
@@ -286,7 +283,9 @@ class VoiceMemoService:
             if len(audio_bytes) < 100:
                 raise ValueError("Generated WAV file is too small, header may be corrupted")
 
-            logger.info(f"TTS synthesis successful: {request.text[:50]}... (rate={target_rate}Hz, samples={len(audio)})")
+            logger.info(
+                f"TTS synthesis successful: {request.text[:50]}... (rate={target_rate}Hz, samples={len(audio)})"
+            )
 
             return audio_bytes
 
@@ -310,9 +309,7 @@ class VoiceMemoService:
     def is_speech(self, audio_chunk: np.ndarray) -> bool:
         """Check if audio chunk contains speech using VAD."""
         try:
-            speech_prob = self.vad_model(
-                torch.tensor(audio_chunk).float().to(self.device)
-            ).item()
+            speech_prob = self.vad_model(torch.tensor(audio_chunk).float().to(self.device)).item()
             return speech_prob > 0.5
         except:
             return False
@@ -334,11 +331,9 @@ class VoiceMemoService:
             "tts_available": True,
             "vad_available": True,
             "device": self.device.type,
-            "models_loaded": all([
-                hasattr(self, 'stt_model'),
-                hasattr(self, 'tts_model'),
-                hasattr(self, 'vad_model')
-            ])
+            "models_loaded": all(
+                [hasattr(self, "stt_model"), hasattr(self, "tts_model"), hasattr(self, "vad_model")]
+            ),
         }
 
 

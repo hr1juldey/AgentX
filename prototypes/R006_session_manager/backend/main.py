@@ -1,4 +1,5 @@
 """Main application entry point."""
+
 import logging
 
 import uvicorn

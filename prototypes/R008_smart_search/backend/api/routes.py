@@ -21,8 +21,7 @@ async def add_document(document: DocumentCreate):
 
     if doc_id is None:
         raise HTTPException(
-            status_code=503,
-            detail="Search service unavailable. Please ensure Qdrant is running."
+            status_code=503, detail="Search service unavailable. Please ensure Qdrant is running."
         )
 
     return Document(id=doc_id, content=document.content, metadata=document.metadata)
@@ -33,11 +32,7 @@ async def search(request: SearchRequest):
     """Search for similar documents."""
     results = await search_service.search(request)
 
-    return SearchResponse(
-        query=request.query,
-        results=results,
-        total=len(results)
-    )
+    return SearchResponse(query=request.query, results=results, total=len(results))
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -48,7 +43,7 @@ async def health_check():
     return HealthResponse(
         status="healthy" if info["connected"] else "unhealthy",
         qdrant_connected=info["connected"],
-        collection_exists=info["collection_exists"]
+        collection_exists=info["collection_exists"],
     )
 
 

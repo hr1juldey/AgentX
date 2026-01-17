@@ -1,4 +1,5 @@
 """Business logic service layer."""
+
 import base64
 import hashlib
 from datetime import datetime, timedelta
@@ -85,18 +86,20 @@ class AuthService:
     def create_access_token(data: dict) -> str:
         """Create a JWT access token."""
         to_encode = data.copy()
-        expire = datetime.utcnow() + timedelta(minutes=settings.access_token_expire_minutes)
+        expire = datetime.utcnow() + timedelta(
+            minutes=settings.access_token_expire_minutes
+        )
         to_encode.update({"exp": expire.timestamp()})  # Convert to timestamp
 
         # Simple JWT implementation (for production, use python-jose properly)
         import json
+
         token_data = json.dumps(to_encode)
         # Sign with HMAC using secret key
         import hmac
+
         signature = hmac.new(
-            settings.secret_key.encode(),
-            token_data.encode(),
-            hashlib.sha256
+            settings.secret_key.encode(), token_data.encode(), hashlib.sha256
         ).hexdigest()
 
         return f"{token_data}|{signature}"
@@ -117,9 +120,7 @@ class AuthService:
 
             # Verify signature
             expected_signature = hmac.new(
-                settings.secret_key.encode(),
-                token_data.encode(),
-                hashlib.sha256
+                settings.secret_key.encode(), token_data.encode(), hashlib.sha256
             ).hexdigest()
 
             if not hmac.compare_digest(signature, expected_signature):
@@ -162,9 +163,7 @@ class UserService:
         users_db[user_id_counter] = user
         # Return UserResponse without hashed_password
         return UserResponse(
-            id=user["id"],
-            username=user["username"],
-            created_at=user["created_at"]
+            id=user["id"], username=user["username"], created_at=user["created_at"]
         )
 
     @staticmethod
@@ -177,7 +176,7 @@ class UserService:
                     return UserResponse(
                         id=user["id"],
                         username=user["username"],
-                        created_at=user["created_at"]
+                        created_at=user["created_at"],
                     )
                 return None
         return None
@@ -189,9 +188,7 @@ class UserService:
         if user:
             # Return UserResponse without hashed_password
             return UserResponse(
-                id=user["id"],
-                username=user["username"],
-                created_at=user["created_at"]
+                id=user["id"], username=user["username"], created_at=user["created_at"]
             )
         return None
 
@@ -201,9 +198,7 @@ class PasswordService:
 
     @staticmethod
     def create_entry(
-        user_id: int,
-        entry_data: PasswordEntryCreate,
-        master_password: str
+        user_id: int, entry_data: PasswordEntryCreate, master_password: str
     ) -> PasswordEntryResponse:
         """Create a new password entry."""
         global entry_id_counter
@@ -234,9 +229,7 @@ class PasswordService:
 
     @staticmethod
     def list_entries(
-        user_id: int,
-        master_password: str,
-        include_passwords: bool = False
+        user_id: int, master_password: str, include_passwords: bool = False
     ) -> List[PasswordEntryResponse]:
         """List all password entries for a user."""
         entries = []
@@ -247,8 +240,7 @@ class PasswordService:
                 if include_passwords:
                     try:
                         entry_copy["password"] = decrypt_password(
-                            entry["password"],
-                            master_password
+                            entry["password"], master_password
                         )
                     except Exception:
                         entry_copy["password"] = "[DECRYPTION FAILED]"
@@ -261,9 +253,7 @@ class PasswordService:
 
     @staticmethod
     def get_entry(
-        entry_id: int,
-        user_id: int,
-        master_password: str
+        entry_id: int, user_id: int, master_password: str
     ) -> Optional[PasswordEntryResponse]:
         """Get a specific password entry."""
         entry = password_entries_db.get(entry_id)
@@ -273,7 +263,9 @@ class PasswordService:
 
         entry_copy = entry.copy()
         try:
-            entry_copy["password"] = decrypt_password(entry["password"], master_password)
+            entry_copy["password"] = decrypt_password(
+                entry["password"], master_password
+            )
         except Exception:
             entry_copy["password"] = "[DECRYPTION FAILED]"
 
@@ -284,7 +276,7 @@ class PasswordService:
         entry_id: int,
         user_id: int,
         entry_data: PasswordEntryUpdate,
-        master_password: str
+        master_password: str,
     ) -> Optional[PasswordEntryResponse]:
         """Update a password entry."""
         entry = password_entries_db.get(entry_id)
@@ -309,7 +301,9 @@ class PasswordService:
         # Return decrypted version
         entry_copy = entry.copy()
         try:
-            entry_copy["password"] = decrypt_password(entry["password"], master_password)
+            entry_copy["password"] = decrypt_password(
+                entry["password"], master_password
+            )
         except Exception:
             entry_copy["password"] = "[DECRYPTION FAILED]"
 

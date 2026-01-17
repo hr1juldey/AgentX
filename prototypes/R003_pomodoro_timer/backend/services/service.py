@@ -60,9 +60,7 @@ class PomodoroService:
         self._websocket_connections[self._next_id] = set()
 
         # Start the countdown timer
-        self._timer_tasks[self._next_id] = asyncio.create_task(
-            self._countdown(self._next_id)
-        )
+        self._timer_tasks[self._next_id] = asyncio.create_task(self._countdown(self._next_id))
 
         self._next_id += 1
         return session_response
@@ -98,7 +96,9 @@ class PomodoroService:
         # Sort by creation date (newest first)
         return sorted(sessions, key=lambda s: s.created_at, reverse=True)
 
-    async def update(self, session_id: int, session_update: SessionUpdate) -> SessionResponse | None:
+    async def update(
+        self, session_id: int, session_update: SessionUpdate
+    ) -> SessionResponse | None:
         """Update an existing session.
 
         Args:
@@ -124,9 +124,7 @@ class PomodoroService:
 
         # If resuming, restart the countdown
         if new_status == SessionStatus.RUNNING and existing.status == SessionStatus.PAUSED:
-            self._timer_tasks[session_id] = asyncio.create_task(
-                self._countdown(session_id)
-            )
+            self._timer_tasks[session_id] = asyncio.create_task(self._countdown(session_id))
 
         # If cancelling, cancel the countdown and mark as cancelled
         if new_status == SessionStatus.CANCELLED:

@@ -1,4 +1,5 @@
 """Smart search service with Qdrant and FastEmbed."""
+
 import logging
 from typing import List, Optional
 
@@ -39,8 +40,8 @@ class SearchService:
                     collection_name=settings.qdrant_collection_name,
                     vectors_config=VectorParams(
                         size=384,  # BGE-small dimension
-                        distance=Distance.COSINE
-                    )
+                        distance=Distance.COSINE,
+                    ),
                 )
                 logger.info(f"Created collection: {settings.qdrant_collection_name}")
             else:
@@ -53,9 +54,7 @@ class SearchService:
     def _initialize_embeddings(self):
         """Initialize embedding model."""
         try:
-            self.embedding_model = fastembed.TextEmbedding(
-                model_name=settings.embedding_model
-            )
+            self.embedding_model = fastembed.TextEmbedding(model_name=settings.embedding_model)
             logger.info(f"Loaded embedding model: {settings.embedding_model}")
         except Exception as e:
             logger.error(f"Failed to load embedding model: {e}")
@@ -81,6 +80,7 @@ class SearchService:
 
         try:
             import hashlib
+
             doc_id = hashlib.md5(document.content.encode()).hexdigest()
             embedding = self._generate_embedding(document.content)
 
@@ -90,16 +90,10 @@ class SearchService:
             point = PointStruct(
                 id=doc_id,
                 vector=embedding,
-                payload={
-                    "content": document.content,
-                    "metadata": document.metadata or {}
-                }
+                payload={"content": document.content, "metadata": document.metadata or {}},
             )
 
-            self.client.upsert(
-                collection_name=settings.qdrant_collection_name,
-                points=[point]
-            )
+            self.client.upsert(collection_name=settings.qdrant_collection_name, points=[point])
 
             logger.info(f"Added document: {doc_id}")
             return doc_id
@@ -125,7 +119,7 @@ class SearchService:
                 collection_name=settings.qdrant_collection_name,
                 query_vector=query_embedding,
                 limit=top_k,
-                score_threshold=threshold
+                score_threshold=threshold,
             )
 
             search_results = []
@@ -135,7 +129,7 @@ class SearchService:
                         id=str(result.id),
                         content=result.payload.get("content", ""),
                         score=result.score,
-                        metadata=result.payload.get("metadata")
+                        metadata=result.payload.get("metadata"),
                     )
                 )
 
@@ -148,11 +142,7 @@ class SearchService:
     async def get_collection_info(self) -> dict:
         """Get collection information."""
         if not self.client:
-            return {
-                "connected": False,
-                "collection_exists": False,
-                "document_count": 0
-            }
+            return {"connected": False, "collection_exists": False, "document_count": 0}
 
         try:
             collection_info = self.client.get_collection(
@@ -161,15 +151,11 @@ class SearchService:
             return {
                 "connected": True,
                 "collection_exists": True,
-                "document_count": collection_info.points_count
+                "document_count": collection_info.points_count,
             }
         except Exception as e:
             logger.error(f"Failed to get collection info: {e}")
-            return {
-                "connected": True,
-                "collection_exists": False,
-                "document_count": 0
-            }
+            return {"connected": True, "collection_exists": False, "document_count": 0}
 
 
 # Global service instance

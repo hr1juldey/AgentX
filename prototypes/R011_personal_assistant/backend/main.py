@@ -1,4 +1,5 @@
 """Main application entry point."""
+
 import logging
 
 import uvicorn
@@ -12,7 +13,13 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title=settings.app_name, version=settings.version, debug=settings.debug)
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 from api.routes import router
 
@@ -21,7 +28,12 @@ app.include_router(router)
 
 @app.get("/")
 async def root():
-    return {"service": settings.app_name, "version": settings.version, "status": "running", "endpoints": {"/docs": "API docs", "/chat": "Chat endpoint"}}
+    return {
+        "service": settings.app_name,
+        "version": settings.version,
+        "status": "running",
+        "endpoints": {"/docs": "API docs", "/chat": "Chat endpoint"},
+    }
 
 
 @app.get("/health")

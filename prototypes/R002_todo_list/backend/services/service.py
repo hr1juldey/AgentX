@@ -103,9 +103,7 @@ class TodoService:
                 else existing.description
             ),
             due_date=(
-                todo_update.due_date
-                if todo_update.due_date is not None
-                else existing.due_date
+                todo_update.due_date if todo_update.due_date is not None else existing.due_date
             ),
             priority=(
                 todo_update.priority if todo_update.priority is not None else existing.priority

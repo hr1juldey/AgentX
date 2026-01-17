@@ -1,4 +1,5 @@
 """Analytics dashboard service with data aggregation."""
+
 import logging
 import random
 from datetime import datetime, timedelta
@@ -37,7 +38,9 @@ class AnalyticsService:
 
     async def get_user_growth_data(self) -> ChartData:
         """Get user growth time series data."""
-        labels = [(datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(29, -1, -1)]
+        labels = [
+            (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(29, -1, -1)
+        ]
         return ChartData(
             title="User Growth (Last 30 Days)",
             type="line",
@@ -46,7 +49,9 @@ class AnalyticsService:
 
     async def get_request_volume_data(self) -> ChartData:
         """Get request volume time series data."""
-        labels = [(datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(29, -1, -1)]
+        labels = [
+            (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(29, -1, -1)
+        ]
         return ChartData(
             title="Request Volume (Last 30 Days)",
             type="bar",
@@ -57,7 +62,7 @@ class AnalyticsService:
         """Get response time distribution data."""
         # Create histogram buckets
         hist, bins = np.histogram(self.response_times, bins=10)
-        labels = [f"{int(bins[i])}-{int(bins[i+1])}ms" for i in range(len(bins)-1)]
+        labels = [f"{int(bins[i])}-{int(bins[i + 1])}ms" for i in range(len(bins) - 1)]
         return ChartData(
             title="Response Time Distribution",
             type="bar",

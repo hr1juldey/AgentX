@@ -1,6 +1,7 @@
 """
 Main application entry point for PDF Summarizer API.
 """
+
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -13,7 +14,7 @@ from api.routes import router
 # Configure logging
 logging.basicConfig(
     level=logging.INFO if settings.debug else logging.WARNING,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ app = FastAPI(
     description="API for PDF document processing and AI-powered summarization",
     lifespan=lifespan,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # Configure CORS
@@ -63,21 +64,14 @@ async def root():
         "application": settings.app_name,
         "version": settings.app_version,
         "status": "running",
-        "endpoints": {
-            "docs": "/docs",
-            "api": settings.api_prefix,
-            "health": "/health"
-        }
+        "endpoints": {"docs": "/docs", "api": settings.api_prefix, "health": "/health"},
     }
 
 
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "service": settings.app_name
-    }
+    return {"status": "healthy", "service": settings.app_name}
 
 
 @app.exception_handler(Exception)
@@ -89,8 +83,8 @@ async def global_exception_handler(request, exc):
         status_code=500,
         content={
             "error": "Internal server error",
-            "detail": str(exc) if settings.debug else "An unexpected error occurred"
-        }
+            "detail": str(exc) if settings.debug else "An unexpected error occurred",
+        },
     )
 
 
@@ -102,5 +96,5 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=settings.port,
         reload=settings.debug,
-        log_level="info" if settings.debug else "warning"
+        log_level="info" if settings.debug else "warning",
     )

@@ -2,6 +2,7 @@
 Service layer for PDF Summarizer API.
 Handles PDF processing, text extraction, and LLM integration.
 """
+
 import os
 import hashlib
 from typing import Optional, List, AsyncGenerator
@@ -47,12 +48,14 @@ class PDFService:
             ValueError: If file is invalid or not a PDF
         """
         # Validate file extension
-        if not filename.lower().endswith('.pdf'):
+        if not filename.lower().endswith(".pdf"):
             raise ValueError("Only PDF files are allowed")
 
         # Validate file size
         if len(content) > settings.max_file_size:
-            raise ValueError(f"File size exceeds maximum of {settings.max_file_size} bytes")
+            raise ValueError(
+                f"File size exceeds maximum of {settings.max_file_size} bytes"
+            )
 
         # Generate unique filename
         file_hash = hashlib.md5(content).hexdigest()
@@ -60,7 +63,7 @@ class PDFService:
         file_path = os.path.join(settings.upload_dir, unique_filename)
 
         # Save file to disk
-        with open(file_path, 'wb') as f:
+        with open(file_path, "wb") as f:
             f.write(content)
 
         # Create document object
@@ -69,7 +72,7 @@ class PDFService:
             id=self.document_id_counter,
             filename=filename,
             file_path=file_path,
-            status=DocumentStatus.PROCESSING
+            status=DocumentStatus.PROCESSING,
         )
 
         try:
@@ -81,7 +84,9 @@ class PDFService:
             document.word_count = len(extracted_text.split()) if extracted_text else 0
             document.status = DocumentStatus.READY
 
-            logger.info(f"Document {document.id} processed successfully: {page_count} pages, {document.word_count} words")
+            logger.info(
+                f"Document {document.id} processed successfully: {page_count} pages, {document.word_count} words"
+            )
 
         except Exception as e:
             document.status = DocumentStatus.ERROR
@@ -137,16 +142,15 @@ class PDFService:
             Cleaned text
         """
         # Remove excessive whitespace
-        lines = text.split('\n')
+        lines = text.split("\n")
         cleaned_lines = [line.strip() for line in lines if line.strip()]
 
         # Remove page numbers and headers (basic heuristic)
         cleaned_lines = [
-            line for line in cleaned_lines
-            if not line.isdigit() and len(line) > 3
+            line for line in cleaned_lines if not line.isdigit() and len(line) > 3
         ]
 
-        return '\n'.join(cleaned_lines)
+        return "\n".join(cleaned_lines)
 
     def get_document(self, document_id: int) -> Optional[Document]:
         """
@@ -170,9 +174,7 @@ class PDFService:
         return list(self.documents.values())
 
     async def generate_summary(
-        self,
-        document_id: int,
-        summary_type: SummaryType
+        self, document_id: int, summary_type: SummaryType
     ) -> AsyncGenerator[str, None]:
         """
         Generate a summary for a document using LLM.
@@ -216,7 +218,7 @@ class PDFService:
             document_id=document_id,
             summary_type=summary_type,
             summary_text=summary_text,
-            tokens_used=int(tokens_used)
+            tokens_used=int(tokens_used),
         )
 
         self.summaries[summary.id] = summary
@@ -308,6 +310,7 @@ The actual implementation would stream real responses from the LLM model."""
             yield word + " "
             if i % 5 == 0:  # Simulate network delay
                 import asyncio
+
                 await asyncio.sleep(0.01)
 
     def get_summary(self, document_id: int) -> Optional[Summary]:
@@ -322,8 +325,7 @@ The actual implementation would stream real responses from the LLM model."""
         """
         # Find the most recent summary for this document
         document_summaries = [
-            s for s in self.summaries.values()
-            if s.document_id == document_id
+            s for s in self.summaries.values() if s.document_id == document_id
         ]
 
         if not document_summaries:
@@ -358,8 +360,7 @@ The actual implementation would stream real responses from the LLM model."""
 
         # Remove associated summaries
         self.summaries = {
-            k: v for k, v in self.summaries.items()
-            if v.document_id != document_id
+            k: v for k, v in self.summaries.items() if v.document_id != document_id
         }
 
         logger.info(f"Document {document_id} deleted")

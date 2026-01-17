@@ -184,7 +184,7 @@ export default function Home() {
                       </div>
                       <div className={`rounded-lg px-4 py-2 ${message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
                         <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                        <span className="text-xs opacity-70 mt-1 block">{new Date(message.timestamp).toLocaleTimeString()}</span>
+                        <span className="text-xs opacity-70 mt-1 block" suppressHydrationWarning>{new Date(message.timestamp).toLocaleTimeString()}</span>
                       </div>
                     </div>
                   </div>
@@ -201,7 +201,7 @@ export default function Home() {
                           </div>
                           <div className="rounded-lg px-4 py-2 bg-primary text-primary-foreground">
                             <p className="text-sm whitespace-pre-wrap">{currentTranscript}</p>
-                            <span className="text-xs opacity-70 mt-1 block">Just now</span>
+                            <span className="text-xs opacity-70 mt-1 block" suppressHydrationWarning>Just now</span>
                           </div>
                         </div>
                       </div>
@@ -228,7 +228,7 @@ export default function Home() {
                           </div>
                           <div className="rounded-lg px-4 py-2 bg-muted">
                             <p className="text-sm whitespace-pre-wrap">{currentResponse}</p>
-                            <span className="text-xs opacity-70 mt-1 block">Just now</span>
+                            <span className="text-xs opacity-70 mt-1 block" suppressHydrationWarning>Just now</span>
                           </div>
                         </div>
                       </div>

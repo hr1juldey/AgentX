@@ -96,9 +96,7 @@ class HabitService:
             del self._completions[habit_id]
         return True
 
-    async def record_completion(
-        self, completion: HabitCompletionCreate
-    ) -> HabitCompletionResponse:
+    async def record_completion(self, completion: HabitCompletionCreate) -> HabitCompletionResponse:
         """Record a habit completion.
 
         Args:
@@ -134,9 +132,7 @@ class HabitService:
 
         return completion_response
 
-    async def get_habit_completions(
-        self, habit_id: int
-    ) -> list[HabitCompletionResponse]:
+    async def get_habit_completions(self, habit_id: int) -> list[HabitCompletionResponse]:
         """Get all completions for a habit.
 
         Args:
@@ -161,9 +157,7 @@ class HabitService:
         """
         completions = self._completions.get(habit_id, [])
         if not completions:
-            return StreakData(
-                current_streak=0, longest_streak=0, last_completion_date=None
-            )
+            return StreakData(current_streak=0, longest_streak=0, last_completion_date=None)
 
         # Sort by completion date (oldest first for streak calculation)
         sorted_completions = sorted(completions, key=lambda c: c.completed_at)
@@ -209,9 +203,7 @@ class HabitService:
             streak_data=streak_data,
         )
 
-    async def get_time_series_data(
-        self, habit_id: int, days: int = 30
-    ) -> list[TimeSeriesData]:
+    async def get_time_series_data(self, habit_id: int, days: int = 30) -> list[TimeSeriesData]:
         """Get time-series aggregated completion data.
 
         Args:
@@ -242,9 +234,7 @@ class HabitService:
         current_date = start_date
         while current_date <= end_date:
             count = daily_counts.get(current_date, 0)
-            time_series.append(
-                TimeSeriesData(date=current_date.isoformat(), count=count)
-            )
+            time_series.append(TimeSeriesData(date=current_date.isoformat(), count=count))
             current_date += timedelta(days=1)
 
         return time_series

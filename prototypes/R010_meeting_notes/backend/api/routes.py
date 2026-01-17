@@ -18,8 +18,8 @@ router = APIRouter(
     tags=["Meeting Notes"],
     responses={
         400: {"description": "Invalid request", "model": dict},
-        500: {"description": "Internal server error", "model": dict}
-    }
+        500: {"description": "Internal server error", "model": dict},
+    },
 )
 
 
@@ -65,12 +65,12 @@ router = APIRouter(
                         "text": "Hello everyone, let's start the meeting",
                         "is_speech": True,
                         "timestamp": 12.5,
-                        "confidence": 0.92
+                        "confidence": 0.92,
                     }
                 }
-            }
+            },
         }
-    }
+    },
 )
 async def transcribe_audio(request: TranscriptionRequest) -> RealTimeTranscription:
     """Transcribe audio with VAD for meeting notes."""
@@ -80,13 +80,12 @@ async def transcribe_audio(request: TranscriptionRequest) -> RealTimeTranscripti
         return RealTimeTranscription(text=text, is_speech=is_speech, timestamp=0.0)
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid audio data: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid audio data: {str(e)}"
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Transcription failed: {str(e)}"
+            detail=f"Transcription failed: {str(e)}",
         )
 
 
@@ -121,12 +120,12 @@ async def transcribe_audio(request: TranscriptionRequest) -> RealTimeTranscripti
                     "example": {
                         "audio_data": "<Base64-encoded WAV audio>",
                         "format": "wav",
-                        "sample_rate": 24000
+                        "sample_rate": 24000,
                     }
                 }
-            }
+            },
         }
-    }
+    },
 )
 async def text_to_speech(request: dict):
     """Convert text to speech audio, returned as Base64 string."""
@@ -140,13 +139,12 @@ async def text_to_speech(request: dict):
         return {"audio_data": audio_base64, "format": "wav", "sample_rate": 24000}
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid input: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid input: {str(e)}"
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"TTS synthesis failed: {str(e)}"
+            detail=f"TTS synthesis failed: {str(e)}",
         )
 
 
@@ -161,15 +159,17 @@ async def text_to_speech(request: dict):
     - Speech-to-Text (STT) model
     - Text-to-Speech (TTS) model
     - Voice Activity Detection (VAD) model
-    """
+    """,
 )
 async def health() -> HealthResponse:
     """Health check endpoint."""
     health_data = await meeting_notes_service.check_health()
 
     return HealthResponse(
-        status="healthy" if health_data.get("stt_available") and health_data.get("tts_available") else "unhealthy",
+        status="healthy"
+        if health_data.get("stt_available") and health_data.get("tts_available")
+        else "unhealthy",
         stt_available=health_data.get("stt_available", False),
         tts_available=health_data.get("tts_available", False),
-        vad_available=health_data.get("vad_available", False)
+        vad_available=health_data.get("vad_available", False),
     )

@@ -1,4 +1,5 @@
 """API routes."""
+
 from fastapi import APIRouter
 
 from models.schemas import ChartData, DashboardMetrics

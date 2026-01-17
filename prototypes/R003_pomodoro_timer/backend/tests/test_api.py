@@ -156,9 +156,7 @@ def test_update_session_pause() -> None:
     session_id = create_response.json()["id"]
 
     # Pause it
-    update_response = client.put(
-        f"/api/v1/sessions/{session_id}", json={"status": "paused"}
-    )
+    update_response = client.put(f"/api/v1/sessions/{session_id}", json={"status": "paused"})
     assert update_response.status_code == 200
     assert update_response.json()["status"] == "paused"
 
@@ -173,9 +171,7 @@ def test_update_session_resume() -> None:
     client.put(f"/api/v1/sessions/{session_id}", json={"status": "paused"})
 
     # Resume it
-    update_response = client.put(
-        f"/api/v1/sessions/{session_id}", json={"status": "running"}
-    )
+    update_response = client.put(f"/api/v1/sessions/{session_id}", json={"status": "running"})
     assert update_response.status_code == 200
     assert update_response.json()["status"] == "running"
 
@@ -188,9 +184,7 @@ def test_update_session_cancel() -> None:
     session_id = create_response.json()["id"]
 
     # Cancel it
-    update_response = client.put(
-        f"/api/v1/sessions/{session_id}", json={"status": "cancelled"}
-    )
+    update_response = client.put(f"/api/v1/sessions/{session_id}", json={"status": "cancelled"})
     assert update_response.status_code == 200
     assert update_response.json()["status"] == "cancelled"
 
@@ -245,21 +239,15 @@ def test_create_session_validation() -> None:
     assert response.status_code == 422
 
     # Invalid work_duration (too long)
-    response = client.post(
-        "/api/v1/sessions", json={"title": "Test", "work_duration": 200}
-    )
+    response = client.post("/api/v1/sessions", json={"title": "Test", "work_duration": 200})
     assert response.status_code == 422
 
     # Invalid work_duration (too short)
-    response = client.post(
-        "/api/v1/sessions", json={"title": "Test", "work_duration": 0}
-    )
+    response = client.post("/api/v1/sessions", json={"title": "Test", "work_duration": 0})
     assert response.status_code == 422
 
     # Invalid break_duration (negative)
-    response = client.post(
-        "/api/v1/sessions", json={"title": "Test", "break_duration": -1}
-    )
+    response = client.post("/api/v1/sessions", json={"title": "Test", "break_duration": -1})
     assert response.status_code == 422
 
 
@@ -271,9 +259,7 @@ def test_update_session_remaining_seconds() -> None:
     session_id = create_response.json()["id"]
 
     # Update remaining seconds
-    update_response = client.put(
-        f"/api/v1/sessions/{session_id}", json={"remaining_seconds": 600}
-    )
+    update_response = client.put(f"/api/v1/sessions/{session_id}", json={"remaining_seconds": 600})
     assert update_response.status_code == 200
     assert update_response.json()["remaining_seconds"] == 600
 
@@ -290,21 +276,15 @@ def test_session_workflow() -> None:
     assert create_response.json()["status"] == "running"
 
     # Pause
-    pause_response = client.put(
-        f"/api/v1/sessions/{session_id}", json={"status": "paused"}
-    )
+    pause_response = client.put(f"/api/v1/sessions/{session_id}", json={"status": "paused"})
     assert pause_response.json()["status"] == "paused"
 
     # Resume
-    resume_response = client.put(
-        f"/api/v1/sessions/{session_id}", json={"status": "running"}
-    )
+    resume_response = client.put(f"/api/v1/sessions/{session_id}", json={"status": "running"})
     assert resume_response.json()["status"] == "running"
 
     # Complete (manually)
-    complete_response = client.put(
-        f"/api/v1/sessions/{session_id}", json={"status": "completed"}
-    )
+    complete_response = client.put(f"/api/v1/sessions/{session_id}", json={"status": "completed"})
     assert complete_response.json()["status"] == "completed"
 
 

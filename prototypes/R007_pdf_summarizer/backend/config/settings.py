@@ -1,6 +1,7 @@
 """
 Configuration settings for PDF Summarizer API.
 """
+
 from pydantic_settings import BaseSettings
 
 

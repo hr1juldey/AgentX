@@ -1,4 +1,5 @@
 """API route handlers."""
+
 from typing import List
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -25,7 +26,7 @@ security = HTTPBearer()
 
 # Authentication dependency
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> UserResponse:
     """
     Get the currently authenticated user from JWT token.
@@ -68,7 +69,9 @@ async def get_master_password() -> str:
 
 
 # Auth Routes
-@router.post("/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(user_data: UserCreate):
     """
     Register a new user.
@@ -115,11 +118,17 @@ async def list_passwords(
     List all password entries for the current user.
     Passwords are hidden by default.
     """
-    entries = PasswordService.list_entries(current_user.id, master_password, include_passwords=False)
+    entries = PasswordService.list_entries(
+        current_user.id, master_password, include_passwords=False
+    )
     return entries
 
 
-@router.post("/passwords", response_model=PasswordEntryResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/passwords",
+    response_model=PasswordEntryResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_password(
     entry_data: PasswordEntryCreate,
     current_user: UserResponse = Depends(get_current_user),
@@ -130,7 +139,9 @@ async def create_password(
     The password will be encrypted before storage.
     """
     try:
-        entry = PasswordService.create_entry(current_user.id, entry_data, master_password)
+        entry = PasswordService.create_entry(
+            current_user.id, entry_data, master_password
+        )
         return entry
     except ValueError as e:
         raise HTTPException(
@@ -169,7 +180,9 @@ async def update_password(
     """
     Update a password entry.
     """
-    entry = PasswordService.update_entry(entry_id, current_user.id, entry_data, master_password)
+    entry = PasswordService.update_entry(
+        entry_id, current_user.id, entry_data, master_password
+    )
 
     if not entry:
         raise HTTPException(

@@ -1,4 +1,5 @@
 """Main application entry point."""
+
 import logging
 
 import uvicorn
@@ -56,6 +57,7 @@ async def root() -> dict:
 async def health_check() -> dict:
     """Health check endpoint."""
     from services.service import voice_memo_service
+
     health = await voice_memo_service.check_health()
     return {
         "status": "healthy",

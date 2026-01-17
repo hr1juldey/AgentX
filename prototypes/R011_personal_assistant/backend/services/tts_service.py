@@ -1,4 +1,5 @@
 """Text-to-Speech service using Silero TTS."""
+
 import io
 import logging
 
@@ -13,8 +14,8 @@ class TTSService:
 
     def __init__(self):
         """Initialize TTS service with GPU/CPU detection."""
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        if self.device.type == 'cuda':
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if self.device.type == "cuda":
             logger.info(f"TTS using GPU: {torch.cuda.get_device_name()}")
         else:
             logger.info("TTS using CPU")
@@ -25,10 +26,7 @@ class TTSService:
     def _initialize_model(self):
         """Initialize Silero TTS model."""
         try:
-            self.tts_model, self.tts_example_text = silero_tts(
-                language='en',
-                speaker='v3_en'
-            )
+            self.tts_model, self.tts_example_text = silero_tts(language="en", speaker="v3_en")
             self.tts_model.to(self.device)
             logger.info("Silero TTS model loaded (speaker: v3_en)")
 
@@ -52,14 +50,10 @@ class TTSService:
 
         try:
             # Generate audio
-            audio = self.tts_model.apply_tts(
-                text=text,
-                speaker='en_0',
-                sample_rate=target_rate
-            )
+            audio = self.tts_model.apply_tts(text=text, speaker="en_0", sample_rate=target_rate)
 
             # Validate audio
-            if not hasattr(audio, 'shape'):
+            if not hasattr(audio, "shape"):
                 raise ValueError(f"Generated audio is not a tensor, got {type(audio)}")
 
             expected_samples_per_char = target_rate * 0.1
@@ -73,12 +67,9 @@ class TTSService:
 
             # Save to WAV
             import scipy.io.wavfile as wavfile
+
             audio_buffer = io.BytesIO()
-            wavfile.write(
-                audio_buffer,
-                target_rate,
-                audio.cpu().numpy()
-            )
+            wavfile.write(audio_buffer, target_rate, audio.cpu().numpy())
             audio_buffer.seek(0)
 
             audio_bytes = audio_buffer.read()

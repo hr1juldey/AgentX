@@ -1,6 +1,7 @@
 """
 API routes for PDF Summarizer.
 """
+
 import logging
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -24,7 +25,7 @@ router = APIRouter(tags=["Documents"])
     response_model=DocumentResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Upload a PDF document",
-    description="Upload a PDF file for processing and summarization"
+    description="Upload a PDF file for processing and summarization",
 )
 async def upload_document(file: UploadFile = File(...)):
     """
@@ -39,8 +40,7 @@ async def upload_document(file: UploadFile = File(...)):
 
         # Upload document
         document = await pdf_service.upload_document(
-            filename=file.filename,
-            content=content
+            filename=file.filename, content=content
         )
 
         return DocumentResponse(
@@ -51,20 +51,17 @@ async def upload_document(file: UploadFile = File(...)):
             page_count=document.page_count,
             word_count=document.word_count,
             file_path=document.file_path,
-            error_message=document.error_message
+            error_message=document.error_message,
         )
 
     except ValueError as e:
         logger.error(f"Validation error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         logger.error(f"Error uploading document: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload document: {str(e)}"
+            detail=f"Failed to upload document: {str(e)}",
         )
 
 
@@ -72,7 +69,7 @@ async def upload_document(file: UploadFile = File(...)):
     "/documents",
     response_model=DocumentListResponse,
     summary="List all documents",
-    description="Get a list of all uploaded documents"
+    description="Get a list of all uploaded documents",
 )
 async def list_documents():
     """
@@ -93,18 +90,18 @@ async def list_documents():
                     page_count=doc.page_count,
                     word_count=doc.word_count,
                     file_path=doc.file_path,
-                    error_message=doc.error_message
+                    error_message=doc.error_message,
                 )
                 for doc in documents
             ],
-            total=len(documents)
+            total=len(documents),
         )
 
     except Exception as e:
         logger.error(f"Error listing documents: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to list documents: {str(e)}"
+            detail=f"Failed to list documents: {str(e)}",
         )
 
 
@@ -112,7 +109,7 @@ async def list_documents():
     "/documents/{document_id}",
     response_model=DocumentResponse,
     summary="Get document details",
-    description="Get detailed information about a specific document"
+    description="Get detailed information about a specific document",
 )
 async def get_document(document_id: int):
     """
@@ -127,7 +124,7 @@ async def get_document(document_id: int):
         if not document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Document {document_id} not found"
+                detail=f"Document {document_id} not found",
             )
 
         return DocumentResponse(
@@ -138,7 +135,7 @@ async def get_document(document_id: int):
             page_count=document.page_count,
             word_count=document.word_count,
             file_path=document.file_path,
-            error_message=document.error_message
+            error_message=document.error_message,
         )
 
     except HTTPException:
@@ -147,16 +144,18 @@ async def get_document(document_id: int):
         logger.error(f"Error getting document: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get document: {str(e)}"
+            detail=f"Failed to get document: {str(e)}",
         )
 
 
 @router.post(
     "/documents/{document_id}/summarize",
     summary="Generate document summary",
-    description="Generate a summary for a document (streaming response)"
+    description="Generate a summary for a document (streaming response)",
 )
-async def generate_summary(document_id: int, summary_type: SummaryType = SummaryType.MEDIUM):
+async def generate_summary(
+    document_id: int, summary_type: SummaryType = SummaryType.MEDIUM
+):
     """
     Generate a summary for a document.
 
@@ -170,19 +169,21 @@ async def generate_summary(document_id: int, summary_type: SummaryType = Summary
         if not document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Document {document_id} not found"
+                detail=f"Document {document_id} not found",
             )
 
         if document.status != DocumentStatus.READY:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Document {document_id} is not ready for summarization. Status: {document.status}"
+                detail=f"Document {document_id} is not ready for summarization. Status: {document.status}",
             )
 
         async def generate():
             """Generate and stream the summary."""
             try:
-                async for chunk in pdf_service.generate_summary(document_id, summary_type):
+                async for chunk in pdf_service.generate_summary(
+                    document_id, summary_type
+                ):
                     yield chunk
             except Exception as e:
                 logger.error(f"Error generating summary: {e}")
@@ -191,10 +192,7 @@ async def generate_summary(document_id: int, summary_type: SummaryType = Summary
         return StreamingResponse(
             generate(),
             media_type="text/plain",
-            headers={
-                "Cache-Control": "no-cache",
-                "X-Accel-Buffering": "no"
-            }
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
     except HTTPException:
@@ -203,7 +201,7 @@ async def generate_summary(document_id: int, summary_type: SummaryType = Summary
         logger.error(f"Error in summarize endpoint: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate summary: {str(e)}"
+            detail=f"Failed to generate summary: {str(e)}",
         )
 
 
@@ -211,7 +209,7 @@ async def generate_summary(document_id: int, summary_type: SummaryType = Summary
     "/documents/{document_id}/summary",
     response_model=SummaryResponse,
     summary="Get document summary",
-    description="Get the latest generated summary for a document"
+    description="Get the latest generated summary for a document",
 )
 async def get_summary(document_id: int):
     """
@@ -226,7 +224,7 @@ async def get_summary(document_id: int):
         if not document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Document {document_id} not found"
+                detail=f"Document {document_id} not found",
             )
 
         summary = pdf_service.get_summary(document_id)
@@ -234,7 +232,7 @@ async def get_summary(document_id: int):
         if not summary:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No summary found for document {document_id}"
+                detail=f"No summary found for document {document_id}",
             )
 
         return SummaryResponse(
@@ -244,7 +242,7 @@ async def get_summary(document_id: int):
             summary_text=summary.summary_text,
             word_count=summary.word_count,
             tokens_used=summary.tokens_used,
-            created_at=summary.created_at
+            created_at=summary.created_at,
         )
 
     except HTTPException:
@@ -253,7 +251,7 @@ async def get_summary(document_id: int):
         logger.error(f"Error getting summary: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get summary: {str(e)}"
+            detail=f"Failed to get summary: {str(e)}",
         )
 
 
@@ -261,7 +259,7 @@ async def get_summary(document_id: int):
     "/documents/{document_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a document",
-    description="Delete a document and its associated data"
+    description="Delete a document and its associated data",
 )
 async def delete_document(document_id: int):
     """
@@ -276,7 +274,7 @@ async def delete_document(document_id: int):
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Document {document_id} not found"
+                detail=f"Document {document_id} not found",
             )
 
         return None
@@ -287,5 +285,5 @@ async def delete_document(document_id: int):
         logger.error(f"Error deleting document: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete document: {str(e)}"
+            detail=f"Failed to delete document: {str(e)}",
         )

@@ -1,4 +1,5 @@
 """Main application entry point."""
+
 import logging
 
 import uvicorn
@@ -31,7 +32,12 @@ app.include_router(router)
 
 @app.get("/")
 async def root():
-    return {"service": settings.app_name, "version": settings.version, "status": "running", "endpoints": {"/docs": "API docs", "/health": "Health check"}}
+    return {
+        "service": settings.app_name,
+        "version": settings.version,
+        "status": "running",
+        "endpoints": {"/docs": "API docs", "/health": "Health check"},
+    }
 
 
 @app.get("/health")

@@ -1,10 +1,11 @@
 """Personal Assistant service with DSPy ReAct + streaming."""
+
+import asyncio
 import logging
 from datetime import UTC, datetime
 from typing import AsyncIterator, Dict, List
 
 import dspy
-import dspy.streaming
 
 from config.settings import settings
 
@@ -41,35 +42,25 @@ class AssistantService:
         # Configure DSPy with Ollama (built-in support)
         logger.info(f"Initializing DSPy with model: {settings.llm_model}")
         self.lm = dspy.LM(
-            f"ollama_chat/{settings.llm_model}",
-            api_base=settings.llm_api_url,
-            api_key=""
+            f"ollama_chat/{settings.llm_model}", api_base=settings.llm_api_url, api_key=""
         )
         dspy.configure(lm=self.lm)
 
         # Initialize STT/TTS services
         from .stt_service import stt_service
         from .tts_service import tts_service
+
         self.stt = stt_service
         self.tts = tts_service
 
-        # Initialize ReAct with streaming
-        self.react = dspy.ReAct("question->answer", tools=[
-            dspy.Tool(calculator, name="calculator"),
-            dspy.Tool(search, name="search"),
-            dspy.Tool(weather, name="weather"),
-        ])
-
-        # Wrap with streaming
-        stream_listeners = [
-            dspy.streaming.StreamListener(
-                signature_field_name="next_thought",
-                allow_reuse=True
-            )
-        ]
-        self.stream_react = dspy.streamify(
-            self.react,
-            stream_listeners=stream_listeners
+        # Initialize ReAct
+        self.react = dspy.ReAct(
+            "question->answer",
+            tools=[
+                dspy.Tool(calculator, name="calculator"),
+                dspy.Tool(search, name="search"),
+                dspy.Tool(weather, name="weather"),
+            ],
         )
 
         logger.info(f"Personal Assistant initialized with model: {settings.llm_model}")
@@ -81,15 +72,15 @@ class AssistantService:
         Yields: Text chunks as they arrive
         """
         try:
-            output_stream = self.stream_react(question=message)
+            # Run DSPy in thread pool to avoid async issues
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, lambda: self.react(question=message))
 
-            for chunk in output_stream:
-                if isinstance(chunk, dspy.streaming.StreamResponse):
-                    yield chunk.chunk
-                elif isinstance(chunk, dspy.Prediction):
-                    if hasattr(chunk, 'answer'):
-                        yield chunk.answer
-                    break
+            # Yield the answer
+            if hasattr(result, "answer"):
+                yield result.answer
+            else:
+                yield str(result)
 
         except Exception as e:
             logger.error(f"DSPy streaming error: {e}")
@@ -97,8 +88,8 @@ class AssistantService:
 
     async def process_message(self, request) -> Dict:
         """Process a chat message (non-streaming for REST API)."""
-        conversation_id = getattr(request, 'conversation_id', None) or "default"
-        message = getattr(request, 'message', '')
+        conversation_id = getattr(request, "conversation_id", None) or "default"
+        message = getattr(request, "message", "")
 
         # Collect full response
         response_text = ""
@@ -109,22 +100,19 @@ class AssistantService:
         if conversation_id not in self._conversations:
             self._conversations[conversation_id] = []
 
-        self._conversations[conversation_id].append({
-            "role": "user",
-            "content": message,
-            "timestamp": datetime.now(UTC).isoformat()
-        })
+        self._conversations[conversation_id].append(
+            {"role": "user", "content": message, "timestamp": datetime.now(UTC).isoformat()}
+        )
 
-        self._conversations[conversation_id].append({
-            "role": "assistant",
-            "content": response_text,
-            "timestamp": datetime.now(UTC).isoformat()
-        })
+        self._conversations[conversation_id].append(
+            {
+                "role": "assistant",
+                "content": response_text,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        )
 
-        return {
-            "response": response_text,
-            "conversation_id": conversation_id
-        }
+        return {"response": response_text, "conversation_id": conversation_id}
 
     def get_conversation(self, conversation_id: str) -> List[Dict]:
         """Get conversation history."""

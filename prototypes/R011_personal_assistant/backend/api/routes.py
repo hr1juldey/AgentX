@@ -1,4 +1,5 @@
 """API routes for Personal Assistant with WebSocket voice support."""
+
 import base64
 import logging
 import uuid
@@ -41,7 +42,9 @@ async def chat(request: ChatRequest):
 async def list_tools():
     """List available tools for the ReAct agent."""
     tools = [
-        ToolSchema(name="calculator", description="Calculate mathematical expressions", parameters={}),
+        ToolSchema(
+            name="calculator", description="Calculate mathematical expressions", parameters={}
+        ),
         ToolSchema(name="search", description="Search for information", parameters={}),
         ToolSchema(name="weather", description="Get weather information", parameters={}),
     ]
@@ -54,8 +57,8 @@ async def health():
     return {
         "status": "healthy",
         "agent_ready": True,
-        "stt_available": hasattr(assistant_service, 'stt'),
-        "tts_available": hasattr(assistant_service, 'tts'),
+        "stt_available": hasattr(assistant_service, "stt"),
+        "tts_available": hasattr(assistant_service, "tts"),
     }
 
 
@@ -110,10 +113,7 @@ async def websocket_voice(websocket: WebSocket):
     session_id = str(uuid.uuid4())
     history = []
 
-    await websocket.send_json({
-        "type": "connected",
-        "session_id": session_id
-    })
+    await websocket.send_json({"type": "connected", "session_id": session_id})
 
     logger.info(f"WebSocket connected: {session_id}")
 
@@ -133,10 +133,7 @@ async def websocket_voice(websocket: WebSocket):
 
                 history.append({"role": "user", "content": text})
 
-                await websocket.send_json({
-                    "type": "transcription",
-                    "text": text
-                })
+                await websocket.send_json({"type": "transcription", "text": text})
 
                 # Stream response
                 await websocket.send_json({"type": "thinking"})
@@ -145,20 +142,16 @@ async def websocket_voice(websocket: WebSocket):
                 response_text = ""
                 async for chunk in assistant_service.chat_stream(text, history):
                     response_text += chunk
-                    await websocket.send_json({
-                        "type": "response_chunk",
-                        "text": chunk
-                    })
+                    await websocket.send_json({"type": "response_chunk", "text": chunk})
 
                 history.append({"role": "assistant", "content": response_text})
 
                 # TTS
                 audio = await assistant_service.tts.synthesize(response_text)
 
-                await websocket.send_json({
-                    "type": "audio",
-                    "data": base64.b64encode(audio).decode()
-                })
+                await websocket.send_json(
+                    {"type": "audio", "data": base64.b64encode(audio).decode()}
+                )
 
                 await websocket.send_json({"type": "listening"})
 

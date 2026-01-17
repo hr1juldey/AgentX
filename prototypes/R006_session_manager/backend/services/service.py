@@ -1,4 +1,5 @@
 """Session service with Redis storage and fallback to in-memory."""
+
 import json
 import logging
 import secrets
@@ -336,7 +337,9 @@ class SessionService:
             return {
                 "storage_type": "in-memory",
                 "warning": "Redis unavailable - using in-memory fallback (not recommended for production)",
-                "active_sessions": len([k for k in self.fallback_storage.keys() if k.startswith("session:")]),
+                "active_sessions": len(
+                    [k for k in self.fallback_storage.keys() if k.startswith("session:")]
+                ),
             }
         else:
             try:
