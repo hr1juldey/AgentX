@@ -35,7 +35,9 @@ def searxng_search(query: str) -> str:
     logger.info(f"SearXNG search called with: {query}")
     try:
         response = requests.get(
-            "http://localhost:8080/search", params={"q": query, "format": "json"}, timeout=10
+            "http://localhost:8080/search",
+            params={"q": query, "format": "json"},
+            timeout=10,
         )
         response.raise_for_status()
         data = response.json()
@@ -66,7 +68,7 @@ def tavily_search(query: str) -> str:
     """Search using Tavily API."""
     try:
         # Use Tavily via MCP
-        from mcp__tavily__tavily_search import tavily_search as mcp_tavily
+        from mcp__tavily__tavily_search import tavily_search as mcp_tavily  # type: ignore[import]
 
         results = mcp_tavily(query=query, max_results=3)
 
@@ -99,7 +101,9 @@ class AssistantService:
         # Configure DSPy with Ollama (built-in support)
         logger.info(f"Initializing DSPy with model: {settings.llm_model}")
         self.lm = dspy.LM(
-            f"ollama_chat/{settings.llm_model}", api_base=settings.llm_api_url, api_key=""
+            f"ollama_chat/{settings.llm_model}",
+            api_base=settings.llm_api_url,
+            api_key="",
         )
         dspy.configure(lm=self.lm)
 
@@ -112,7 +116,7 @@ class AssistantService:
 
         # Initialize ReAct with tools
         self.react = dspy.ReAct(
-            "question->answer",
+            "question->answer",  # type: ignore[arg-type]
             tools=[
                 dspy.Tool(calculator, name="calculator"),
                 dspy.Tool(searxng_search, name="searxng_search"),
@@ -123,7 +127,9 @@ class AssistantService:
         logger.info(f"Personal Assistant initialized with model: {settings.llm_model}")
         logger.info("Tools available: calculator, searxng_search, tavily_search")
 
-    async def chat_stream(self, message: str, history: List[Dict]) -> AsyncIterator[str]:
+    async def chat_stream(
+        self, message: str, history: List[Dict]
+    ) -> AsyncIterator[str]:
         """
         Stream response from DSPy ReAct.
 
@@ -184,7 +190,11 @@ class AssistantService:
             self._conversations[conversation_id] = []
 
         self._conversations[conversation_id].append(
-            {"role": "user", "content": message, "timestamp": datetime.now(UTC).isoformat()}
+            {
+                "role": "user",
+                "content": message,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
         )
 
         self._conversations[conversation_id].append(

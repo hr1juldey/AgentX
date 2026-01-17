@@ -60,7 +60,9 @@ class NoteService:
         """
         return sorted(self._notes.values(), key=lambda n: n.created_at, reverse=True)
 
-    async def update(self, note_id: int, note_update: NoteUpdate) -> NoteResponse | None:
+    async def update(
+        self, note_id: int, note_update: NoteUpdate
+    ) -> NoteResponse | None:
         """Update an existing note.
 
         Args:
@@ -78,8 +80,12 @@ class NoteService:
         # Update fields if provided
         updated_note = NoteResponse(
             id=existing.id,
-            title=note_update.title if note_update.title is not None else existing.title,
-            content=note_update.content if note_update.content is not None else existing.content,
+            title=note_update.title
+            if note_update.title is not None
+            else existing.title,
+            content=note_update.content
+            if note_update.content is not None
+            else existing.content,
             created_at=existing.created_at,
             updated_at=datetime.now(UTC),
         )

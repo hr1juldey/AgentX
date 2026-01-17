@@ -87,12 +87,16 @@ class TodoUpdate(BaseModel):
         max_length=200,
         examples=["Updated: Complete project report"],
     )
-    description: str | None = Field(None, description="Updated task description", max_length=1000)
+    description: str | None = Field(
+        None, description="Updated task description", max_length=1000
+    )
     due_date: datetime | None = Field(
         None, description="Updated due date", examples=["2024-01-21T17:00:00Z"]
     )
     priority: Priority | None = Field(
-        None, description="Updated priority level", examples=[Priority.LOW, Priority.HIGH]
+        None,
+        description="Updated priority level",
+        examples=[Priority.LOW, Priority.HIGH],
     )
     status: Status | None = Field(
         None, description="Updated status", examples=[Status.IN_PROGRESS, Status.DONE]
@@ -115,16 +119,24 @@ class TodoResponse(BaseModel):
     """
 
     id: int = Field(..., description="Unique todo identifier", examples=[1, 42, 100])
-    title: str = Field(..., description="Task title", examples=["Complete project report"])
+    title: str = Field(
+        ..., description="Task title", examples=["Complete project report"]
+    )
     description: str | None = Field(..., description="Task description or null")
     due_date: datetime | None = Field(..., description="Due date or null")
-    priority: Priority = Field(..., description="Priority level", examples=[Priority.HIGH])
-    status: Status = Field(..., description="Current status", examples=[Status.IN_PROGRESS])
+    priority: Priority = Field(
+        ..., description="Priority level", examples=[Priority.HIGH]
+    )
+    status: Status = Field(
+        ..., description="Current status", examples=[Status.IN_PROGRESS]
+    )
     created_at: datetime = Field(
         ..., description="When the todo was created", examples=["2024-01-15T10:00:00Z"]
     )
     updated_at: datetime = Field(
-        ..., description="When the todo was last updated", examples=["2024-01-15T14:30:00Z"]
+        ...,
+        description="When the todo was last updated",
+        examples=["2024-01-15T14:30:00Z"],
     )
 
     model_config = {
@@ -157,7 +169,9 @@ class TodoListResponse(BaseModel):
 class ErrorResponse(BaseModel):
     """Error response schema."""
 
-    error: str = Field(..., description="Error type", examples=["ValidationError", "NotFound"])
+    error: str = Field(
+        ..., description="Error type", examples=["ValidationError", "NotFound"]
+    )
     message: str = Field(
         ...,
         description="Human-readable error message",

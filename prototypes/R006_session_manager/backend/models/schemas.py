@@ -87,17 +87,27 @@ class SessionResponse(SessionBase):
         examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
     session_token: str = Field(
-        ..., description="Session token for authentication", examples=["sess_abc123xyz456"]
+        ...,
+        description="Session token for authentication",
+        examples=["sess_abc123xyz456"],
     )
-    user_id: str = Field(..., description="User ID who owns this session", examples=["user_123"])
+    user_id: str = Field(
+        ..., description="User ID who owns this session", examples=["user_123"]
+    )
     created_at: datetime = Field(
-        ..., description="When the session was created", examples=["2024-01-15T10:00:00Z"]
+        ...,
+        description="When the session was created",
+        examples=["2024-01-15T10:00:00Z"],
     )
     last_active: datetime = Field(
-        ..., description="When the session was last active", examples=["2024-01-15T14:30:00Z"]
+        ...,
+        description="When the session was last active",
+        examples=["2024-01-15T14:30:00Z"],
     )
     is_active: bool = Field(
-        ..., description="Whether the session is currently active", examples=[True, False]
+        ...,
+        description="Whether the session is currently active",
+        examples=[True, False],
     )
 
     model_config = {"from_attributes": True}
@@ -122,7 +132,9 @@ class ErrorResponse(BaseModel):
     """Schema for error responses."""
 
     error: str = Field(
-        ..., description="Error type", examples=["ValidationError", "NotFound", "Unauthorized"]
+        ...,
+        description="Error type",
+        examples=["ValidationError", "NotFound", "Unauthorized"],
     )
     detail: Optional[str] = Field(None, description="Additional error details")
     timestamp: datetime = Field(
@@ -140,4 +152,6 @@ class SessionListResponse(BaseModel):
         default_factory=list, description="List of sessions (may be empty)"
     )
     total: int = Field(..., description="Total count of sessions", examples=[5])
-    active: int = Field(..., description="Count of currently active sessions", examples=[3])
+    active: int = Field(
+        ..., description="Count of currently active sessions", examples=[3]
+    )

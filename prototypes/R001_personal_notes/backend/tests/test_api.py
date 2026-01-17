@@ -80,7 +80,9 @@ def test_update_note() -> None:
     )
     note_id = create_response.json()["id"]
     # Update it
-    update_response = client.put(f"/api/v1/notes/{note_id}", json={"title": "Updated Title"})
+    update_response = client.put(
+        f"/api/v1/notes/{note_id}", json={"title": "Updated Title"}
+    )
     assert update_response.status_code == 200
     assert update_response.json()["title"] == "Updated Title"
     assert update_response.json()["content"] == "Original content"

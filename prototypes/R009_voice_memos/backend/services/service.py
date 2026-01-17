@@ -13,7 +13,11 @@ from silero import silero_tts
 from silero_vad import load_silero_vad
 
 from config.settings import settings
-from models.schemas import TranscriptionRequest, TranscriptionResponse, TTSSynthesisRequest
+from models.schemas import (
+    TranscriptionRequest,
+    TranscriptionResponse,
+    TTSSynthesisRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +39,10 @@ class VoiceMemoService:
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
         # Device detection: GPU first, CPU fallback
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if self.device.type == "cuda":
+        use_cuda = torch.cuda.is_available()
+        device_str = "cuda" if use_cuda else "cpu"
+        self._torch_device = torch.device(device_str)  # type: ignore[read-only]
+        if use_cuda:
             logger.info(f"Using GPU: {torch.cuda.get_device_name()}")
         else:
             logger.info("Using CPU")
@@ -55,18 +61,18 @@ class VoiceMemoService:
                 repo_or_dir="snakers4/silero-models",
                 model="silero_stt",
                 language="en",
-                device=self.device,
+                device=self._torch_device,
                 trust_repo=True,  # Suppress download prompt
             )
 
             # Silero STT returns: (model, decoder, tuple_of_functions)
             # The tuple contains: (read_batch, prepare_model_input, pre_process, post_process)
-            self.stt_model = stt_result[0]
-            self.stt_decoder = stt_result[1]
+            self.stt_model = stt_result[0]  # type: ignore[index]
+            self.stt_decoder = stt_result[1]  # type: ignore[index]
 
             # Store utils functions directly
             # Tuple order: read_batch, split_into_batches, read_audio, prepare_model_input
-            utils_tuple = stt_result[2]
+            utils_tuple = stt_result[2]  # type: ignore[index]
             self._stt_read_batch = utils_tuple[0]
             self._stt_prepare_model_input = utils_tuple[3]
 
@@ -74,10 +80,17 @@ class VoiceMemoService:
 
             # TTS Model (Text-to-Speech) using silero package
             # Available speakers for English: v3_en, lj_v2, lj_8khz, lj_16khz
-            self.tts_model, self.tts_example_text = silero_tts(
-                language="en", speaker=settings.tts_speaker
-            )
-            self.tts_model.to(self.device)
+            tts_result = silero_tts(language="en", speaker=settings.tts_speaker)
+            # Handle variable-length return from silero_tts
+            if isinstance(tts_result, tuple) and len(tts_result) >= 2:
+                self.tts_model = tts_result[0]
+                self.tts_example_text = tts_result[1]
+            else:
+                self.tts_model = tts_result
+                self.tts_example_text = "Hello world"  # Default example text
+            # Ensure the model is on the correct device
+            if hasattr(self.tts_model, "to"):
+                self.tts_model.to(self._torch_device)
             self.tts_speaker = settings.tts_speaker
             logger.info(f"TTS model loaded (speaker: {self.tts_speaker})")
 
@@ -93,7 +106,9 @@ class VoiceMemoService:
     # Silero STT expects 16kHz mono audio
     STT_SAMPLE_RATE = 16000
 
-    async def transcribe_audio(self, request: TranscriptionRequest) -> TranscriptionResponse:
+    async def transcribe_audio(
+        self, request: TranscriptionRequest
+    ) -> TranscriptionResponse:
         """
         Transcribe audio file to text using Silero STT.
 
@@ -101,6 +116,7 @@ class VoiceMemoService:
         - Input: Any WAV format (converts to 16kHz mono if needed)
         - STT: Silero expects 16kHz mono
         """
+        temp_path = None
         try:
             # Decode base64 audio
             audio_bytes = base64.b64decode(request.audio_data)
@@ -135,7 +151,9 @@ class VoiceMemoService:
                         audio_tensor = audio_tensor.unsqueeze(0)
 
                     # Resample using torchaudio
-                    resampler = _get_resampler(sr, self.STT_SAMPLE_RATE, dtype=audio_tensor.dtype)
+                    resampler = _get_resampler(
+                        sr, self.STT_SAMPLE_RATE, dtype=audio_tensor.dtype
+                    )
                     audio_tensor = resampler(audio_tensor)
 
                     # Convert back to numpy
@@ -146,7 +164,9 @@ class VoiceMemoService:
                 # If float, scale to int16 range
                 if audio_data.dtype == np.float32 or audio_data.dtype == np.float64:
                     # Float audio is in [-1, 1], scale to int16 range [-32768, 32767]
-                    audio_data = np.clip(audio_data, -1.0, 1.0)  # Clip to prevent overflow
+                    audio_data = np.clip(
+                        audio_data, -1.0, 1.0
+                    )  # Clip to prevent overflow
                     audio_data = (audio_data * 32768).astype(np.int16)
                 elif audio_data.dtype != np.int16:
                     # Convert other types to int16
@@ -168,7 +188,9 @@ class VoiceMemoService:
                 )
 
                 # FAIL FAST: Assert Silero requirements
-                assert validate_sr == 16000, f"Invalid sample rate: {validate_sr}, expected 16000"
+                assert validate_sr == 16000, (
+                    f"Invalid sample rate: {validate_sr}, expected 16000"
+                )
                 assert validate_audio.dtype == np.int16, (
                     f"Invalid dtype: {validate_audio.dtype}, expected int16"
                 )
@@ -187,7 +209,7 @@ class VoiceMemoService:
 
             # Prepare audio for STT
             input_batch = self._stt_prepare_model_input(
-                self._stt_read_batch([temp_path]), device=self.device
+                self._stt_read_batch([temp_path]), device=self._torch_device
             )
 
             # Perform transcription
@@ -198,21 +220,27 @@ class VoiceMemoService:
             text = self.stt_decoder(output[0].cpu())
 
             # Clean up temp file
-            Path(temp_path).unlink(missing_ok=True)
+            if temp_path is not None:
+                Path(temp_path).unlink(missing_ok=True)
 
             logger.info(f"Transcription successful: {text}")
 
-            return TranscriptionResponse(text=text, confidence=0.95, language=request.language)
+            return TranscriptionResponse(
+                text=text, confidence=0.95, language=request.language
+            )
 
         except Exception as e:
             logger.error(f"Transcription error: {e}")
             # Clean up temp file if it exists
-            try:
-                Path(temp_path).unlink(missing_ok=True)
-            except OSError:
-                pass
+            if temp_path is not None:
+                try:
+                    Path(temp_path).unlink(missing_ok=True)
+                except OSError:
+                    pass
             return TranscriptionResponse(
-                text="[Transcription failed - see logs]", confidence=0.0, language=request.language
+                text="[Transcription failed - see logs]",
+                confidence=0.0,
+                language=request.language,
             )
 
     # TTS Sample Rate Configuration (SINGLE SOURCE OF TRUTH)
@@ -287,7 +315,9 @@ class VoiceMemoService:
             # STEP 4: Verify the WAV file
             audio_bytes = audio_buffer.read()
             if len(audio_bytes) < 100:
-                raise ValueError("Generated WAV file is too small, header may be corrupted")
+                raise ValueError(
+                    "Generated WAV file is too small, header may be corrupted"
+                )
 
             logger.info(
                 f"TTS synthesis successful: {request.text[:50]}... (rate={target_rate}Hz, samples={len(audio)})"
@@ -299,7 +329,9 @@ class VoiceMemoService:
             logger.error(f"TTS synthesis error: {e}")
             raise
 
-    async def save_audio_file(self, audio_data: bytes, filename: Optional[str] = None) -> Path:
+    async def save_audio_file(
+        self, audio_data: bytes, filename: Optional[str] = None
+    ) -> Path:
         """Save audio data to file."""
         if filename is None:
             filename = f"{uuid.uuid4()}.wav"
@@ -315,7 +347,10 @@ class VoiceMemoService:
     def is_speech(self, audio_chunk: np.ndarray) -> bool:
         """Check if audio chunk contains speech using VAD."""
         try:
-            speech_prob = self.vad_model(torch.tensor(audio_chunk).float().to(self.device)).item()
+            # VAD model requires sample rate parameter (16000 for speech)
+            speech_prob = self.vad_model(
+                torch.tensor(audio_chunk).float().to(self._torch_device), sr=16000
+            ).item()
             return speech_prob > 0.5
         except (OSError, RuntimeError, ValueError):
             return False
@@ -336,9 +371,13 @@ class VoiceMemoService:
             "stt_available": True,
             "tts_available": True,
             "vad_available": True,
-            "device": self.device.type,
+            "device": self._torch_device.type,
             "models_loaded": all(
-                [hasattr(self, "stt_model"), hasattr(self, "tts_model"), hasattr(self, "vad_model")]
+                [
+                    hasattr(self, "stt_model"),
+                    hasattr(self, "tts_model"),
+                    hasattr(self, "vad_model"),
+                ]
             ),
         }
 

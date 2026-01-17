@@ -1,83 +1,9 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "agentx-session-manager"
+name = "prototype-session-manager"
 version = "0.1.0"
-description = "Session Manager with Redis storage for multi-device login management"
-readme = "README.md"
-requires-python = ">=3.11"
-authors = [
-    {name = "AgentX Team"}
-]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Framework :: FastAPI",
-    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
-]
-dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
-    "pydantic>=2.10.0",
-    "pydantic-settings>=2.6.0",
-    "redis>=5.2.0",
-]
+requires-python = ">=3.12"
+dependencies = []
 
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.24.0",
-    "httpx>=0.28.0",
-    "black>=24.0.0",
-    "ruff>=0.8.0",
-]
-
-[project.urls]
-Homepage = "https://github.com/agentx/session-manager"
-Documentation = "https://github.com/agentx/session-manager/docs"
-Repository = "https://github.com/agentx/session-manager"
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["config*", "models*", "services*", "api*"]
-
-[tool.black]
-line-length = 100
-target-version = ["py311", "py312"]
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-    | \.venv
-    | \.eggs
-    | \.tox
-    | build
-    | dist
-    | __pycache__
-)/
-'''
-
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "N", "W"]
-ignore = ["E501"]
-
-[tool.pytest.ini_options]
-minversion = "8.0"
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-asyncio_mode = "auto"
-
-[tool.coverage.run]
-source = ["."]
-omit = ["tests/*", "*/__pycache__/*"]
+[tool.pyrefly]
+project-includes = ["**/*.py"]
+venv-path = "/home/riju279/Documents/Code/XRIG/AgentX/.venv"

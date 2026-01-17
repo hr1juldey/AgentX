@@ -17,11 +17,15 @@ class MetricData(BaseModel):
     """
 
     timestamp: datetime = Field(
-        ..., description="When the metric was recorded", examples=["2024-01-15T10:00:00Z"]
+        ...,
+        description="When the metric was recorded",
+        examples=["2024-01-15T10:00:00Z"],
     )
     value: float = Field(..., description="Metric value", examples=[42.5, 100.0])
     label: Optional[str] = Field(
-        None, description="Optional label for the data point", examples=["Server 1", "Region A"]
+        None,
+        description="Optional label for the data point",
+        examples=["Server 1", "Region A"],
     )
 
 
@@ -43,7 +47,10 @@ class TimeSeriesData(BaseModel):
     model_config = {
         "json_schema_extra": {
             "examples": [
-                {"labels": ["10:00", "11:00", "12:00", "13:00"], "values": [10.5, 15.2, 12.8, 18.3]}
+                {
+                    "labels": ["10:00", "11:00", "12:00", "13:00"],
+                    "values": [10.5, 15.2, 12.8, 18.3],
+                }
             ]
         }
     }
@@ -55,7 +62,9 @@ class DashboardMetrics(BaseModel):
     Key performance indicators for the dashboard.
     """
 
-    total_users: int = Field(..., description="Total registered users", examples=[1000, 5000])
+    total_users: int = Field(
+        ..., description="Total registered users", examples=[1000, 5000]
+    )
     active_sessions: int = Field(
         ..., description="Currently active user sessions", examples=[50, 200]
     )
@@ -63,16 +72,30 @@ class DashboardMetrics(BaseModel):
         ..., description="Total API requests processed", examples=[100000, 500000]
     )
     avg_response_time: float = Field(
-        ..., description="Average API response time in milliseconds", examples=[125.5, 250.0]
+        ...,
+        description="Average API response time in milliseconds",
+        examples=[125.5, 250.0],
     )
     success_rate: float = Field(
-        ..., description="Success rate percentage (0-100)", examples=[99.5], ge=0.0, le=100.0
+        ...,
+        description="Success rate percentage (0-100)",
+        examples=[99.5],
+        ge=0.0,
+        le=100.0,
     )
     cpu_usage: float = Field(
-        ..., description="CPU usage percentage (0-100)", examples=[45.2], ge=0.0, le=100.0
+        ...,
+        description="CPU usage percentage (0-100)",
+        examples=[45.2],
+        ge=0.0,
+        le=100.0,
     )
     memory_usage: float = Field(
-        ..., description="Memory usage percentage (0-100)", examples=[62.8], ge=0.0, le=100.0
+        ...,
+        description="Memory usage percentage (0-100)",
+        examples=[62.8],
+        ge=0.0,
+        le=100.0,
     )
 
     model_config = {
@@ -116,10 +139,14 @@ class MetricsQuery(BaseModel):
     """
 
     start_date: datetime = Field(
-        ..., description="Start of time range (inclusive)", examples=["2024-01-01T00:00:00Z"]
+        ...,
+        description="Start of time range (inclusive)",
+        examples=["2024-01-01T00:00:00Z"],
     )
     end_date: datetime = Field(
-        ..., description="End of time range (inclusive)", examples=["2024-01-31T23:59:59Z"]
+        ...,
+        description="End of time range (inclusive)",
+        examples=["2024-01-31T23:59:59Z"],
     )
     granularity: str = Field(
         default="hour",
@@ -143,8 +170,12 @@ class MetricsQuery(BaseModel):
 class ErrorResponse(BaseModel):
     """Schema for error response."""
 
-    error: str = Field(..., description="Error type", examples=["ValidationError", "QueryError"])
+    error: str = Field(
+        ..., description="Error type", examples=["ValidationError", "QueryError"]
+    )
     message: str = Field(
-        ..., description="Error message", examples=["Invalid date range", "Query too broad"]
+        ...,
+        description="Error message",
+        examples=["Invalid date range", "Query too broad"],
     )
     detail: Optional[str] = Field(None, description="Additional technical details")

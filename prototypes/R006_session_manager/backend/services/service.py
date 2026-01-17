@@ -40,7 +40,9 @@ class SessionService:
             logger.info("✅ Redis connection established successfully")
         except (ConnectionError, RedisError) as e:
             logger.warning(f"⚠️  Redis connection failed: {e}")
-            logger.warning("🔄 Falling back to in-memory storage (not recommended for production)")
+            logger.warning(
+                "🔄 Falling back to in-memory storage (not recommended for production)"
+            )
             self._use_fallback = True
             self.redis_client = None
 
@@ -113,6 +115,8 @@ class SessionService:
                 self.fallback_storage[user_sessions_key].append(session_id)
             logger.debug(f"Created session {session_id} in in-memory storage")
         else:
+            # redis_client is guaranteed to be non-None here
+            assert self.redis_client is not None, "Redis client must be initialized"
             # Store in Redis
             key = self._get_redis_key(session_id)
             self.redis_client.setex(
@@ -146,6 +150,7 @@ class SessionService:
                 return SessionResponse(**session)
             return None
         else:
+            assert self.redis_client is not None, "Redis client must be initialized"
             key = self._get_redis_key(session_id)
             data = self.redis_client.get(key)
             if data:
@@ -181,6 +186,7 @@ class SessionService:
                 if session and session.get("is_active"):
                     sessions.append(SessionResponse(**session))
         else:
+            assert self.redis_client is not None, "Redis client must be initialized"
             user_sessions_key = self._get_user_sessions_key(user_id)
             session_ids = self.redis_client.smembers(user_sessions_key)
             for session_id in session_ids:
@@ -216,6 +222,7 @@ class SessionService:
                 return SessionResponse(**session)
             return None
         else:
+            assert self.redis_client is not None, "Redis client must be initialized"
             key = self._get_redis_key(session_id)
             data = self.redis_client.get(key)
             if data:
@@ -253,6 +260,7 @@ class SessionService:
                 return True
             return False
         else:
+            assert self.redis_client is not None, "Redis client must be initialized"
             key = self._get_redis_key(session_id)
             # Delete session
             result = self.redis_client.delete(key)
@@ -282,6 +290,7 @@ class SessionService:
                     count += 1
             self.fallback_storage[user_sessions_key] = []
         else:
+            assert self.redis_client is not None, "Redis client must be initialized"
             user_sessions_key = self._get_user_sessions_key(user_id)
             session_ids = self.redis_client.smembers(user_sessions_key)
             for session_id in session_ids:
@@ -338,10 +347,15 @@ class SessionService:
                 "storage_type": "in-memory",
                 "warning": "Redis unavailable - using in-memory fallback (not recommended for production)",
                 "active_sessions": len(
-                    [k for k in self.fallback_storage.keys() if k.startswith("session:")]
+                    [
+                        k
+                        for k in self.fallback_storage.keys()
+                        if k.startswith("session:")
+                    ]
                 ),
             }
         else:
+            assert self.redis_client is not None, "Redis client must be initialized"
             try:
                 info = self.redis_client.info()
                 return {

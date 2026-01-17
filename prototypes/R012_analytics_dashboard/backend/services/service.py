@@ -21,7 +21,9 @@ class AnalyticsService:
     def _generate_mock_data(self):
         """Generate mock data for demonstration."""
         self.user_growth = [100 + i * 10 + random.randint(-5, 15) for i in range(30)]
-        self.request_counts = [500 + i * 20 + random.randint(-50, 100) for i in range(30)]
+        self.request_counts = [
+            500 + i * 20 + random.randint(-50, 100) for i in range(30)
+        ]
         self.response_times = [100 + random.randint(-20, 50) for _ in range(100)]
 
     async def get_dashboard_metrics(self) -> DashboardMetrics:
@@ -39,7 +41,8 @@ class AnalyticsService:
     async def get_user_growth_data(self) -> ChartData:
         """Get user growth time series data."""
         labels = [
-            (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(29, -1, -1)
+            (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+            for i in range(29, -1, -1)
         ]
         return ChartData(
             title="User Growth (Last 30 Days)",
@@ -50,7 +53,8 @@ class AnalyticsService:
     async def get_request_volume_data(self) -> ChartData:
         """Get request volume time series data."""
         labels = [
-            (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(29, -1, -1)
+            (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+            for i in range(29, -1, -1)
         ]
         return ChartData(
             title="Request Volume (Last 30 Days)",

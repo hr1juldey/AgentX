@@ -81,17 +81,25 @@ class NoteResponse(BaseModel):
     """
 
     id: int = Field(
-        ..., description="Unique note identifier (auto-generated)", examples=[1, 42, 100]
+        ...,
+        description="Unique note identifier (auto-generated)",
+        examples=[1, 42, 100],
     )
     title: str = Field(..., description="Note title", examples=["Meeting Notes"])
     content: str = Field(
-        ..., description="Note content", examples=["Discussed Q1 goals and action items..."]
+        ...,
+        description="Note content",
+        examples=["Discussed Q1 goals and action items..."],
     )
     created_at: datetime = Field(
-        ..., description="When the note was first created", examples=["2024-01-15T10:30:00Z"]
+        ...,
+        description="When the note was first created",
+        examples=["2024-01-15T10:30:00Z"],
     )
     updated_at: datetime = Field(
-        ..., description="When the note was last modified", examples=["2024-01-15T14:20:00Z"]
+        ...,
+        description="When the note was last modified",
+        examples=["2024-01-15T14:20:00Z"],
     )
 
     model_config = {
@@ -116,7 +124,9 @@ class NoteListResponse(BaseModel):
         default_factory=list, description="List of notes (may be empty)"
     )
     total: int = Field(
-        ..., description="Total count of all notes (not just returned page)", examples=[42]
+        ...,
+        description="Total count of all notes (not just returned page)",
+        examples=[42],
     )
 
     model_config = {
@@ -150,14 +160,18 @@ class ErrorResponse(BaseModel):
     """Error response schema."""
 
     error: str = Field(
-        ..., description="Type of error that occurred", examples=["ValidationError", "NotFound"]
+        ...,
+        description="Type of error that occurred",
+        examples=["ValidationError", "NotFound"],
     )
     message: str = Field(
         ...,
         description="Human-readable error message",
         examples=["Note not found", "Title is required"],
     )
-    detail: str | None = Field(None, description="Additional technical details for debugging")
+    detail: str | None = Field(
+        None, description="Additional technical details for debugging"
+    )
 
     model_config = {
         "json_schema_extra": {

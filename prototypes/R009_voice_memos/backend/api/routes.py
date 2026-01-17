@@ -83,7 +83,8 @@ async def transcribe_audio(request: TranscriptionRequest) -> TranscriptionRespon
         return result
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid audio data: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid audio data: {str(e)}",
         )
     except Exception as e:
         raise HTTPException(
@@ -126,7 +127,8 @@ async def synthesize_speech(request: TTSSynthesisRequest) -> Response:
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid text input: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid text input: {str(e)}",
         )
     except Exception as e:
         raise HTTPException(
@@ -164,7 +166,9 @@ async def synthesize_speech(request: TTSSynthesisRequest) -> Response:
     responses={
         200: {
             "description": "WAV audio file",
-            "content": {"audio/mpeg": {"schema": {"type": "string", "format": "binary"}}},
+            "content": {
+                "audio/mpeg": {"schema": {"type": "string", "format": "binary"}}
+            },
         }
     },
 )
@@ -180,7 +184,8 @@ async def download_speech(request: TTSSynthesisRequest) -> Response:
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid text input: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid text input: {str(e)}",
         )
     except Exception as e:
         raise HTTPException(

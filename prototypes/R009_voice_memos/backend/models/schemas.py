@@ -88,7 +88,9 @@ class TranscriptionResponse(BaseModel):
     """Response containing transcribed text and metadata."""
 
     text: str = Field(
-        ..., description="Transcribed text from the audio", examples=["Hello world, this is a test"]
+        ...,
+        description="Transcribed text from the audio",
+        examples=["Hello world, this is a test"],
     )
     confidence: Optional[float] = Field(
         None,
@@ -97,12 +99,18 @@ class TranscriptionResponse(BaseModel):
         le=1.0,
         examples=[0.95],
     )
-    language: str = Field(..., description="Detected or specified language code", examples=["en"])
+    language: str = Field(
+        ..., description="Detected or specified language code", examples=["en"]
+    )
 
     model_config = {
         "json_schema_extra": {
             "examples": [
-                {"text": "Hello world, this is a test", "confidence": 0.95, "language": "en"}
+                {
+                    "text": "Hello world, this is a test",
+                    "confidence": 0.95,
+                    "language": "en",
+                }
             ]
         }
     }
@@ -169,7 +177,9 @@ class TTSSynthesisResponse(BaseModel):
 class HealthResponse(BaseModel):
     """Health check response showing service status."""
 
-    status: str = Field(..., description="Service health status", examples=["healthy", "unhealthy"])
+    status: str = Field(
+        ..., description="Service health status", examples=["healthy", "unhealthy"]
+    )
     stt_available: bool = Field(
         ..., description="Whether speech-to-text is available", examples=[True]
     )
@@ -179,7 +189,9 @@ class HealthResponse(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{"status": "healthy", "stt_available": True, "tts_available": True}]
+            "examples": [
+                {"status": "healthy", "stt_available": True, "tts_available": True}
+            ]
         }
     }
 
@@ -197,7 +209,9 @@ class ErrorResponse(BaseModel):
         description="Human-readable error message",
         examples=["Failed to transcribe audio: invalid format"],
     )
-    detail: Optional[str] = Field(None, description="Additional technical details for debugging")
+    detail: Optional[str] = Field(
+        None, description="Additional technical details for debugging"
+    )
 
     model_config = {
         "json_schema_extra": {

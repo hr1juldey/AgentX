@@ -67,12 +67,15 @@ class PDFService:
             f.write(content)
 
         # Create document object
+        from datetime import datetime, UTC
+
         self.document_id_counter += 1
         document = Document(
             id=self.document_id_counter,
             filename=filename,
             file_path=file_path,
             status=DocumentStatus.PROCESSING,
+            uploaded_at=datetime.now(UTC),
         )
 
         try:
@@ -109,7 +112,7 @@ class PDFService:
         Raises:
             Exception: If PDF cannot be processed
         """
-        text_parts = []
+        text_parts: list[str] = []
         page_count = 0
 
         try:
@@ -143,14 +146,15 @@ class PDFService:
         """
         # Remove excessive whitespace
         lines = text.split("\n")
-        cleaned_lines = [line.strip() for line in lines if line.strip()]
+        cleaned_lines: list[str] = [line.strip() for line in lines if line.strip()]
 
         # Remove page numbers and headers (basic heuristic)
-        cleaned_lines = [
-            line for line in cleaned_lines if not line.isdigit() and len(line) > 3
-        ]
+        filtered_lines: list[str] = []
+        for line in cleaned_lines:
+            if not line.isdigit() and len(line) > 3:
+                filtered_lines.append(line)
 
-        return "\n".join(cleaned_lines)
+        return "\n".join(filtered_lines)
 
     def get_document(self, document_id: int) -> Optional[Document]:
         """
@@ -210,6 +214,8 @@ class PDFService:
             yield chunk
 
         # Save summary
+        from datetime import datetime, UTC
+
         self.summary_id_counter += 1
         tokens_used = len(summary_text.split()) * 1.3  # Rough estimate
 
@@ -218,7 +224,9 @@ class PDFService:
             document_id=document_id,
             summary_type=summary_type,
             summary_text=summary_text,
+            word_count=len(summary_text.split()),
             tokens_used=int(tokens_used),
+            created_at=datetime.now(UTC),
         )
 
         self.summaries[summary.id] = summary
@@ -350,7 +358,7 @@ The actual implementation would stream real responses from the LLM model."""
 
         # Delete file from disk
         try:
-            if os.path.exists(document.file_path):
+            if document.file_path is not None and os.path.exists(document.file_path):
                 os.remove(document.file_path)
         except Exception as e:
             logger.error(f"Error deleting file {document.file_path}: {e}")

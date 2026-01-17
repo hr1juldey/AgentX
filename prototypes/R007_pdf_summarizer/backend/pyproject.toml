@@ -1,51 +1,9 @@
-[tool.poetry]
-name = "pdf-summarizer"
-version = "1.0.0"
-description = "PDF document processing and AI-powered summarization API"
-authors = ["AgentX Team"]
-readme = "README.md"
-packages = [{include = "backend"}]
+[project]
+name = "prototype-pdf-summarizer"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
 
-[tool.poetry.dependencies]
-python = "^3.11"
-fastapi = "^0.115.0"
-uvicorn = {extras = ["standard"], version = "^0.32.0"}
-pydantic = "^2.10.0"
-pydantic-settings = "^2.6.0"
-python-multipart = "^0.0.12"
-
-# PDF Processing
-pdfplumber = "^0.11.0"
-Pillow = "^10.4.0"
-
-# Optional: LLM Integration (uncomment when using Ollama)
-# httpx = "^0.27.0"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.0"
-pytest-asyncio = "^0.24.0"
-httpx = "^0.27.0"
-black = "^24.0.0"
-flake8 = "^7.1.0"
-mypy = "^1.13.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-[tool.black]
-line-length = 100
-target-version = ['py311']
-
-[tool.mypy]
-python_version = "3.11"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
+[tool.pyrefly]
+project-includes = ["**/*.py"]
+venv-path = "/home/riju279/Documents/Code/XRIG/AgentX/.venv"

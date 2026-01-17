@@ -77,7 +77,9 @@ class HabitResponse(BaseModel):
     frequency: HabitFrequency = Field(
         ..., description="Habit frequency", examples=[HabitFrequency.DAILY]
     )
-    target_count: int = Field(..., description="Target completions per period", examples=[1])
+    target_count: int = Field(
+        ..., description="Target completions per period", examples=[1]
+    )
     streak_count: int = Field(
         ..., description="Current consecutive day streak", examples=[7, 30], ge=0
     )
@@ -88,7 +90,9 @@ class HabitResponse(BaseModel):
         ..., description="When the habit was created", examples=["2024-01-01T00:00:00Z"]
     )
     updated_at: datetime = Field(
-        ..., description="When the habit was last updated", examples=["2024-01-15T09:00:00Z"]
+        ...,
+        description="When the habit was last updated",
+        examples=["2024-01-15T09:00:00Z"],
     )
 
 
@@ -98,7 +102,9 @@ class HabitCompletionCreate(BaseModel):
     Record that a habit was completed at a specific time.
     """
 
-    habit_id: int = Field(..., description="ID of the habit being completed", examples=[1, 42])
+    habit_id: int = Field(
+        ..., description="ID of the habit being completed", examples=[1, 42]
+    )
     completed_at: datetime | None = Field(
         None,
         description="When the habit was completed (defaults to now)",
@@ -113,7 +119,11 @@ class HabitCompletionCreate(BaseModel):
     model_config = {
         "json_schema_extra": {
             "examples": [
-                {"habit_id": 1, "completed_at": "2024-01-15T09:00:00Z", "notes": "Felt great!"}
+                {
+                    "habit_id": 1,
+                    "completed_at": "2024-01-15T09:00:00Z",
+                    "notes": "Felt great!",
+                }
             ]
         }
     }
@@ -123,9 +133,13 @@ class HabitCompletionResponse(BaseModel):
     """Schema for habit completion response."""
 
     id: int = Field(..., description="Completion record ID", examples=[1001])
-    habit_id: int = Field(..., description="ID of the habit that was completed", examples=[1])
+    habit_id: int = Field(
+        ..., description="ID of the habit that was completed", examples=[1]
+    )
     completed_at: datetime = Field(
-        ..., description="When the habit was completed", examples=["2024-01-15T09:00:00Z"]
+        ...,
+        description="When the habit was completed",
+        examples=["2024-01-15T09:00:00Z"],
     )
     notes: str | None = Field(..., description="Completion notes or null")
 
@@ -143,7 +157,9 @@ class StreakData(BaseModel):
         ..., description="Longest streak ever achieved", examples=[30, 60, 100], ge=0
     )
     last_completion_date: datetime | None = Field(
-        None, description="Date of most recent completion", examples=["2024-01-15T00:00:00Z"]
+        None,
+        description="Date of most recent completion",
+        examples=["2024-01-15T00:00:00Z"],
     )
 
     model_config = {
@@ -168,7 +184,9 @@ class HabitDetailResponse(HabitResponse):
     completions: list[HabitCompletionResponse] = Field(
         default_factory=list, description="Recent completion history (chronological)"
     )
-    streak_data: StreakData = Field(..., description="Current and best streak information")
+    streak_data: StreakData = Field(
+        ..., description="Current and best streak information"
+    )
 
 
 class TimeSeriesData(BaseModel):
@@ -177,8 +195,12 @@ class TimeSeriesData(BaseModel):
     Used for charts and analytics visualization.
     """
 
-    date: str = Field(..., description="Date in YYYY-MM-DD format", examples=["2024-01-15"])
-    count: int = Field(..., description="Number of completions on this date", examples=[3], ge=0)
+    date: str = Field(
+        ..., description="Date in YYYY-MM-DD format", examples=["2024-01-15"]
+    )
+    count: int = Field(
+        ..., description="Number of completions on this date", examples=[3], ge=0
+    )
 
 
 class HabitListResponse(BaseModel):
@@ -193,7 +215,9 @@ class HabitListResponse(BaseModel):
 class ErrorResponse(BaseModel):
     """Error response schema."""
 
-    error: str = Field(..., description="Error type", examples=["ValidationError", "NotFound"])
+    error: str = Field(
+        ..., description="Error type", examples=["ValidationError", "NotFound"]
+    )
     message: str = Field(
         ...,
         description="Human-readable error message",

@@ -41,7 +41,9 @@ async def get_current_user_id(
 )
 async def create_session(
     session_data: SessionCreate,
-    user_id: str = Header(..., alias="X-User-Id", description="User ID from authentication"),
+    user_id: str = Header(
+        ..., alias="X-User-Id", description="User ID from authentication"
+    ),
 ) -> SessionResponse:
     """
     Create a new session (login from device).
@@ -54,7 +56,9 @@ async def create_session(
         Created session with session token
     """
     try:
-        logger.info(f"Creating session for user {user_id} on {session_data.device_type}")
+        logger.info(
+            f"Creating session for user {user_id} on {session_data.device_type}"
+        )
         session = await session_service.create_session(session_data, user_id)
         return session
     except Exception as e:
@@ -72,7 +76,9 @@ async def create_session(
     description="Get all active sessions for the authenticated user.",
 )
 async def list_sessions(
-    user_id: str = Header(..., alias="X-User-Id", description="User ID from authentication"),
+    user_id: str = Header(
+        ..., alias="X-User-Id", description="User ID from authentication"
+    ),
 ) -> SessionListResponse:
     """
     List all active sessions for the user.
@@ -107,7 +113,9 @@ async def list_sessions(
 )
 async def get_session(
     session_id: str,
-    user_id: str = Header(..., alias="X-User-Id", description="User ID from authentication"),
+    user_id: str = Header(
+        ..., alias="X-User-Id", description="User ID from authentication"
+    ),
 ) -> SessionResponse:
     """
     Get a specific session by ID.
@@ -146,7 +154,9 @@ async def get_session(
 async def update_session(
     session_id: str,
     session_update: SessionUpdate,
-    user_id: str = Header(..., alias="X-User-Id", description="User ID from authentication"),
+    user_id: str = Header(
+        ..., alias="X-User-Id", description="User ID from authentication"
+    ),
 ) -> SessionResponse:
     """
     Update a session (refresh last_active or deactivate).
@@ -176,7 +186,9 @@ async def update_session(
         )
 
     # Update session
-    updated_session = await session_service.update_session(session_id, session_update.is_active)
+    updated_session = await session_service.update_session(
+        session_id, session_update.is_active
+    )
     if not updated_session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -193,7 +205,9 @@ async def update_session(
 )
 async def delete_session(
     session_id: str,
-    user_id: str = Header(..., alias="X-User-Id", description="User ID from authentication"),
+    user_id: str = Header(
+        ..., alias="X-User-Id", description="User ID from authentication"
+    ),
 ) -> None:
     """
     Delete a session (logout from specific device).
@@ -234,7 +248,9 @@ async def delete_session(
     description="Logout and invalidate all sessions for the user.",
 )
 async def delete_all_sessions(
-    user_id: str = Header(..., alias="X-User-Id", description="User ID from authentication"),
+    user_id: str = Header(
+        ..., alias="X-User-Id", description="User ID from authentication"
+    ),
 ) -> None:
     """
     Delete all sessions for the user (logout from all devices).

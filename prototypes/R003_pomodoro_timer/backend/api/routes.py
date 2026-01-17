@@ -42,7 +42,9 @@ async def create_session(session: SessionCreate) -> SessionResponse:
 
 @router.get("", response_model=dict)
 async def list_sessions(
-    status: Annotated[SessionStatus | None, Query(description="Filter by status")] = None,
+    status: Annotated[
+        SessionStatus | None, Query(description="Filter by status")
+    ] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> dict[str, object]:
     """List all Pomodoro sessions with optional filtering.
@@ -83,7 +85,9 @@ async def get_session(session_id: int) -> SessionResponse:
 
 
 @router.put("/{session_id}", response_model=SessionResponse)
-async def update_session(session_id: int, session_update: SessionUpdate) -> SessionResponse:
+async def update_session(
+    session_id: int, session_update: SessionUpdate
+) -> SessionResponse:
     """Update an existing Pomodoro session.
 
     Args:
@@ -145,6 +149,7 @@ async def websocket_timer(websocket: WebSocket, session_id: int) -> None:
         await websocket.close(code=1008, reason="Failed to register connection")
         return
 
+    receive_task = None
     try:
         # Send initial state
         await websocket.send_json(
@@ -184,7 +189,7 @@ async def websocket_timer(websocket: WebSocket, session_id: int) -> None:
             pass
     finally:
         # Cancel receive task
-        if "receive_task" in locals():
+        if receive_task is not None:
             receive_task.cancel()
 
         # Unregister WebSocket connection

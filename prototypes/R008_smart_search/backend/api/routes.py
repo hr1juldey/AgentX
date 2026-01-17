@@ -21,7 +21,8 @@ async def add_document(document: DocumentCreate):
 
     if doc_id is None:
         raise HTTPException(
-            status_code=503, detail="Search service unavailable. Please ensure Qdrant is running."
+            status_code=503,
+            detail="Search service unavailable. Please ensure Qdrant is running.",
         )
 
     return Document(id=doc_id, content=document.content, metadata=document.metadata)

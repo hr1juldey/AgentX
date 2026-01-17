@@ -60,7 +60,9 @@ class PomodoroService:
         self._websocket_connections[self._next_id] = set()
 
         # Start the countdown timer
-        self._timer_tasks[self._next_id] = asyncio.create_task(self._countdown(self._next_id))
+        self._timer_tasks[self._next_id] = asyncio.create_task(
+            self._countdown(self._next_id)
+        )
 
         self._next_id += 1
         return session_response
@@ -77,7 +79,9 @@ class PomodoroService:
         """
         return self._sessions.get(session_id)
 
-    async def list_all(self, status: SessionStatus | None = None) -> list[SessionResponse]:
+    async def list_all(
+        self, status: SessionStatus | None = None
+    ) -> list[SessionResponse]:
         """List all sessions with optional filtering.
 
         Args:
@@ -114,17 +118,29 @@ class PomodoroService:
             return None
 
         # Handle status transitions
-        new_status = session_update.status if session_update.status is not None else existing.status
+        new_status = (
+            session_update.status
+            if session_update.status is not None
+            else existing.status
+        )
 
         # If pausing, cancel the countdown task
-        if new_status == SessionStatus.PAUSED and existing.status == SessionStatus.RUNNING:
+        if (
+            new_status == SessionStatus.PAUSED
+            and existing.status == SessionStatus.RUNNING
+        ):
             if session_id in self._timer_tasks:
                 self._timer_tasks[session_id].cancel()
                 del self._timer_tasks[session_id]
 
         # If resuming, restart the countdown
-        if new_status == SessionStatus.RUNNING and existing.status == SessionStatus.PAUSED:
-            self._timer_tasks[session_id] = asyncio.create_task(self._countdown(session_id))
+        if (
+            new_status == SessionStatus.RUNNING
+            and existing.status == SessionStatus.PAUSED
+        ):
+            self._timer_tasks[session_id] = asyncio.create_task(
+                self._countdown(session_id)
+            )
 
         # If cancelling, cancel the countdown and mark as cancelled
         if new_status == SessionStatus.CANCELLED:
@@ -268,7 +284,9 @@ class PomodoroService:
             # Timer was cancelled (pause or cancel operation)
             pass
 
-    async def _broadcast_update(self, session_id: int, session: SessionResponse) -> None:
+    async def _broadcast_update(
+        self, session_id: int, session: SessionResponse
+    ) -> None:
         """Broadcast session update to all WebSocket clients.
 
         Args:

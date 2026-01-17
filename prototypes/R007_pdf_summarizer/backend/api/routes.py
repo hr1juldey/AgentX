@@ -38,10 +38,11 @@ async def upload_document(file: UploadFile = File(...)):
         # Read file content
         content = await file.read()
 
+        # Validate filename
+        filename = file.filename or "document.pdf"
+
         # Upload document
-        document = await pdf_service.upload_document(
-            filename=file.filename, content=content
-        )
+        document = await pdf_service.upload_document(filename=filename, content=content)
 
         return DocumentResponse(
             id=document.id,

@@ -78,7 +78,9 @@ class TodoService:
         # Sort by creation date (newest first)
         return sorted(todos, key=lambda t: t.created_at, reverse=True)
 
-    async def update(self, todo_id: int, todo_update: TodoUpdate) -> TodoResponse | None:
+    async def update(
+        self, todo_id: int, todo_update: TodoUpdate
+    ) -> TodoResponse | None:
         """Update an existing todo.
 
         Args:
@@ -96,19 +98,27 @@ class TodoService:
         # Update fields if provided
         updated_todo = TodoResponse(
             id=existing.id,
-            title=todo_update.title if todo_update.title is not None else existing.title,
+            title=todo_update.title
+            if todo_update.title is not None
+            else existing.title,
             description=(
                 todo_update.description
                 if todo_update.description is not None
                 else existing.description
             ),
             due_date=(
-                todo_update.due_date if todo_update.due_date is not None else existing.due_date
+                todo_update.due_date
+                if todo_update.due_date is not None
+                else existing.due_date
             ),
             priority=(
-                todo_update.priority if todo_update.priority is not None else existing.priority
+                todo_update.priority
+                if todo_update.priority is not None
+                else existing.priority
             ),
-            status=todo_update.status if todo_update.status is not None else existing.status,
+            status=todo_update.status
+            if todo_update.status is not None
+            else existing.status,
             created_at=existing.created_at,
             updated_at=datetime.now(UTC),
         )

@@ -4,18 +4,17 @@ import pytest
 from fastapi.testclient import TestClient
 
 from main import app
-from services.service import users_db, password_entries_db
+import services.service as service_module
 
 
 # Reset databases before each test
 @pytest.fixture(autouse=True)
 def reset_db():
     """Reset in-memory databases before each test."""
-    global users_db, password_entries_db, user_id_counter, entry_id_counter
-    users_db.clear()
-    password_entries_db.clear()
-    user_id_counter = 0
-    entry_id_counter = 0
+    service_module.users_db.clear()
+    service_module.password_entries_db.clear()
+    service_module.user_id_counter = 0
+    service_module.entry_id_counter = 0
     yield
 
 

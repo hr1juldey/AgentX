@@ -72,10 +72,14 @@ async def list_tools():
     """List available tools for the ReAct agent."""
     tools = [
         ToolSchema(
-            name="calculator", description="Calculate mathematical expressions", parameters={}
+            name="calculator",
+            description="Calculate mathematical expressions",
+            parameters={},
         ),
         ToolSchema(name="search", description="Search for information", parameters={}),
-        ToolSchema(name="weather", description="Get weather information", parameters={}),
+        ToolSchema(
+            name="weather", description="Get weather information", parameters={}
+        ),
     ]
     return tools
 

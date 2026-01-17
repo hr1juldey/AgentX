@@ -37,7 +37,9 @@ async def create_todo(todo: TodoCreate) -> TodoResponse:
 @router.get("", response_model=dict)
 async def list_todos(
     status: Annotated[Status | None, Query(description="Filter by status")] = None,
-    priority: Annotated[Priority | None, Query(description="Filter by priority")] = None,
+    priority: Annotated[
+        Priority | None, Query(description="Filter by priority")
+    ] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> dict[str, object]:
     """List all todos with optional filtering.

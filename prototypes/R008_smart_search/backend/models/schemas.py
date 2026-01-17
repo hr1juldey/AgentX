@@ -73,7 +73,9 @@ class SearchResult(BaseModel):
     """
 
     id: str = Field(
-        ..., description="Document ID", examples=["550e8400-e29b-41d4-a716-446655440000"]
+        ...,
+        description="Document ID",
+        examples=["550e8400-e29b-41d4-a716-446655440000"],
     )
     content: str = Field(
         ...,
@@ -81,7 +83,11 @@ class SearchResult(BaseModel):
         examples=["This is a document about machine..."],
     )
     score: float = Field(
-        ..., description="Relevance score (0-1, higher is better)", examples=[0.92], ge=0.0, le=1.0
+        ...,
+        description="Relevance score (0-1, higher is better)",
+        examples=[0.92],
+        ge=0.0,
+        le=1.0,
     )
     metadata: Optional[dict] = Field(None, description="Document metadata")
 
@@ -99,15 +105,29 @@ class SearchRequest(BaseModel):
         examples=["machine learning papers", "how to optimize neural networks"],
     )
     top_k: Optional[int] = Field(
-        None, description="Maximum number of results (default: 10)", ge=1, le=20, examples=[5, 10]
+        None,
+        description="Maximum number of results (default: 10)",
+        ge=1,
+        le=20,
+        examples=[5, 10],
     )
     score_threshold: Optional[float] = Field(
-        None, description="Minimum relevance score (0-1)", ge=0.0, le=1.0, examples=[0.7]
+        None,
+        description="Minimum relevance score (0-1)",
+        ge=0.0,
+        le=1.0,
+        examples=[0.7],
     )
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{"query": "machine learning papers", "top_k": 10, "score_threshold": 0.7}]
+            "examples": [
+                {
+                    "query": "machine learning papers",
+                    "top_k": 10,
+                    "score_threshold": 0.7,
+                }
+            ]
         }
     }
 
@@ -133,7 +153,9 @@ class HealthResponse(BaseModel):
     Returns service and database connection status.
     """
 
-    status: str = Field(..., description="Service health status", examples=["healthy", "unhealthy"])
+    status: str = Field(
+        ..., description="Service health status", examples=["healthy", "unhealthy"]
+    )
     qdrant_connected: bool = Field(
         ..., description="Whether Qdrant vector database is connected", examples=[True]
     )
@@ -143,7 +165,13 @@ class HealthResponse(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "examples": [{"status": "healthy", "qdrant_connected": True, "collection_exists": True}]
+            "examples": [
+                {
+                    "status": "healthy",
+                    "qdrant_connected": True,
+                    "collection_exists": True,
+                }
+            ]
         }
     }
 
@@ -151,7 +179,9 @@ class HealthResponse(BaseModel):
 class ErrorResponse(BaseModel):
     """Schema for error response."""
 
-    error: str = Field(..., description="Error type", examples=["ValidationError", "SearchError"])
+    error: str = Field(
+        ..., description="Error type", examples=["ValidationError", "SearchError"]
+    )
     message: str = Field(
         ...,
         description="Error message",

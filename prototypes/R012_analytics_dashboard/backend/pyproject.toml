@@ -1,47 +1,9 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "agentx-analytics-dashboard"
+name = "prototype-analytics-dashboard"
 version = "0.1.0"
-description = "Analytics Dashboard with data aggregation"
-readme = "README.md"
-requires-python = ">=3.11"
-authors = [{name = "AgentX Team"}]
-classifiers = ["Development Status :: 3 - Alpha", "Intended Audience :: Developers", "Programming Language :: Python :: 3", "Framework :: FastAPI"]
-dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.32.0",
-    "pydantic>=2.10.0",
-    "pydantic-settings>=2.6.0",
-    "numpy>=1.24.0",
-    "pandas>=2.0.0",
-]
+requires-python = ">=3.12"
+dependencies = []
 
-[project.optional-dependencies]
-dev = ["pytest>=8.3.0", "pytest-asyncio>=0.24.0", "httpx>=0.28.0", "black>=24.0.0", "ruff>=0.8.0"]
-
-[project.urls]
-Homepage = "https://github.com/agentx/analytics-dashboard"
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["config*", "models*", "services*", "api*"]
-
-[tool.black]
-line-length = 100
-target-version = ["py311", "py312"]
-
-[tool.ruff]
-line-length = 100
-target-version = "py311"
-
-[tool.ruff.lint]
-select = ["E", "F", "I", "N", "W"]
-ignore = ["E501"]
-
-[tool.pytest.ini_options]
-minversion = "8.0"
-testpaths = ["tests"]
-asyncio_mode = "auto"
+[tool.pyrefly]
+project-includes = ["**/*.py"]
+venv-path = "/home/riju279/Documents/Code/XRIG/AgentX/.venv"

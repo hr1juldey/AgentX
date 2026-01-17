@@ -23,8 +23,10 @@ class STTService:
 
     def __init__(self):
         """Initialize STT service with GPU/CPU detection."""
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if self.device.type == "cuda":
+        use_cuda = torch.cuda.is_available()
+        device_str = "cuda" if use_cuda else "cpu"
+        self._torch_device = torch.device(device_str)  # type: ignore[read-only]
+        if use_cuda:
             logger.info(f"STT using GPU: {torch.cuda.get_device_name()}")
         else:
             logger.info("STT using CPU")
@@ -39,16 +41,16 @@ class STTService:
                 repo_or_dir="snakers4/silero-models",
                 model="silero_stt",
                 language="en",
-                device=self.device,
+                device=self._torch_device,
                 trust_repo=True,
             )
 
-            self.stt_model = stt_result[0]
-            self.stt_decoder = stt_result[1]
+            self.stt_model = stt_result[0]  # type: ignore[index]
+            self.stt_decoder = stt_result[1]  # type: ignore[index]
 
-            utils_tuple = stt_result[2]
-            self._stt_read_batch = utils_tuple[0]
-            self._stt_prepare_model_input = utils_tuple[3]
+            utils_tuple = stt_result[2]  # type: ignore[index]
+            self._stt_read_batch = utils_tuple[0]  # type: ignore[index]
+            self._stt_prepare_model_input = utils_tuple[3]  # type: ignore[index]
 
             logger.info("Silero STT model loaded")
 
@@ -94,7 +96,9 @@ class STTService:
                 if audio_tensor.dim() == 1:
                     audio_tensor = audio_tensor.unsqueeze(0)
 
-                resampler = _get_resampler(sr, self.STT_SAMPLE_RATE, dtype=audio_tensor.dtype)
+                resampler = _get_resampler(
+                    sr, self.STT_SAMPLE_RATE, dtype=audio_tensor.dtype
+                )
                 audio_tensor = resampler(audio_tensor)
                 audio_data = audio_tensor.squeeze().numpy()
                 sr = self.STT_SAMPLE_RATE
@@ -112,12 +116,14 @@ class STTService:
             # Validate audio format
             validate_sr, validate_audio = wavfile.read(temp_path)
             assert validate_sr == 16000, f"Invalid sample rate: {validate_sr}"
-            assert validate_audio.dtype == np.int16, f"Invalid dtype: {validate_audio.dtype}"
+            assert validate_audio.dtype == np.int16, (
+                f"Invalid dtype: {validate_audio.dtype}"
+            )
             assert validate_audio.ndim == 1, "Audio must be mono"
 
             # Prepare audio for STT
             input_batch = self._stt_prepare_model_input(
-                self._stt_read_batch([temp_path]), device=self.device
+                self._stt_read_batch([temp_path]), device=self._torch_device
             )
 
             # Perform transcription

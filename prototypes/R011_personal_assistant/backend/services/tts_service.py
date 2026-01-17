@@ -14,8 +14,10 @@ class TTSService:
 
     def __init__(self):
         """Initialize TTS service with GPU/CPU detection."""
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if self.device.type == "cuda":
+        use_cuda = torch.cuda.is_available()
+        device_str = "cuda" if use_cuda else "cpu"
+        self._torch_device = torch.device(device_str)  # type: ignore[read-only]
+        if use_cuda:
             logger.info(f"TTS using GPU: {torch.cuda.get_device_name()}")
         else:
             logger.info("TTS using CPU")
@@ -26,8 +28,17 @@ class TTSService:
     def _initialize_model(self):
         """Initialize Silero TTS model."""
         try:
-            self.tts_model, self.tts_example_text = silero_tts(language="en", speaker="v3_en")
-            self.tts_model.to(self.device)
+            tts_result = silero_tts(language="en", speaker="v3_en")
+            # Handle variable-length return from silero_tts
+            if isinstance(tts_result, tuple) and len(tts_result) >= 2:
+                self.tts_model = tts_result[0]
+                self.tts_example_text = tts_result[1]
+            else:
+                self.tts_model = tts_result
+                self.tts_example_text = "Hello world"  # Default example text
+            # Ensure the model is on the correct device
+            if hasattr(self.tts_model, "to"):
+                self.tts_model.to(self._torch_device)
             logger.info("Silero TTS model loaded (speaker: v3_en)")
 
         except Exception as e:
@@ -50,7 +61,9 @@ class TTSService:
 
         try:
             # Generate audio
-            audio = self.tts_model.apply_tts(text=text, speaker="en_5", sample_rate=target_rate)
+            audio = self.tts_model.apply_tts(
+                text=text, speaker="en_5", sample_rate=target_rate
+            )
 
             # Validate audio
             if not hasattr(audio, "shape"):

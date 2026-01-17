@@ -30,7 +30,10 @@ class ToolCall(BaseModel):
     model_config = {
         "json_schema_extra": {
             "examples": [
-                {"name": "search_web", "arguments": {"query": "latest AI news", "limit": 5}}
+                {
+                    "name": "search_web",
+                    "arguments": {"query": "latest AI news", "limit": 5},
+                }
             ]
         }
     }
@@ -46,10 +49,13 @@ class Message(BaseModel):
         ..., description="Message sender role", examples=["user", "assistant"]
     )
     content: str = Field(
-        ..., description="Message text content", examples=["Hello, how can you help me?"]
+        ...,
+        description="Message text content",
+        examples=["Hello, how can you help me?"],
     )
     tool_calls: Optional[List[ToolCall]] = Field(
-        None, description="Tool calls made by the assistant (for assistant messages only)"
+        None,
+        description="Tool calls made by the assistant (for assistant messages only)",
     )
     timestamp: datetime = Field(
         default_factory=datetime.now, description="When the message was sent"
@@ -133,7 +139,9 @@ class ToolSchema(BaseModel):
     Describes a tool that the assistant can use.
     """
 
-    name: str = Field(..., description="Tool/function name", examples=["search_web", "get_weather"])
+    name: str = Field(
+        ..., description="Tool/function name", examples=["search_web", "get_weather"]
+    )
     description: str = Field(
         ...,
         description="What the tool does and when to use it",
@@ -145,7 +153,9 @@ class ToolSchema(BaseModel):
         examples=[
             {
                 "type": "object",
-                "properties": {"query": {"type": "string", "description": "Search query"}},
+                "properties": {
+                    "query": {"type": "string", "description": "Search query"}
+                },
                 "required": ["query"],
             }
         ],
@@ -159,7 +169,9 @@ class ErrorResponse(BaseModel):
         ..., description="Error type", examples=["ValidationError", "AssistantError"]
     )
     message: str = Field(
-        ..., description="Error message", examples=["Message is required", "Assistant unavailable"]
+        ...,
+        description="Error message",
+        examples=["Message is required", "Assistant unavailable"],
     )
     detail: Optional[str] = Field(None, description="Additional technical details")
 
@@ -167,5 +179,7 @@ class ErrorResponse(BaseModel):
 class ConversationListResponse(BaseModel):
     """Schema for conversation list response."""
 
-    conversations: List[dict] = Field(default_factory=list, description="List of conversations")
+    conversations: List[dict] = Field(
+        default_factory=list, description="List of conversations"
+    )
     total: int = Field(..., description="Total count of conversations", examples=[10])

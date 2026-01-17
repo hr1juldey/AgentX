@@ -45,7 +45,9 @@ class SearchService:
                 )
                 logger.info(f"Created collection: {settings.qdrant_collection_name}")
             else:
-                logger.info(f"Using existing collection: {settings.qdrant_collection_name}")
+                logger.info(
+                    f"Using existing collection: {settings.qdrant_collection_name}"
+                )
 
         except Exception as e:
             logger.warning(f"Qdrant not available: {e}. Using in-memory mode.")
@@ -54,7 +56,9 @@ class SearchService:
     def _initialize_embeddings(self):
         """Initialize embedding model."""
         try:
-            self.embedding_model = fastembed.TextEmbedding(model_name=settings.embedding_model)
+            self.embedding_model = fastembed.TextEmbedding(
+                model_name=settings.embedding_model
+            )
             logger.info(f"Loaded embedding model: {settings.embedding_model}")
         except Exception as e:
             logger.error(f"Failed to load embedding model: {e}")
@@ -66,8 +70,8 @@ class SearchService:
             return None
 
         try:
-            embedding = list(self.embedding_model.embed([text]))[0]
-            return embedding
+            embeddings = list(self.embedding_model.embed([text]))
+            return list(embeddings[0])
         except Exception as e:
             logger.error(f"Failed to generate embedding: {e}")
             return None
@@ -90,10 +94,15 @@ class SearchService:
             point = PointStruct(
                 id=doc_id,
                 vector=embedding,
-                payload={"content": document.content, "metadata": document.metadata or {}},
+                payload={
+                    "content": document.content,
+                    "metadata": document.metadata or {},
+                },
             )
 
-            self.client.upsert(collection_name=settings.qdrant_collection_name, points=[point])
+            self.client.upsert(
+                collection_name=settings.qdrant_collection_name, points=[point]
+            )
 
             logger.info(f"Added document: {doc_id}")
             return doc_id
@@ -115,21 +124,22 @@ class SearchService:
             top_k = request.top_k or settings.top_k_results
             threshold = request.score_threshold or settings.score_threshold
 
-            results = self.client.search(
+            results = self.client.query_points(
                 collection_name=settings.qdrant_collection_name,
-                query_vector=query_embedding,
+                query=query_embedding,
                 limit=top_k,
                 score_threshold=threshold,
             )
 
             search_results = []
-            for result in results:
+            for result in results.points:
+                payload = result.payload or {}
                 search_results.append(
                     SearchResult(
                         id=str(result.id),
-                        content=result.payload.get("content", ""),
+                        content=payload.get("content", ""),
                         score=result.score,
-                        metadata=result.payload.get("metadata"),
+                        metadata=payload.get("metadata"),
                     )
                 )
 

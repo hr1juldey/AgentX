@@ -94,7 +94,9 @@ async def delete_habit(habit_id: int) -> None:
 # -----------------------------------------------------------------------------
 # Completion Endpoints
 # -----------------------------------------------------------------------------
-@router.post("/{habit_id}/completions", response_model=HabitCompletionResponse, status_code=201)
+@router.post(
+    "/{habit_id}/completions", response_model=HabitCompletionResponse, status_code=201
+)
 async def record_completion(
     habit_id: int, completion: HabitCompletionCreate
 ) -> HabitCompletionResponse:
@@ -171,7 +173,9 @@ async def get_streak(habit_id: int) -> StreakData:
 @router.get("/{habit_id}/timeseries", response_model=list[TimeSeriesData])
 async def get_time_series(
     habit_id: int,
-    days: Annotated[int, Query(ge=1, le=365, description="Number of days to include")] = 30,
+    days: Annotated[
+        int, Query(ge=1, le=365, description="Number of days to include")
+    ] = 30,
 ) -> list[TimeSeriesData]:
     """Get time-series completion data for a habit.
 

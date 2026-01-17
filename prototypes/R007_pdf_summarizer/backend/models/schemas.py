@@ -5,10 +5,45 @@ This module provides request/response models for PDF document processing
 and AI-powered summarization.
 """
 
+from __future__ import annotations
+
 from enum import Enum
 from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
+
+
+# Internal data classes (not exposed via API)
+class Document(BaseModel):
+    """Internal document storage model."""
+
+    id: int
+    filename: str
+    uploaded_at: datetime
+    status: DocumentStatus
+    page_count: Optional[int] = None
+    word_count: Optional[int] = None
+    file_path: Optional[str] = None
+    error_message: Optional[str] = None
+    extracted_text: str = ""
+
+    class Config:
+        from_attributes = True
+
+
+class Summary(BaseModel):
+    """Internal summary storage model."""
+
+    id: int
+    document_id: int
+    summary_type: SummaryType
+    summary_text: str
+    word_count: int
+    tokens_used: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class SummaryType(str, Enum):

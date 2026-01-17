@@ -27,7 +27,9 @@ class TranscriptionSegment(BaseModel):
         ..., description="Timestamp in seconds from the start", examples=[12.5], ge=0.0
     )
     is_speech: bool = Field(
-        ..., description="Whether this segment contains speech (vs silence/noise)", examples=[True]
+        ...,
+        description="Whether this segment contains speech (vs silence/noise)",
+        examples=[True],
     )
 
     model_config = {
@@ -51,7 +53,9 @@ class MeetingNote(BaseModel):
     """
 
     id: str = Field(
-        ..., description="Unique identifier for the meeting", examples=["meeting-2024-01-15-001"]
+        ...,
+        description="Unique identifier for the meeting",
+        examples=["meeting-2024-01-15-001"],
     )
     title: str = Field(
         ...,
@@ -59,7 +63,9 @@ class MeetingNote(BaseModel):
         examples=["Weekly Team Standup", "Product Planning Session"],
     )
     segments: List[TranscriptionSegment] = Field(
-        ..., description="List of transcribed segments in chronological order", min_length=0
+        ...,
+        description="List of transcribed segments in chronological order",
+        min_length=0,
     )
     created_at: datetime = Field(
         default_factory=datetime.now, description="When the meeting note was created"
@@ -109,7 +115,10 @@ class TranscriptionRequest(BaseModel):
         min_length=1,
     )
     sample_rate: int = Field(
-        default=16000, description="Audio sample rate in Hz (16000 recommended)", ge=8000, le=48000
+        default=16000,
+        description="Audio sample rate in Hz (16000 recommended)",
+        ge=8000,
+        le=48000,
     )
     language: str = Field(
         default="en",
@@ -117,7 +126,9 @@ class TranscriptionRequest(BaseModel):
         pattern="^[a-z]{2}$",
     )
 
-    model_config = {"json_schema_extra": {"examples": [{"sample_rate": 16000, "language": "en"}]}}
+    model_config = {
+        "json_schema_extra": {"examples": [{"sample_rate": 16000, "language": "en"}]}
+    }
 
 
 class RealTimeTranscription(BaseModel):
@@ -168,7 +179,9 @@ class RealTimeTranscription(BaseModel):
 class HealthResponse(BaseModel):
     """Health check response showing service status."""
 
-    status: str = Field(..., description="Service health status", examples=["healthy", "unhealthy"])
+    status: str = Field(
+        ..., description="Service health status", examples=["healthy", "unhealthy"]
+    )
     stt_available: bool = Field(
         ..., description="Whether speech-to-text is available", examples=[True]
     )
@@ -176,7 +189,9 @@ class HealthResponse(BaseModel):
         ..., description="Whether text-to-speech is available", examples=[True]
     )
     vad_available: bool = Field(
-        ..., description="Whether voice activity detection is available", examples=[True]
+        ...,
+        description="Whether voice activity detection is available",
+        examples=[True],
     )
 
     model_config = {
@@ -206,7 +221,9 @@ class ErrorResponse(BaseModel):
         description="Human-readable error message",
         examples=["Failed to transcribe audio: invalid format"],
     )
-    detail: Optional[str] = Field(None, description="Additional technical details for debugging")
+    detail: Optional[str] = Field(
+        None, description="Additional technical details for debugging"
+    )
 
     model_config = {
         "json_schema_extra": {

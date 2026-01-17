@@ -78,7 +78,8 @@ def test_get_todo() -> None:
     client = TestClient(app)
     # First create a todo
     create_response = client.post(
-        "/api/v1/todos", json={"title": "Get Test", "description": "Testing get endpoint"}
+        "/api/v1/todos",
+        json={"title": "Get Test", "description": "Testing get endpoint"},
     )
     todo_id = create_response.json()["id"]
     # Then get it
@@ -142,7 +143,8 @@ def test_update_todo() -> None:
     todo_id = create_response.json()["id"]
     # Update it
     update_response = client.put(
-        f"/api/v1/todos/{todo_id}", json={"title": "Updated Title", "status": "in_progress"}
+        f"/api/v1/todos/{todo_id}",
+        json={"title": "Updated Title", "status": "in_progress"},
     )
     assert update_response.status_code == 200
     assert update_response.json()["title"] == "Updated Title"
@@ -199,7 +201,9 @@ def test_create_todo_validation() -> None:
     response = client.post("/api/v1/todos", json={"title": "Test", "status": "invalid"})
     assert response.status_code == 422
     # Invalid priority
-    response = client.post("/api/v1/todos", json={"title": "Test", "priority": "urgent"})
+    response = client.post(
+        "/api/v1/todos", json={"title": "Test", "priority": "urgent"}
+    )
     assert response.status_code == 422
 
 
