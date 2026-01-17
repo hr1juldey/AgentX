@@ -76,3 +76,9 @@ dependencies = [
     "websockets>=13.0",
     "xlrd>=2.0.0",
 ]
+
+[tool.pyrefly]
+project-includes = [
+    "**/*.py*",
+    "**/*.ipynb",
+]
