@@ -1,9 +1,9 @@
 # AGENTX Product Requirements Document (PRD)
 
-**Version**: 1.0.0
+**Version**: 1.1.0
 **Date**: 2026-01-18
 **Status**: Final Draft
-**Linked to**: Research docs v1.0, Prototype learnings v1.0
+**Linked to**: Research docs v1.0, Prototype learnings v1.0, Kyutai integration plan v1.0
 
 ---
 
@@ -54,7 +54,7 @@ Success criteria: A working system that can (1) maintain long-term temporal memo
 |---------|-------------|-------------------|
 | **Core Memory System** | Mem0AI + Qdrant + ColBERTv2 | Can store and retrieve across 7-day window with >80% precision |
 | **DSPy ReAct Agent** | Local LLM with tool calling | Successfully chains 2+ tools with >75% success rate |
-| **Voice Interface** | Silero STT/TTS/VAD + WebSocket | Full duplex conversation with <300ms latency |
+| **Voice Interface** | Kyutai unmute STT + pocket-tts TTS (with built-in semantic VAD) + WebSocket | Full duplex conversation with <300ms latency, deployed as separate Docker containers |
 | **Company MIS Plugin** | FastMCP server for data access | Can query metrics, alerts, database |
 | **Web Search Plugin** | SearXNG integration | Returns top 5 results for current queries |
 | **PWA Frontend** | Next.js + shadcn/ui | Installable, offline-capable, voice toggle |
@@ -157,9 +157,9 @@ Success criteria: A working system that can (1) maintain long-term temporal memo
 |-----------|-------|--------|----------|-----------|
 | **Primary LLM** | GLM-4.7 | latest | Ollama (local) | Best tool use benchmarks (42.8% HLE) |
 | **Fallback LLM** | Qwen3-Coder | latest | Ollama (local) | Smaller footprint (30B) |
-| **STT** | Silero | v5.1 | torch.hub | Lightweight, accurate |
-| **TTS** | Silero | v3_en | silero package | Natural voice, fast |
-| **VAD** | Silero VAD | latest | silero-vad | <50ms latency |
+| **STT** | Kyutai unmute | 1B-en_fr / 2.6B-en | ghcr.io/kyutai-labs/moshi-server | 500ms latency, OpenAI Realtime API protocol, built-in semantic VAD |
+| **TTS** | Kyutai pocket-tts | 100M params | ghcr.io/kyutai-labs/pocket-tts | ~200ms first chunk, CPU-only, FastAPI streaming |
+| **VAD** | Built-in semantic VAD | N/A | Kyutai unmute | Integrated with STT, eliminates separate model |
 | **Embeddings** | ColBERTv2 | 0.44GB | FastEmbed | Late interaction, 128-dim |
 
 ### Input Context Limits
@@ -414,8 +414,8 @@ SAFETY:
 |--------------|-------------------|-------------------|
 | **LLM unavailable** | Use cached responses | "I'm having trouble connecting. Using last known response." |
 | **Memory down** | Use web search | "Memory temporarily unavailable. Searching web instead." |
-| **STT failed** | Request text input | "I couldn't hear that clearly. Please type your message." |
-| **TTS failed** | Return text only | [Show text response with speaker icon disabled] |
+| **Kyutai STT failed** | Request text input | "I couldn't hear that clearly. Please type your message." |
+| **Kyutai TTS failed** | Return text only | [Show text response with speaker icon disabled] |
 | **Tool timeout** | Skip tool, use LLM | "That tool is taking too long. Let me try answering directly." |
 
 ---
@@ -580,7 +580,7 @@ Action: Store encrypted, flag as sensitive
 | Component | Retraining Trigger | Cadence |
 |-----------|-------------------|---------|
 | **LLM** | New model version available | Quarterly |
-| **STT/TTS** | WER >15% | Monthly review |
+| **Kyutai STT/TTS** | WER >15% or latency >500ms | Monthly review |
 | **Embeddings** | Precision@10 drops 5% | Weekly review |
 | **Prompts** | User satisfaction <3.5/5 | Biweekly review |
 
@@ -641,6 +641,8 @@ Action: Store encrypted, flag as sensitive
 | Dependency | Owner | Approval Required | SLA | Fallback |
 |-------------|-------|-------------------|-----|----------|
 | **Ollama** | External (local) | None | Best effort | Restart service |
+| **Kyutai unmute STT** | Self-hosted Docker (ghcr.io/kyutai-labs/moshi-server) | None | Best effort (500ms latency target) | Request text input |
+| **Kyutai pocket-tts** | Self-hosted Docker | None | Best effort (200ms first chunk) | Return text only |
 | **SearXNG** | Self-hosted | None | Best effort | Use cached results |
 | **Qdrant** | Self-hosted | None | 99% uptime | In-memory fallback |
 | **FastMCP** | Open source | None | N/A | Manual plugin loading |
@@ -668,9 +670,10 @@ Action: Store encrypted, flag as sensitive
 - [ ] Streaming responses implemented
 
 **Milestone 3: Voice Interface (Week 3-4)**
-- [ ] Silero STT/TTS/VAD integrated
-- [ ] WebSocket bidirectional working
-- [ ] Latency <300ms achieved
+- [ ] Kyutai unmute STT deployed as Docker container (OpenAI Realtime API)
+- [ ] Kyutai pocket-tts TTS deployed as Docker container (FastAPI)
+- [ ] WebSocket bidirectional working with semantic VAD
+- [ ] Latency <300ms achieved (VAD: 50ms, STT streaming: 100ms, LLM first token: 50ms, TTS first chunk: 100ms)
 
 **Milestone 4: Company MIS Plugin (Week 4)**
 - [ ] FastMCP server implemented
@@ -721,12 +724,13 @@ Action: Store encrypted, flag as sensitive
 | **User satisfaction** | <3.5/5 for 1 week | Review prompts, consider retraining |
 | **Memory precision** | <80% for 1 week | Review embeddings, retrain if needed |
 | **Tool success rate** | <70% for 1 week | Review tool definitions, add examples |
-| **Voice WER** | >20% for 1 week | Retrain STT model |
+| **Voice WER** | >20% for 1 week | Review Kyutai STT model, consider switching to 2.6B-en for higher accuracy |
 
 ### PRD Version History
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 1.1.0 | 2026-01-18 | Replaced Silero STT/TTS/VAD with Kyutai unmute STT + pocket-tts TTS (with built-in semantic VAD), added Docker container architecture, updated voice interface specifications | AGENTX Team |
 | 1.0.0 | 2026-01-18 | Initial PRD from research and prototypes | AGENTX Team |
 
 ---
