@@ -1,0 +1,108 @@
+{
+  "metadata": {
+    "max_duration_seconds": 300,
+    "actual_duration_seconds": 312.14421701431274,
+    "timestamp": "20260119_032301",
+    "endpoint": "ws://localhost:8013/api/v1/ws/travel/stream",
+    "session_id": "3c3d5e0f-69a9-4b0d-8b8c-34e13a65003c"
+  },
+  "summary": {
+    "total_turns": 9,
+    "successful_turns": 9,
+    "total_duration": 312.14421701431274,
+    "total_tokens": 4245,
+    "success_rate": 100.0
+  },
+  "turns": [
+    {
+      "turn_number": 1,
+      "question": "What are the top places to visit in India as of January 2026?",
+      "success": true,
+      "duration": 9.309394598007202,
+      "token_count": 114,
+      "response_preview": "\nOkay, I need to find the top places to visit in India as of January 2026. I should use the search_travel tool to get this information. I need to specify the query as \"top places to visit in India in ",
+      "error_message": null,
+      "turn_in_session": 1
+    },
+    {
+      "turn_number": 2,
+      "question": "What should I see there? What festivals and activities are currently going on?",
+      "success": true,
+      "duration": 14.433769941329956,
+      "token_count": 113,
+      "response_preview": "\nOkay, let\u2019s start by searching for the top places to visit in India as of January 2026 and any ongoing festivals or activities. I\u2019ll use the search_travel tool to get this information.\n\n\nOkay, I\u2019ve u",
+      "error_message": null,
+      "turn_in_session": 2
+    },
+    {
+      "turn_number": 3,
+      "question": "Which regions are most popular vs hidden gems that nobody visits?",
+      "success": true,
+      "duration": 35.69392967224121,
+      "token_count": 475,
+      "response_preview": "\nOkay, let's start by identifying popular and less-visited regions in India as of January 2026. I'll start with a search for popular destinations and then explore some hidden gems. I should focus the ",
+      "error_message": null,
+      "turn_in_session": 3
+    },
+    {
+      "turn_number": 4,
+      "question": "What transport options are available?",
+      "success": true,
+      "duration": 38.13611698150635,
+      "token_count": 489,
+      "response_preview": "\nOkay, let's figure out the transport options for popular and hidden gem locations in India as of January 2026. I need to use the `search_travel` tool to gather information about transportation within",
+      "error_message": null,
+      "turn_in_session": 4
+    },
+    {
+      "turn_number": 5,
+      "question": "I have a limited budget of 50000 INR. Can you suggest affordable options?",
+      "success": true,
+      "duration": 67.41927528381348,
+      "token_count": 773,
+      "response_preview": "\nOkay, let's find some affordable travel options in India with a budget of 50,000 INR. Given the constraints, I'll focus on regions and experiences that offer good value. First, I need to gather infor",
+      "error_message": null,
+      "turn_in_session": 5
+    },
+    {
+      "turn_number": 6,
+      "question": "I'm vegetarian and prefer local street food. Any recommendations?",
+      "success": true,
+      "duration": 43.37516903877258,
+      "token_count": 844,
+      "response_preview": "\nOkay, let\u2019s focus on vegetarian street food options in India, keeping a budget in mind. Since it\u2019s January 2026, I\u2019ll prioritize regions known for delicious and affordable vegetarian street food. I'l",
+      "error_message": null,
+      "turn_in_session": 6
+    },
+    {
+      "turn_number": 7,
+      "question": "What about budget-friendly homestays or hostels instead of hotels?",
+      "success": true,
+      "duration": 36.07084822654724,
+      "token_count": 425,
+      "response_preview": "\nOkay, let's explore some budget-friendly options considering the user's preferences \u2013 vegetarian food, local street food, and a 50,000 INR budget. Given the time frame of January 2026, it\u2019s smart to ",
+      "error_message": null,
+      "turn_in_session": 7
+    },
+    {
+      "turn_number": 8,
+      "question": "Can you suggest variations of this plan for a solo female traveler?",
+      "success": true,
+      "duration": 37.952704191207886,
+      "token_count": 559,
+      "response_preview": "\nOkay, let\u2019s tailor this trip for a solo female traveler on a budget, keeping in mind vegetarian food and a preference for local experiences. Considering the initial open-ended nature of the request, ",
+      "error_message": null,
+      "turn_in_session": 8
+    },
+    {
+      "turn_number": 9,
+      "question": "Actually, my group size just changed from 2 people to 6 people. Can you replan everything?",
+      "success": true,
+      "duration": 21.7129123210907,
+      "token_count": 453,
+      "response_preview": "\nOkay, shifting the focus to a group of six significantly changes the recommendations! With a larger group, we can prioritize experiences that scale well and cater to a wider range of interests while ",
+      "error_message": null,
+      "turn_in_session": 9
+    }
+  ]
+}

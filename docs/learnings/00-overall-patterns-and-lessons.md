@@ -1,9 +1,9 @@
 # AGENTX: Overall Patterns and Lessons Learned
 
 **Project**: AGENTX Prototyping Initiative
-**Prototypes**: R001-R012 (12 complete prototypes)
-**Total Build Time**: ~37.5 hours
-**Duration**: January 14-17, 2026
+**Prototypes**: R001-R013 (13 complete prototypes)
+**Total Build Time**: ~43.5 hours
+**Duration**: January 14-19, 2026
 **Status**: All Prototypes Complete ✅
 
 ---
@@ -12,18 +12,18 @@
 
 ### Objective
 
-Build 12 progressive prototypes demonstrating modern web application patterns, from basic CRUD to AI-powered voice assistants.
+Build 13 progressive prototypes demonstrating modern web application patterns, from basic CRUD to AI-powered voice assistants with streaming and conversation memory.
 
 ### Results
 
 | Metric | Value |
 |--------|-------|
-| Total Prototypes | 12 |
-| Total Build Time | ~37.5 hours |
-| Working Prototypes | 11 ✅ |
+| Total Prototypes | 13 |
+| Total Build Time | ~43.5 hours |
+| Working Prototypes | 12 ✅ |
 | Partial Prototypes | 1 ⚠️ (R008) |
-| Critical Issues Resolved | 15+ |
-| Patterns Established | 30+ |
+| Critical Issues Resolved | 20+ |
+| Patterns Established | 40+ |
 
 ---
 
@@ -43,6 +43,7 @@ Build 12 progressive prototypes demonstrating modern web application patterns, f
 | R010 | Meeting Notes | 5 | ✅ | VAD, Streaming STT |
 | R011 | Personal Assistant | 6 | ✅ | DSPy, Ollama, WebSocket voice |
 | R012 | Analytics Dashboard | 6 | ✅ | NumPy, Pandas, Aggregation |
+| R013 | Travel Planning Stream | 6 | ✅ | DSPy async, WebSocket streaming, dspy.History |
 
 ---
 
@@ -59,6 +60,9 @@ Build 12 progressive prototypes demonstrating modern web application patterns, f
 | 7 | Clipping issues | R009 | Clamp before conversion |
 | 8 | No LLM integration | R011 | DSPy + Ollama |
 | 9 | Tailwind not loading | R011 | Create config files |
+| 10 | Tool argument hallucination | R013 | Explicit dspy.Tool wrapper |
+| 11 | Missing history field in warmup | R013 | Pass dspy.History(messages=[]) |
+| 12 | History.append() not working | R013 | Use history.messages.append() |
 
 ---
 
@@ -122,6 +126,10 @@ Build 12 progressive prototypes demonstrating modern web application patterns, f
 16. **DSPy Built-in Ollama Support** - No separate package
 17. **Silero Models Lightweight** - <160MB total
 18. **GPU Acceleration Helps** - 2-3x speedup
+19. **DSPy `streamify` Requires Sync Warmup** - Call before async streaming
+20. **`dspy.History.messages` is a List** - Append dicts, not Examples
+21. **Tool Definition Must Be Explicit** - Clear name/desc prevents hallucination
+22. **ReAct Includes All Input Fields** - `history` auto-passed to reasoning
 
 ### Audio
 
@@ -133,6 +141,8 @@ Build 12 progressive prototypes demonstrating modern web application patterns, f
 
 22. **WebSocket Essential for Voice** - Low latency
 23. **VAD Enables Turn Detection** - Better transcripts
+24. **Session Storage Required for History** - Server-side memory
+25. **Query Params for Session ID** - Maintain context across connections
 
 ---
 
@@ -146,6 +156,9 @@ Build 12 progressive prototypes demonstrating modern web application patterns, f
 | TTS (Silero) | ~100ms |
 | VAD | <1ms |
 | DSPy streaming | 50-100ms/token |
+| **DSPy first token** | **1.36s average** |
+| **DSPy full request** | **17.78s average** |
+| **300s conversation** | **312s, 9 turns, 4,245 tokens** |
 
 ---
 
