@@ -1,0 +1,68 @@
+{
+  "metadata": {
+    "max_duration_seconds": 60,
+    "actual_duration_seconds": 79.18044018745422,
+    "timestamp": "20260119_024821",
+    "endpoint": "ws://localhost:8013/api/v1/ws/travel/stream",
+    "session_id": "55f01c57-457d-4f98-83c6-e141b27abdf2"
+  },
+  "summary": {
+    "total_turns": 5,
+    "successful_turns": 2,
+    "total_duration": 79.18044018745422,
+    "total_tokens": 325,
+    "success_rate": 40.0
+  },
+  "turns": [
+    {
+      "turn_number": 1,
+      "question": "What are the top places to visit in India as of January 2026?",
+      "success": false,
+      "duration": 10.028559923171997,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "timed out during opening handshake",
+      "turn_in_session": 0
+    },
+    {
+      "turn_number": 2,
+      "question": "What should I see there? What festivals and activities are currently going on?",
+      "success": false,
+      "duration": 10.008055448532104,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "timed out during opening handshake",
+      "turn_in_session": 0
+    },
+    {
+      "turn_number": 3,
+      "question": "Which regions are most popular vs hidden gems that nobody visits?",
+      "success": false,
+      "duration": 10.049647092819214,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "timed out during opening handshake",
+      "turn_in_session": 0
+    },
+    {
+      "turn_number": 4,
+      "question": "What transport options are available?",
+      "success": true,
+      "duration": 19.341127157211304,
+      "token_count": 98,
+      "response_preview": "\nOkay, I need to find out about transport options. I should start by searching for general transport options.\n\nOkay, the search results provide several transport options. I should refine my search to ",
+      "error_message": null,
+      "turn_in_session": 1
+    },
+    {
+      "turn_number": 5,
+      "question": "I have a limited budget of 50000 INR. Can you suggest affordable options?",
+      "success": true,
+      "duration": 25.73692488670349,
+      "token_count": 227,
+      "response_preview": "\nOkay, let\u2019s find affordable transport options for a budget of 50000 INR. I should start by searching for options considering this budget.\n\n\nOkay, the search result gives me some ideas. Let\u2019s focus on",
+      "error_message": null,
+      "turn_in_session": 2
+    }
+  ]
+}

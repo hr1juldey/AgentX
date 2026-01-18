@@ -1,0 +1,107 @@
+{
+  "metadata": {
+    "max_duration_seconds": 300,
+    "actual_duration_seconds": 193.34216380119324,
+    "timestamp": "20260119_023952",
+    "endpoint": "ws://localhost:8013/api/v1/ws/travel/stream"
+  },
+  "summary": {
+    "total_turns": 10,
+    "successful_turns": 8,
+    "total_duration": 193.34216380119324,
+    "total_tokens": 1619,
+    "success_rate": 80.0
+  },
+  "turns": [
+    {
+      "turn_number": 1,
+      "question": "What are the top places to visit in India as of January 2026?",
+      "success": true,
+      "duration": 22.454435348510742,
+      "token_count": 116,
+      "response_preview": "\nOkay, I need to find the top places to visit in India as of January 2026. I should start by using the search_travel tool to get updated travel recommendations. I will focus the search on India and th",
+      "error_message": null
+    },
+    {
+      "turn_number": 2,
+      "question": "What should I see there? What festivals and activities are currently going on?",
+      "success": true,
+      "duration": 9.67434811592102,
+      "token_count": 94,
+      "response_preview": "\nOkay, the user wants to know about current festivals and activities. I should use the `search_travel` tool to find out what's happening. I'll need to specify a query to search for events.\n\nOkay, I've",
+      "error_message": null
+    },
+    {
+      "turn_number": 3,
+      "question": "Which regions are most popular vs hidden gems that nobody visits?",
+      "success": true,
+      "duration": 28.98848867416382,
+      "token_count": 288,
+      "response_preview": "\nOkay, I need to explore both popular and less-visited travel destinations. I should start by searching for information on popular regions to get a baseline, and then I can use that to identify potent",
+      "error_message": null
+    },
+    {
+      "turn_number": 4,
+      "question": "What transport options are available?",
+      "success": true,
+      "duration": 12.262596368789673,
+      "token_count": 189,
+      "response_preview": "\nOkay, the user is asking about transport options. I should use the `search_travel` tool to get information on available transport methods. I need to be specific with my query to get relevant results.",
+      "error_message": null
+    },
+    {
+      "turn_number": 5,
+      "question": "I have a limited budget of 50000 INR. Can you suggest affordable options?",
+      "success": true,
+      "duration": 22.618874073028564,
+      "token_count": 315,
+      "response_preview": "\nOkay, I need to find affordable travel options for a budget of 50000 INR. I should start by searching for destinations and potential travel deals. I'll use the search_travel tool to gather informatio",
+      "error_message": null
+    },
+    {
+      "turn_number": 6,
+      "question": "I'm vegetarian and prefer local street food. Any recommendations?",
+      "success": true,
+      "duration": 17.07335591316223,
+      "token_count": 212,
+      "response_preview": "\nOkay, I need to find some vegetarian street food recommendations, focusing on local options. I should start by searching for vegetarian street food in a general area to get some ideas, and then refin",
+      "error_message": null
+    },
+    {
+      "turn_number": 7,
+      "question": "What about budget-friendly homestays or hostels instead of hotels?",
+      "success": true,
+      "duration": 12.885189533233643,
+      "token_count": 138,
+      "response_preview": "\nOkay, the user is interested in budget-friendly accommodation options. Let's use the search_travel tool to find homestays and hostels. I should focus the search on keywords like \"budget homestays,\" \"",
+      "error_message": null
+    },
+    {
+      "turn_number": 8,
+      "question": "Can you suggest variations of this plan for a solo female traveler?",
+      "success": true,
+      "duration": 22.52248978614807,
+      "token_count": 267,
+      "response_preview": "\nOkay, I need to understand what kind of variations a solo female traveler might be looking for. To give good suggestions, I need to know what kind of trip they're interested in. I'll start with a bro",
+      "error_message": null
+    },
+    {
+      "turn_number": 9,
+      "question": "Actually, my group size just changed from 2 people to 6 people. Can you replan everything?",
+      "success": false,
+      "duration": 25.79149842262268,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "received 1012 (service restart); then sent 1012 (service restart)"
+    },
+    {
+      "turn_number": 10,
+      "question": "With 6 people, how does this affect our transportation and lodging options?",
+      "success": false,
+      "duration": 10.024616003036499,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "timed out during opening handshake"
+    }
+  ]
+}

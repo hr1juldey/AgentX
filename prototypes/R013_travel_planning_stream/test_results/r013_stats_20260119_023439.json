@@ -1,0 +1,339 @@
+{
+  "metadata": {
+    "iterations": 30,
+    "timestamp": "20260119_023439",
+    "endpoint": "ws://localhost:8013/api/v1/ws/travel/stream"
+  },
+  "results": [
+    {
+      "iteration": 1,
+      "question": "What are the top places to visit in India",
+      "success": true,
+      "duration": 9.259698152542114,
+      "token_count": 78,
+      "first_token_time": 1.5018398761749268,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 2,
+      "question": "What festivals and activities are currently going on there",
+      "success": true,
+      "duration": 32.22666573524475,
+      "token_count": 243,
+      "first_token_time": 1.4570865631103516,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 3,
+      "question": "Which regions are most popular vs hidden gems",
+      "success": true,
+      "duration": 16.002257823944092,
+      "token_count": 156,
+      "first_token_time": 1.3654987812042236,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 4,
+      "question": "What transport options are available",
+      "success": true,
+      "duration": 11.72083854675293,
+      "token_count": 131,
+      "first_token_time": 1.082512617111206,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 5,
+      "question": "What are the top places to visit in India",
+      "success": true,
+      "duration": 9.253356456756592,
+      "token_count": 69,
+      "first_token_time": 1.4783117771148682,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 6,
+      "question": "What festivals and activities are currently going on there",
+      "success": true,
+      "duration": 10.354064226150513,
+      "token_count": 75,
+      "first_token_time": 1.4839859008789062,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 7,
+      "question": "Which regions are most popular vs hidden gems",
+      "success": true,
+      "duration": 16.472139596939087,
+      "token_count": 102,
+      "first_token_time": 1.3650801181793213,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 8,
+      "question": "What transport options are available",
+      "success": true,
+      "duration": 31.4387788772583,
+      "token_count": 267,
+      "first_token_time": 1.061021327972412,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 9,
+      "question": "What are the top places to visit in India",
+      "success": true,
+      "duration": 9.371834516525269,
+      "token_count": 93,
+      "first_token_time": 1.4798424243927002,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 10,
+      "question": "What festivals and activities are currently going on there",
+      "success": true,
+      "duration": 10.364120960235596,
+      "token_count": 96,
+      "first_token_time": 1.4726910591125488,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 11,
+      "question": "Which regions are most popular vs hidden gems",
+      "success": true,
+      "duration": 30.308812141418457,
+      "token_count": 367,
+      "first_token_time": 1.374767541885376,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 12,
+      "question": "What transport options are available",
+      "success": true,
+      "duration": 7.375845909118652,
+      "token_count": 115,
+      "first_token_time": 1.071605920791626,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 13,
+      "question": "What are the top places to visit in India",
+      "success": true,
+      "duration": 10.194751739501953,
+      "token_count": 73,
+      "first_token_time": 1.4762530326843262,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 14,
+      "question": "What festivals and activities are currently going on there",
+      "success": true,
+      "duration": 39.92459797859192,
+      "token_count": 276,
+      "first_token_time": 1.4534204006195068,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 15,
+      "question": "Which regions are most popular vs hidden gems",
+      "success": true,
+      "duration": 35.52373743057251,
+      "token_count": 289,
+      "first_token_time": 1.3799245357513428,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 16,
+      "question": "What transport options are available",
+      "success": true,
+      "duration": 19.812742233276367,
+      "token_count": 242,
+      "first_token_time": 1.0637922286987305,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 17,
+      "question": "What are the top places to visit in India",
+      "success": true,
+      "duration": 9.535127401351929,
+      "token_count": 67,
+      "first_token_time": 1.480290174484253,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 18,
+      "question": "What festivals and activities are currently going on there",
+      "success": true,
+      "duration": 22.269088983535767,
+      "token_count": 275,
+      "first_token_time": 1.4769513607025146,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 19,
+      "question": "Which regions are most popular vs hidden gems",
+      "success": true,
+      "duration": 14.307236909866333,
+      "token_count": 160,
+      "first_token_time": 1.3783817291259766,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 20,
+      "question": "What transport options are available",
+      "success": true,
+      "duration": 27.327794313430786,
+      "token_count": 170,
+      "first_token_time": 1.0625574588775635,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 21,
+      "question": "What are the top places to visit in India",
+      "success": true,
+      "duration": 14.079952955245972,
+      "token_count": 121,
+      "first_token_time": 1.482956886291504,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 22,
+      "question": "What festivals and activities are currently going on there",
+      "success": true,
+      "duration": 32.8890266418457,
+      "token_count": 183,
+      "first_token_time": 1.4779636859893799,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 23,
+      "question": "Which regions are most popular vs hidden gems",
+      "success": true,
+      "duration": 13.982564449310303,
+      "token_count": 140,
+      "first_token_time": 1.3712162971496582,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 24,
+      "question": "What transport options are available",
+      "success": true,
+      "duration": 20.529584169387817,
+      "token_count": 173,
+      "first_token_time": 1.0681300163269043,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 25,
+      "question": "What are the top places to visit in India",
+      "success": true,
+      "duration": 16.178479194641113,
+      "token_count": 179,
+      "first_token_time": 1.4753704071044922,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 26,
+      "question": "What festivals and activities are currently going on there",
+      "success": true,
+      "duration": 13.740456342697144,
+      "token_count": 132,
+      "first_token_time": 1.4880666732788086,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 27,
+      "question": "Which regions are most popular vs hidden gems",
+      "success": true,
+      "duration": 13.61407470703125,
+      "token_count": 130,
+      "first_token_time": 1.3685672283172607,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 28,
+      "question": "What transport options are available",
+      "success": true,
+      "duration": 7.497370004653931,
+      "token_count": 88,
+      "first_token_time": 1.058281421661377,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 29,
+      "question": "What are the top places to visit in India",
+      "success": true,
+      "duration": 12.804858207702637,
+      "token_count": 109,
+      "first_token_time": 1.470332384109497,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    },
+    {
+      "iteration": 30,
+      "question": "What festivals and activities are currently going on there",
+      "success": true,
+      "duration": 15.117974281311035,
+      "token_count": 150,
+      "first_token_time": 1.4697082042694092,
+      "error_message": null,
+      "tool_calls": 0,
+      "search_used": false
+    }
+  ]
+}

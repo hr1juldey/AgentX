@@ -1,0 +1,118 @@
+{
+  "metadata": {
+    "max_duration_seconds": 300,
+    "actual_duration_seconds": 277.8657672405243,
+    "timestamp": "20260119_024548",
+    "endpoint": "ws://localhost:8013/api/v1/ws/travel/stream",
+    "session_id": "9f8bde4f-9027-46ce-94c2-827793bc161f"
+  },
+  "summary": {
+    "total_turns": 10,
+    "successful_turns": 0,
+    "total_duration": 277.8657672405243,
+    "total_tokens": 0,
+    "success_rate": 0.0
+  },
+  "turns": [
+    {
+      "turn_number": 1,
+      "question": "What are the top places to visit in India as of January 2026?",
+      "success": false,
+      "duration": 10.061103343963623,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "timed out during opening handshake",
+      "turn_in_session": 0
+    },
+    {
+      "turn_number": 2,
+      "question": "What should I see there? What festivals and activities are currently going on?",
+      "success": false,
+      "duration": 10.029348850250244,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "timed out during opening handshake",
+      "turn_in_session": 0
+    },
+    {
+      "turn_number": 3,
+      "question": "Which regions are most popular vs hidden gems that nobody visits?",
+      "success": false,
+      "duration": 10.023741483688354,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "timed out during opening handshake",
+      "turn_in_session": 0
+    },
+    {
+      "turn_number": 4,
+      "question": "What transport options are available?",
+      "success": false,
+      "duration": 25.90510058403015,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "'History' object has no attribute 'append'",
+      "turn_in_session": 0
+    },
+    {
+      "turn_number": 5,
+      "question": "I have a limited budget of 50000 INR. Can you suggest affordable options?",
+      "success": false,
+      "duration": 39.096818685531616,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "'History' object has no attribute 'append'",
+      "turn_in_session": 1
+    },
+    {
+      "turn_number": 6,
+      "question": "I'm vegetarian and prefer local street food. Any recommendations?",
+      "success": false,
+      "duration": 65.90836763381958,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "'History' object has no attribute 'append'",
+      "turn_in_session": 2
+    },
+    {
+      "turn_number": 7,
+      "question": "What about budget-friendly homestays or hostels instead of hotels?",
+      "success": false,
+      "duration": 8.559027194976807,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "'History' object has no attribute 'append'",
+      "turn_in_session": 3
+    },
+    {
+      "turn_number": 8,
+      "question": "Can you suggest variations of this plan for a solo female traveler?",
+      "success": false,
+      "duration": 26.63224148750305,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "'History' object has no attribute 'append'",
+      "turn_in_session": 4
+    },
+    {
+      "turn_number": 9,
+      "question": "Actually, my group size just changed from 2 people to 6 people. Can you replan everything?",
+      "success": false,
+      "duration": 46.615198612213135,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "'History' object has no attribute 'append'",
+      "turn_in_session": 5
+    },
+    {
+      "turn_number": 10,
+      "question": "With 6 people, how does this affect our transportation and lodging options?",
+      "success": false,
+      "duration": 25.996578216552734,
+      "token_count": 0,
+      "response_preview": "",
+      "error_message": "'History' object has no attribute 'append'",
+      "turn_in_session": 6
+    }
+  ]
+}
