@@ -2,6 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL: Read CLAUDE_POLICY.md First
+
+**Before making any code changes, you MUST read and adhere to `CLAUDE_POLICY.md`.**
+
+This policy is strictly enforced and includes:
+- Absolute imports only (no `from .` or `from ..`)
+- Ruff compliance (mandatory)
+- Pyrefly type checking (mandatory)
+- File size limits
+- Anti-pattern prohibition
+
+**Code that violates CLAUDE_POLICY.md is invalid and must be fixed before responding.**
+
 ## Project Overview
 
 AGENTX is a personal AI assistant framework designed to be a "full-on JARVIS" with memory, reasoning, and multimodal capabilities. The project combines local LLMs (via Ollama), programmatic LLM interactions (DSPy), persistent memory (Mem0AI), and plugin architecture (FastMCP).
@@ -48,8 +61,11 @@ ruff check --fix
 # Format code
 ruff format
 
-# Type checking (optional - uses pyrefly)
-pyrefly check
+# Type checking with pyrefly
+pyrefly check --summarize-errors
+
+# Run on all prototypes (from root)
+for dir in prototypes/*/backend; do cd "$dir" && ruff check . && ruff format . && pyrefly check . --summarize-errors; done
 ```
 
 ### Testing
@@ -218,46 +234,105 @@ The project uses Silero for both STT and TTS. Key requirements:
 
 ### Audio Pipeline Requirements
 
-- **Input STT**: 24kHz → resample to 16kHz (Silero requirement)
-- **Output TTS**: 16kHz sample rate
+- **Input STT**: Any sample rate → resample to 16kHz (Silero STT requirement)
+- **Output TTS**: 24kHz or 48kHz sample rate (Silero TTS output)
 - **Format**: WAV files required for both
+- **VAD**: 16kHz sample rate required for voice activity detection
 
 ### STT Service Pattern
 
 ```python
 import torch
-import torchaudio
+import numpy as np
+import scipy.io.wavfile as wavfile
 
 # Load Silero STT model
-model, decoder, utils = torch.hub.load(repo_or_dir='snakers4/silero-models',
-                                       model='silero_stt',
-                                       language='en',
-                                       device='cuda' if torch.cuda.is_available() else 'cpu')
+stt_result = torch.hub.load(
+    repo_or_dir='snakers4/silero-models',
+    model='silero_stt',
+    language='en',
+    device=self._torch_device,
+    trust_repo=True,
+)
 
-# Transcribe audio
-def transcribe(audio_path: str) -> str:
-    # Resample to 16kHz if needed
-    waveform, sample_rate = torchaudio.load(audio_path)
-    if sample_rate != 16000:
-        resampler = torchaudio.transforms.Resample(sample_rate, 16000)
-        waveform = resampler(waveform)
+self.stt_model = stt_result[0]  # type: ignore[index]
+self.stt_decoder = stt_result[1]  # type: ignore[index]
+utils_tuple = stt_result[2]  # type: ignore[index]
+self._stt_read_batch = utils_tuple[0]  # type: ignore[index]
+self._stt_prepare_model_input = utils_tuple[3]  # type: ignore[index]
 
-    # Transcribe
-    text = decoder(model(waveform[0].to(device))[0])
+# Transcribe audio (accepts any sample rate)
+STT_SAMPLE_RATE = 16000
+
+async def transcribe(self, audio_bytes: bytes) -> str:
+    # Save to temp file
+    temp_path = f"/tmp/temp_stt_{uuid.uuid4().hex}.wav"
+    with open(temp_path, "wb") as f:
+        f.write(audio_bytes)
+
+    # Read and validate
+    sr, audio_data = wavfile.read(temp_path)
+
+    # Convert to mono if stereo
+    if len(audio_data.shape) > 1:
+        audio_data = audio_data.mean(axis=1)
+
+    # Resample if not 16kHz
+    if sr != self.STT_SAMPLE_RATE:
+        # Use torchaudio or scipy for resampling
+        from torchaudio.transforms import Resample
+        audio_tensor = torch.from_numpy(audio_data.astype(np.float32) / 32768.0)
+        if audio_tensor.dim() == 1:
+            audio_tensor = audio_tensor.unsqueeze(0)
+        resampler = Resample(sr, self.STT_SAMPLE_RATE)
+        audio_tensor = resampler(audio_tensor)
+        audio_data = audio_tensor.squeeze().numpy()
+        sr = self.STT_SAMPLE_RATE
+
+    # Prepare and transcribe
+    input_batch = self._stt_prepare_model_input(
+        self._stt_read_batch([temp_path]), device=self._torch_device
+    )
+    with torch.no_grad():
+        output = self.stt_model(input_batch)
+    text = self.stt_decoder(output[0].cpu())
     return text
 ```
 
 ### TTS Service Pattern
 
 ```python
-from silero import TextToSpeech
+from silero import silero_tts
 
-# Initialize TTS
-tts = TextToSpeech(models_dir="models/")
-tts.load_model(language='en', speaker='random')
+# Initialize TTS (variable-length return)
+tts_result = silero_tts(language="en", speaker="v3_en")
+if isinstance(tts_result, tuple) and len(tts_result) >= 2:
+    self.tts_model = tts_result[0]
+    self.tts_example_text = tts_result[1]
+else:
+    self.tts_model = tts_result
+    self.tts_example_text = "Hello world"
 
-# Generate speech
-audio_path = tts.synthesize(text="Hello world", output_file="output.wav")
+if hasattr(self.tts_model, "to"):
+    self.tts_model.to(self._torch_device)
+
+# Generate speech (24kHz or 48kHz output)
+TTS_SAMPLE_RATE = 24000  # or 48000
+
+async def synthesize(self, text: str) -> bytes:
+    # Generate audio at exact sample rate
+    audio = self.tts_model.apply_tts(
+        text=text, speaker="en_5", sample_rate=self.TTS_SAMPLE_RATE
+    )
+
+    # Save to WAV
+    import io
+    import scipy.io.wavfile as wavfile
+
+    audio_buffer = io.BytesIO()
+    wavfile.write(audio_buffer, self.TTS_SAMPLE_RATE, audio.cpu().numpy())
+    audio_buffer.seek(0)
+    return audio_buffer.read()
 ```
 
 ## FastAPI Backend Patterns
@@ -383,11 +458,13 @@ module.exports = {
 
 ## Important Policy Rules
 
-This project has a strict code enforcement policy (CLAUDE_POLICY.md):
+**CRITICAL**: This project has a strict code enforcement policy defined in `CLAUDE_POLICY.md`.
+
+You **MUST** read and adhere to `CLAUDE_POLICY.md` when writing or modifying code. Key requirements:
 
 1. **ABSOLUTE IMPORTS ONLY** - Never use `from .` or `from ..`
-   - ✅ `from app.domain.mock.entities import MockDefinition`
-   - ❌ `from .entities import MockDefinition`
+   - ✅ `from config.settings import settings`
+   - ❌ `from .settings import settings`
 
 2. **Ruff Compliance** - All code must pass:
    ```bash
@@ -395,9 +472,180 @@ This project has a strict code enforcement policy (CLAUDE_POLICY.md):
    ruff format
    ```
 
-3. **File Size Limits** - Max 100 lines of executable code per file (50 lines overhead)
+3. **Pyrefly Type Checking** - All code must pass:
+   ```bash
+   pyrefly check --summarize-errors
+   ```
 
-4. **No Anti-Patterns** - No god objects, magic numbers, circular imports, or "cleanup later" code
+4. **File Size Limits** - Max 100 lines of executable code per file (50 lines overhead)
+
+5. **No Anti-Patterns** - No god objects, magic numbers, circular imports, or "cleanup later" code
+
+6. **Self-Correction Required** - If any check fails, you must fix the code before responding
+
+### Quality Loop Process
+
+When making code changes, follow this loop:
+
+```bash
+# 1. Make your changes
+# 2. Run ruff check
+ruff check . --fix
+
+# 3. Run ruff format
+ruff format .
+
+# 4. Run pyrefly check
+pyrefly check . --summarize-errors
+
+# 5. If any errors remain, fix them and repeat from step 2
+```
+
+**Do not consider code changes complete until all checks pass.**
+
+## Type Checking Patterns (Pyrefly)
+
+Pyrefly is used for strict type checking. Common patterns to satisfy pyrefly:
+
+### PyTorch Device Attribute Pattern
+
+PyTorch's `torch.device` is a read-only descriptor. Use this pattern to avoid pyrefly errors:
+
+```python
+class MyService:
+    def __init__(self):
+        use_cuda = torch.cuda.is_available()
+        device_str = "cuda" if use_cuda else "cpu"
+        self._torch_device = torch.device(device_str)  # type: ignore[read-only]
+        if use_cuda:
+            logger.info(f"Using GPU: {torch.cuda.get_device_name()}")
+        else:
+            logger.info("Using CPU")
+```
+
+**Key points:**
+- Rename `self.device` to `self._torch_device`
+- Use `use_cuda` variable before assignment
+- Add `# type: ignore[read-only]` comment
+- Use `self._torch_device` in all subsequent references
+
+### torch.hub.load Indexing Pattern
+
+torch.hub.load returns `object` type. Add type ignore comments:
+
+```python
+stt_result = torch.hub.load(
+    repo_or_dir="snakers4/silero-models",
+    model="silero_stt",
+    language="en",
+    device=self._torch_device,
+    trust_repo=True,
+)
+
+self.stt_model = stt_result[0]  # type: ignore[index]
+self.stt_decoder = stt_result[1]  # type: ignore[index]
+utils_tuple = stt_result[2]  # type: ignore[index]
+self._stt_read_batch = utils_tuple[0]  # type: ignore[index]
+self._stt_prepare_model_input = utils_tuple[3]  # type: ignore[index]
+```
+
+### silero_tts Unpacking Pattern
+
+silero_tts has variable-length return values:
+
+```python
+from silero import silero_tts
+
+tts_result = silero_tts(language="en", speaker="v3_en")
+# Handle variable-length return from silero_tts
+if isinstance(tts_result, tuple) and len(tts_result) >= 2:
+    self.tts_model = tts_result[0]
+    self.tts_example_text = tts_result[1]
+else:
+    self.tts_model = tts_result
+    self.tts_example_text = "Hello world"  # Default example text
+# Ensure the model is on the correct device
+if hasattr(self.tts_model, "to"):
+    self.tts_model.to(self._torch_device)
+```
+
+### VAD Model sr Argument
+
+VAD model requires explicit sample rate argument:
+
+```python
+from silero_vad import VADIterator, load_silero_vad
+
+vad_model = load_silero_vad()
+# Always include sr parameter
+speech_prob = vad_model(
+    torch.tensor(audio_np).float().to(self._torch_device), sr=16000
+).item()
+```
+
+### Forward References with Enum
+
+When using Enum types before they're defined, add future import:
+
+```python
+from __future__ import annotations
+
+from enum import Enum
+from pydantic import BaseModel
+
+class Document(BaseModel):
+    status: DocumentStatus  # Forward reference works now
+
+class DocumentStatus(str, Enum):
+    PROCESSING = "processing"
+    READY = "ready"
+```
+
+### MCP Import Pattern
+
+MCP imports are dynamically generated and not recognized by type checkers:
+
+```python
+from mcp__tavily__tavily_search import tavily_search as mcp_tavily  # type: ignore[import]
+```
+
+### DSPy ReAct Signature Pattern
+
+DSPy ReAct signature may trigger type errors:
+
+```python
+self.react = dspy.ReAct(
+    "question->answer",  # type: ignore[arg-type]
+    tools=[
+        dspy.Tool(calculator, name="calculator"),
+    ]
+)
+```
+
+### Internal vs API Schemas
+
+Keep internal data classes separate from API response schemas:
+
+```python
+# Internal storage (not exposed via API)
+class Document(BaseModel):
+    id: int
+    filename: str
+    uploaded_at: datetime
+    status: DocumentStatus
+    extracted_text: str = ""
+
+# API response schema
+class DocumentResponse(BaseModel):
+    id: int
+    filename: str
+    uploaded_at: datetime
+    status: DocumentStatus
+```
+
+Import only what you need in each layer:
+- `services/service.py`: Import internal classes (`Document`, `Summary`)
+- `api/routes.py`: Import response schemas (`DocumentResponse`, `SummaryResponse`)
 
 ## External Service Dependencies
 
