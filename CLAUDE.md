@@ -119,11 +119,14 @@ npm run dev
 
 ```
 AgentX/
-├── prototypes/           # Prototype applications (R000-R012)
+├── prototypes/           # Prototype applications (R000-R013+) - IMPLEMENTATION REFERENCES
 │   ├── R000_template/    # Template for new prototypes
 │   ├── R001-R010/        # Various feature prototypes
-│   └── R011_personal_assistant/  # Personal Assistant (DSPy + Voice)
-├── docs/research/        # Comprehensive research documentation
+│   ├── R011_personal_assistant/  # Personal Assistant (DSPy + Voice)
+│   └── R013_travel_planning_stream/  # WebSocket streaming patterns
+├── docs/
+│   ├── engineering/      # HLD, LLD, schemas, threat model, privacy
+│   └── research/         # Comprehensive research documentation
 ├── pyproject.toml        # UV package manager configuration
 ├── requirements-core.txt # Core dependencies (excluding PyTorch)
 └── requirements-pytorch.txt  # PyTorch with CUDA 13.0
@@ -136,6 +139,159 @@ Prototypes are organized by complexity levels:
 - **Level 4-5**: Real-time features (WebSocket), voice (STT/TTS)
 - **Level 6**: AI assistants with DSPy ReAct + tools
 - Each prototype builds on patterns from previous ones
+
+### Reference Hierarchy (Step-by-Step Research Method)
+
+**When implementing new features, follow this logical reference order:**
+
+| Step | Reference | Purpose | Location |
+|------|-----------|---------|----------|
+| **0** | **Research & Learnings** | Foundational knowledge, patterns | `docs/research/`, `docs/learnings/` |
+| **1** | **Existing Prototypes** | Working implementation patterns | `prototypes/R000-R013/` |
+| **2** | **Engineering Docs** | Architecture, schemas, security, UI design | `docs/engineering/` |
+| **3** | **DSPy Tutorials** | Agent patterns, streaming, tools | `/home/riju279/Downloads/dspy-main/dspy-main/docs/` |
+| **4** | **Mimicus Backend** | Clean Architecture patterns | `/home/riju279/Documents/Tools/mimicus/mimicus/src/` |
+
+#### Step 0: Research Documents (`docs/research/`)
+
+| Document | Purpose | Key Topics |
+|----------|---------|------------|
+| `00_research_summary.md` | Architecture overview | Core concepts, tech stack |
+| `01_colbert_qdrant_guide.md` | Vector search integration | ColBERTv2, Qdrant setup |
+| `02_dspy_mem0_integration.md` | DSPy + Mem0AI patterns | ReAct agents, memory system |
+| `03_ollama_local_llm.md` | Local LLM setup | Ollama configuration |
+| `04_plugin_architecture.md` | Plugin system design | FastMCP patterns |
+| `05_mcp_integration.md` | MCP protocol | Model Context Protocol |
+| `06_pwa_frontend.md` | Frontend architecture | Next.js, PWA patterns |
+| `07_temporal_rag.md` | Time-aware RAG | Fact invalidation, TTL |
+| `08_tts_stt_integration.md` | Voice interface | STT/TTS pipeline |
+| `09_computer_vision.md` | Vision capabilities | Multi-modal processing |
+| `10_generative_ui_ollama_models.md` | Generative UI research | UI generation with LLMs |
+| `11_fastmcp_guide.md` | FastMCP reference | Complete guide |
+| `12_ovos_architecture_analysis.md` | OVOS pattern analysis | Voice assistant architecture |
+| `13_blender_plugin_architecture_analysis.md` | Blender plugin patterns | Plugin design principles |
+| `14_core_vs_plugin_separation_principles.md` | Core/plugin boundaries | Architecture separation |
+| `15_comprehensive_research_summary.md` | All research summary | Consolidated findings |
+
+#### Step 0: Learning Documents (`docs/learnings/`)
+
+| Document | Purpose | Key Topics |
+|----------|---------|------------|
+| `00-overall-patterns-and-lessons.md` | Cross-pattern synthesis | All levels combined |
+| `01-level-1-2-basics-crud-websocket-time-series.md` | Basic patterns | CRUD, WebSocket, time-series |
+| `02-level-3-authentication-sessions-encryption.md` | Auth & security | Sessions, encryption |
+| `03-level-4-documents-ai-vector-search.md` | Document + AI | Vector search patterns |
+| `04-level-5-voice-stt-tts-vad.md` | Voice pipeline | STT/TTS/VAD integration |
+| `05-level-6-ai-assistant-analytics.md` | AI assistant patterns | ReAct, analytics |
+
+#### Step 2: Engineering Documents (`docs/engineering/`)
+
+| Document | Purpose | Key Topics |
+|----------|---------|------------|
+| `generative_ui_design_plan.md` | Generative UI design plan | DSPy+LangGraph architecture, UI descriptors, fallback strategy |
+| `HLD.md` | High-level design | System architecture, component catalog |
+| `schemas.md` | Data schemas | Pydantic models, CanonicalDocument, plugin manifests |
+| `threat_model.md` | Security threat model | STRIDE analysis, mitigation strategies |
+| `privacy_assessment.md` | Privacy impact assessment | PII handling, GDPR/CCPA compliance |
+| `openapi.yaml` | API specification | REST endpoints, WebSocket, data models |
+
+#### Example Research Process for UI Agent:
+
+**Foundational (Step 0)**:
+1. Read `docs/research/10_generative_ui_ollama_models.md` for generative UI concepts
+2. Read `docs/learnings/05-level-6-ai-assistant-analytics.md` for AI assistant patterns
+3. Read `docs/research/02_dspy_mem0_integration.md` for DSPy integration
+
+**Implementation (Steps 1-4)**:
+4. Check `R011_personal_assistant` for DSPy ReAct patterns
+5. Check `R013_travel_planning_stream` for WebSocket streaming
+6. Read `docs/engineering/generative_ui_design_plan.md` for UI architecture
+7. Read `docs/engineering/schemas.md` for data structure standards
+8. Read DSPy `tutorials/streaming/` for `dspy.streamify()` patterns
+9. Read mimicus `domain/entities/` for Clean Architecture entity patterns
+
+### Package Management
+
+**Always use `uv` for package management**:
+
+```bash
+# Add new packages
+uv add package-name
+
+# Add with extras
+uv add "package-name[extra]"
+
+# Add dev dependency
+uv add --dev package-name
+
+# Install from requirements
+uv pip install -r requirements-core.txt
+
+# Install PyTorch with CUDA (special index URL)
+uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+
+# Sync lockfile
+uv sync
+```
+
+### Backend Architecture Standards (from Mimicus)
+
+**IMPORTANT**: Follow **Clean Architecture / Domain-Driven Design (DDD)** patterns for all new backend code:
+
+```
+prototype_name/backend/
+├── main.py              # Application entry point (FastAPI factory)
+├── core/                # Configuration & dependency injection
+│   ├── config.py        # Pydantic Settings
+│   ├── dependencies.py  # Dependency injection functions (singletons)
+│   └── middleware/      # CORS, logging, auth middleware
+├── domain/              # Innermost layer - business logic (no dependencies)
+│   ├── entities/        # Core business entities (@dataclass)
+│   ├── repositories/    # Repository interfaces (ABC) + implementations
+│   └── services/        # Domain services (business logic)
+├── application/         # Use cases orchestration
+│   ├── use_cases/       # Single-purpose classes with execute()
+│   ├── dtos/            # Data Transfer Objects (Pydantic models for API)
+│   └── mappers/         # Entity ↔ DTO conversion (static methods)
+├── infrastructure/      # External concerns (DB, HTTP, storage)
+│   ├── database/        # SQLAlchemy models, connection
+│   └── external/        # HTTP clients, external APIs
+└── presentation/        # FastAPI routes (controllers)
+    └── api/
+        └── v1/          # REST endpoints
+```
+
+**Key Patterns** (see mimicus `/home/riju279/Documents/Tools/mimicus/mimicus/src/`):
+
+1. **Repository Pattern**: Abstract base class + implementations
+2. **DTO Pattern**: Pydantic models for API layer (CreateDTO, ResponseDTO)
+3. **Mapper Pattern**: Static methods for entity ↔ DTO conversion
+4. **Use Case Pattern**: Single-purpose classes with `execute()` method
+5. **Dependency Injection**: Global singletons + getter functions
+6. **Entity Pattern**: `@dataclass` with business logic methods
+
+**Variable Naming Conventions**:
+- Entity properties: `mock_id`, `mock_name`, `mock_enabled`
+- Match criteria: `match_method`, `match_path`, `match_headers`
+- Response config: `response_status`, `response_body`
+- Repository instances: `_mock_repository`, `_user_repository`
+- Use case functions: `get_create_mock_use_case()`
+
+**File Size Constraints**: Max 100 lines of executable code per file (50 lines overhead).
+
+### DSPy Documentation Reference
+
+**IMPORTANT**: DSPy tutorials are available at `/home/riju279/Downloads/dspy-main/dspy-main/docs/`
+
+**Key Tutorials** (always combine 3+ examples for complex problems):
+- `docs/tutorials/streaming/index.md` - Token/status streaming with `dspy.streamify()`
+- `docs/tutorials/async/index.md` - Async patterns with `acall()`, `aforward()`
+- `docs/tutorials/tool_use/index.ipynb` - Tool use patterns
+- `docs/tutorials/agents/index.ipynb` - ReAct agent optimization
+- `docs/tutorials/mem0_react_agent/index.md` - Memory-enabled agents
+- `docs/tutorials/yahoo_finance_react/index.md` - Real-world ReAct integration
+- `docs/learn/programming/tools.md` - Complete tools reference
+- `docs/learn/programming/signatures.md` - DSPy signatures
 
 ## DSPy Integration Patterns
 
