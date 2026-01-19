@@ -60,7 +60,7 @@ AGENTX is a local-first AI personal assistant designed to operate entirely on us
 ### Design Constraints
 
 | Constraint | Description | Rationale |
-|------------|-------------|-----------|
+| ------------ | ------------- | ----------- |
 | **Local-first** | All processing on user's machine | Privacy, data residency, air-gapped capability |
 | **Single-user** | Multi-user isolation in v1.5 | MVP scope, simplify authentication |
 | **Air-gapped capable** | Must function without internet | Enterprise, remote use cases |
@@ -80,7 +80,7 @@ AGENTX is a local-first AI personal assistant designed to operate entirely on us
 ### Explicit Exclusions (v1.0)
 
 | Feature | Reason | Future Version |
-|---------|--------|----------------|
+| --------- | -------- | ---------------- |
 | **Cloud LLM fallback** | Privacy requirement | v2.0 (optional opt-in) |
 | **Public telemetry** | Privacy by default | v1.2 (opt-in only) |
 | **Multi-user collaboration** | MVP is single-user | v1.5 |
@@ -121,18 +121,20 @@ graph TD
     Core --> Audit[Audit & Admin Service]
     Core --> Monitor[Observability Stack]
 
-    Note: Voice architecture (Kyutai STT/TTS) documented in separate plan: kyutai_speech_integration_plan.md
+    %% NOTE: Voice architecture (Kyutai STT/TTS) documented separately
+    %% See: kyutai_speech_integration_plan.md
 
     style Core fill:#4A90E2,color:#fff
     style Qdrant fill:#50E3C2,color:#000
     style Ollama fill:#F5A623,color:#000
     style Plugins fill:#9013FE,color:#fff
+
 ```
 
 ### Component Responsibilities
 
 | Component | Responsibility | Data Flow |
-|-----------|---------------|------------|
+| ----------- | --------------- | ------------ |
 | **PWA Frontend** | User interface, voice I/O | ↔ WebSocket |
 | **Ingest Service** | Canonicalize data, add temporal metadata | → Temporal Indexer |
 | **Temporal Indexer** | Timestamp embeddings, manage partitions | → Qdrant |
@@ -151,7 +153,7 @@ graph TD
 **Purpose**: Canonicalize and validate incoming data from all sources
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | --------------- |
 | **Inputs** | Raw data from plugins/API (text, audio, files) |
 | **Outputs** | Canonical documents with temporal metadata |
 | **SLO** | <100ms p95 latency |
@@ -163,7 +165,7 @@ graph TD
 **Purpose**: Add timestamps, embed vectors, manage time partitions
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | --------------- |
 | **Inputs** | Canonical documents |
 | **Outputs** | Timestamped vectors with provenance |
 | **SLO** | <500ms p95 latency |
@@ -175,7 +177,7 @@ graph TD
 **Purpose**: Persistent vector storage with time-aware queries
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | --------------- |
 | **Inputs** | Timestamped vectors, search queries |
 | **Outputs** | Ranked results with provenance |
 | **SLO** | 99% uptime, <200ms p95 query latency |
@@ -187,7 +189,7 @@ graph TD
 **Purpose**: Episodic/semantic/procedural memory with consolidation
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | --------------- |
 | **Inputs** | User interactions, contextual data |
 | **Outputs** | Contextual memories, consolidated summaries |
 | **SLO** | >85% precision@10 |
@@ -199,7 +201,7 @@ graph TD
 **Purpose**: Multi-tool reasoning with conversation memory
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | --------------- |
 | **Inputs** | User query + retrieved context + tool outputs |
 | **Outputs** | Agent responses with tool calls |
 | **SLO** | 1.36s first token latency (achieved in R013) |
@@ -211,7 +213,7 @@ graph TD
 **Purpose**: Plugin lifecycle management and IPC coordination
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | --------------- |
 | **Inputs** | Plugin manifests, tool requests |
 | **Outputs** | Tool capabilities, execution results |
 | **SLO** | <50ms plugin load time |
@@ -223,7 +225,7 @@ graph TD
 **Purpose**: Immutable logging and compliance tracking
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | --------------- |
 | **Inputs** | All system events |
 | **Outputs** | Signed audit logs |
 | **SLO** | <10ms write latency |
@@ -235,7 +237,7 @@ graph TD
 **Purpose**: Metrics, traces, alerts, dashboards
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | --------------- |
 | **Inputs** | Component telemetry |
 | **Outputs** | Dashboards, alerts |
 | **SLO** | <5s metric latency |
@@ -255,7 +257,8 @@ graph TD
 Standard RAG systems are "time-blind" - they retrieve based on semantic similarity without considering when information was created or whether it's still valid.
 
 **Example**:
-```
+
+```bash
 User Timeline:
 - January:  "I love Adidas shoes"
 - July:     "My Adidas broke, I now prefer Puma"
@@ -284,7 +287,8 @@ Temporal RAG Result: Retrieves "I now prefer Puma" (July)
    - New facts automatically override old ones
 
 4. **Decay Function**: Temporal weighting in scoring
-   ```
+
+   ```bash
    final_score = similarity * temporal_weight
    temporal_weight = exp(-0.01 * days_since_creation)
    ```
@@ -359,12 +363,12 @@ PluginManifest:
 
 ### Pipeline
 
-```
+```bash
 Ingest → Validate → Canonicalize → Temporal Tag → Chunk → Embed → Index
 ```
 
 | Stage | Process | Output |
-|-------|---------|--------|
+| ----------- | --------------- | ------------ |
 | **Ingest** | Receive raw data | Raw data buffer |
 | **Validate** | Schema validation, PII detection | Validated data |
 | **Canonicalize** | Apply canonical document model | CanonicalDocument |
@@ -376,7 +380,7 @@ Ingest → Validate → Canonicalize → Temporal Tag → Chunk → Embed → In
 ### Triggers
 
 | Trigger | Condition | Action |
-|---------|-----------|--------|
+| ----------- | --------------- | ------------ |
 | **Reindex** | Schema version change | Full reindex |
 | **Reindex** | Embedding model update | Full reindex |
 | **Compaction** | Nightly (2 AM UTC) | Consolidate <10% similarity |
@@ -389,7 +393,7 @@ Ingest → Validate → Canonicalize → Temporal Tag → Chunk → Embed → In
 ### Must Support
 
 | Feature | Requirement | Qdrant Support |
-|---------|-------------|----------------|
+| ----------- | --------------- | ------------ |
 | **On-prem/local** | Docker deployment | ✅ |
 | **Time filtering** | Payload datetime schema | ✅ |
 | **Snapshotting** | Backup/restore | ✅ |
@@ -401,6 +405,7 @@ Ingest → Validate → Canonicalize → Temporal Tag → Chunk → Embed → In
 ### Selection: Qdrant
 
 **Justification**:
+
 - Validated in R008 prototype
 - Local Docker deployment
 - Built-in time filtering via payload schema
@@ -414,7 +419,8 @@ Ingest → Validate → Canonicalize → Temporal Tag → Chunk → Embed → In
 ### Chosen Strategy: Timestamped Embeddings with Temporal Decay
 
 **Scoring Formula**:
-```
+
+```bash
 final_score = cosine_similarity(query, memory) * temporal_weight
 
 where:
@@ -425,7 +431,7 @@ lambda = 0.01 (decays to 37% after 100 days)
 ### Tradeoffs
 
 | Aspect | Timestamped Embeddings | Temporal Graph |
-|--------|----------------------|----------------|
+| ----------- | --------------- | ------------ |
 | **Query Speed** | 10x faster | Slower |
 | **Implementation** | Simple (Qdrant-native) | Complex (custom graph DB) |
 | **Staleness** | 5-10% stale results | <1% stale results |
@@ -521,7 +527,7 @@ stateDiagram-v2
 ### Failure Paths
 
 | Failure | Recovery |
-|---------|----------|
+| ----------- | --------------- | ------------ |
 | **Tool timeout** | Retry once (2x timeout), then skip |
 | **Memory unavailable** | Fallback to no-context mode |
 | **LLM unavailable** | Return cached response |
@@ -597,6 +603,7 @@ Body:
 ### Response Schema
 
 **Success (200 OK)**:
+
 ```yaml
 result: dict (plugin-specific)
 metadata:
@@ -606,6 +613,7 @@ metadata:
 ```
 
 **Error (4xx/5xx)**:
+
 ```yaml
 error: string
 error_code: enum (validation, timeout, quota_exceeded, not_authorized)
@@ -652,6 +660,7 @@ retryable: boolean
 **Storage**: `/data/keys/` (encrypted with passphrase)
 
 **Key Types**:
+
 - Plugin API keys
 - User tokens (JWT signing)
 - Encryption keys (Fernet)
@@ -708,18 +717,21 @@ PII_PATTERNS = {
 ### Logging Policy
 
 **Log**:
+
 - User ID (SHA-256 hashed)
 - Timestamp
 - Operation type
 - Error codes
 
 **Don't Log**:
+
 - Request content
 - Response content
 - PII
 - Plugin data
 
 **Retention**:
+
 - Security logs: 90 days
 - Audit logs: 7 years
 
@@ -769,6 +781,7 @@ PII_PATTERNS = {
 ### Validation Queries
 
 Run daily:
+
 ```python
 # Recent queries should return recent memories
 assert temporal_search("current preference", time_window="recent_30d")[0]["created_at"] > days_ago(30)
@@ -782,7 +795,7 @@ assert len(invalidate_outdated_facts(results)) < len(results) * 0.1
 ## 19. Testing & Validation Matrix
 
 | Test Type | Scope | Tools | Frequency |
-|-----------|-------|-------|-----------|
+| ----------- | --------------- | ------------ |-------|-----------|
 | **Unit** | Component contracts | pytest | Every commit |
 | **Integration** | Ingest→Index→Retrieve | pytest, docker-compose | Every commit |
 | **Temporal Regression** | Time-shifted queries | pytest | Daily |
@@ -970,6 +983,7 @@ See `kyutai_speech_integration_plan.md` for Kyutai unmute STT + pocket-tts TTS a
 ### MVP (v1.0) - Must-Have
 
 **Gate Criteria**:
+
 - [ ] Core memory operational (Mem0AI + Qdrant + ColBERTv2)
 - [ ] Temporal retrieval >85% precision@10
 - [ ] DSPy ReAct with >75% tool success
