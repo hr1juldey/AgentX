@@ -21,7 +21,8 @@ Success criteria: A working system that can (1) maintain long-term temporal memo
 
 | Metric | Baseline | Target | Timeframe | Owner |
 |--------|----------|--------|----------|-------|
-| **Response Latency (text)** | N/A | <2s p95 | Week 1 | Backend |
+| **Response Latency (text)** | 1.36s (first token), 17.78s (full) | <2s p95 | Week 1 | Backend |
+| **Streaming Latency** | ~268 tokens/min | Token-level streaming | Week 1 | Backend |
 | **Response Latency (voice)** | N/A | <300ms p95 (VAD→STT→LLM→TTS) | Week 2 | Backend |
 | **Memory Retrieval Accuracy** | 0% | >85% precision@10 | Week 3 | RAG Team |
 | **Tool Call Success Rate** | N/A | >80% (GLM-4.7) | Week 2 | AI Team |
@@ -161,6 +162,21 @@ Success criteria: A working system that can (1) maintain long-term temporal memo
 | **TTS** | Kyutai pocket-tts | 100M params | ghcr.io/kyutai-labs/pocket-tts | ~200ms first chunk, CPU-only, FastAPI streaming |
 | **VAD** | Built-in semantic VAD | N/A | Kyutai unmute | Integrated with STT, eliminates separate model |
 | **Embeddings** | ColBERTv2 | 0.44GB | FastEmbed | Late interaction, 128-dim |
+| **LLM Framework** | DSPy 3.1+ | latest | dspy-ai | Programmatic LLM framework with Ollama integration (built-in, no separate package), ReAct agents, streaming, conversation history support |
+
+### Technical Implementation Notes
+
+**DSPy Streaming Requirements**:
+- DSPy `streamify()` wrapper requires **synchronous warmup** before async streaming
+- Pattern: Call module synchronously once (e.g., `module(question="warmup")`), then use `dspy.streamify()` for async streaming
+- `dspy.streaming.StreamListener` requires `allow_reuse=True` for ReAct loops
+- Conversation history via `dspy.History`: Pydantic model with `messages` attribute (list of dicts)
+- Session management required server-side for WebSocket stateless connections
+
+**Proven Integration** (R013):
+- DSPy + Ollama: Built-in `ollama_chat/` prefix support (e.g., `dspy.LM("ollama_chat/gemma3:4b", ...)`)
+- Conversation memory: 300-second test with 9 turns, 4,245 tokens, 100% success rate
+- Tool calling: SearXNG web search with explicit `dspy.Tool` wrapper prevents argument hallucination
 
 ### Input Context Limits
 
@@ -641,11 +657,23 @@ Action: Store encrypted, flag as sensitive
 | Dependency | Owner | Approval Required | SLA | Fallback |
 |-------------|-------|-------------------|-----|----------|
 | **Ollama** | External (local) | None | Best effort | Restart service |
+| **DSPy 3.1+** | dspy-ai (open source) | None | N/A | N/A (core framework) |
 | **Kyutai unmute STT** | Self-hosted Docker (ghcr.io/kyutai-labs/moshi-server) | None | Best effort (500ms latency target) | Request text input |
 | **Kyutai pocket-tts** | Self-hosted Docker | None | Best effort (200ms first chunk) | Return text only |
 | **SearXNG** | Self-hosted | None | Best effort | Use cached results |
 | **Qdrant** | Self-hosted | None | 99% uptime | In-memory fallback |
 | **FastMCP** | Open source | None | N/A | Manual plugin loading |
+
+### Proven Integrations (R013)
+
+The following integrations have been tested and verified in R013 prototype:
+
+| Integration | Status | Test Results | Notes |
+|-------------|--------|--------------|-------|
+| **DSPy + Ollama** | ✅ Working | 30-iteration test: 100% success, 1.36s first token | Built-in `ollama_chat/` support, no separate package needed |
+| **DSPy Streaming** | ✅ Working | 300s conversation: 9 turns, 4,245 tokens, 100% success | Requires sync warmup before async streaming |
+| **DSPy History** | ✅ Working | Multi-turn conversation memory across 9+ turns | `dspy.History` with server-side session storage |
+| **SearXNG Search** | ✅ Working | Tool calling with ReAct, contextualized results | Explicit `dspy.Tool` wrapper prevents hallucination |
 
 ### Team Dependencies
 
