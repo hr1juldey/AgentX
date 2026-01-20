@@ -17,6 +17,26 @@ interface ForceGraphLayoutProps {
   onPositionsCalculated: (positions: Record<string, { x: number; y: number }>) => void;
 }
 
+// Helper to check if positions are approximately the same (within 1px tolerance)
+function positionsEqual(
+  a: Record<string, { x: number; y: number }>,
+  b: Record<string, { x: number; y: number }>
+): boolean {
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+
+  if (keysA.length !== keysB.length) return false;
+
+  for (const key of keysA) {
+    if (!b[key]) return false;
+    const dx = Math.abs(a[key].x - b[key].x);
+    const dy = Math.abs(a[key].y - b[key].y);
+    if (dx > 1 || dy > 1) return false; // 1px tolerance
+  }
+
+  return true;
+}
+
 /**
  * ForceGraphLayout - D3 force simulation for radial positioning
  *
@@ -40,6 +60,9 @@ export function ForceGraphLayout({
   const simulationRef = useRef<ReturnType<typeof forceSimulation<WidgetNode>> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const isUpdatingRef = useRef(false);
+  const hasCalculatedRef = useRef(false);
+  const lastInputHashRef = useRef("");
 
   // Memoize the widget IDs to detect actual changes
   const widgetIds = useMemo(() => widgets.map((w) => w.id).join(","), [widgets]);
@@ -47,11 +70,42 @@ export function ForceGraphLayout({
   // Memoize center as a string for comparison
   const centerKey = useMemo(() => `${center.x},${center.y}`, [center.x, center.y]);
 
+  // Create a hash of the input to detect actual changes
+  const inputHash = useMemo(
+    () => `${widgetIds}-${centerKey}-${islandRadius}`,
+    [widgetIds, centerKey, islandRadius]
+  );
+
+  // Stable callback ref
+  const onPositionsCalculatedRef = useRef(onPositionsCalculated);
   useEffect(() => {
+    onPositionsCalculatedRef.current = onPositionsCalculated;
+  }, [onPositionsCalculated]);
+
+  useEffect(() => {
+    // If input hasn't changed and we've already calculated, skip
+    if (inputHash === lastInputHashRef.current && hasCalculatedRef.current) {
+      return;
+    }
+
+    // Reset calculation flag when input changes
+    if (inputHash !== lastInputHashRef.current) {
+      lastInputHashRef.current = inputHash;
+      hasCalculatedRef.current = false;
+      lastPositionsRef.current = {};
+    }
+
+    // Prevent recursive updates from our own callback
+    if (isUpdatingRef.current) {
+      isUpdatingRef.current = false;
+      return;
+    }
+
     if (widgets.length === 0) {
       if (Object.keys(lastPositionsRef.current).length > 0) {
         lastPositionsRef.current = {};
-        onPositionsCalculated({});
+        isUpdatingRef.current = true;
+        onPositionsCalculatedRef.current({});
       }
       return;
     }
@@ -94,46 +148,31 @@ export function ForceGraphLayout({
       .alphaDecay(0.05)
       .stop();
 
-    // Run simulation for ~3 seconds (180 ticks at 60fps)
-    for (let i = 0; i < 180; i++) {
+    // Run simulation
+    for (let i = 0; i < 300; i++) {
       simulation.tick();
     }
 
     // Extract final positions
     const positions: Record<string, { x: number; y: number }> = {};
     nodes.forEach((node) => {
-      positions[node.id] = { x: node.x, y: node.y };
+      positions[node.id] = { x: Math.round(node.x), y: Math.round(node.y) }; // Round to integers for stability
     });
 
-    // Check if positions actually changed before notifying
-    const positionsChanged = JSON.stringify(positions) !== JSON.stringify(lastPositionsRef.current);
+    // Check if positions actually changed before notifying (using tolerance)
+    const positionsChanged = !positionsEqual(positions, lastPositionsRef.current);
     if (positionsChanged) {
       lastPositionsRef.current = positions;
-      onPositionsCalculated(positions);
+      isUpdatingRef.current = true;
+      hasCalculatedRef.current = true; // Mark as calculated for this input
+      onPositionsCalculatedRef.current(positions);
+    } else {
+      // Even if positions haven't changed, mark as calculated to prevent re-runs
+      hasCalculatedRef.current = true;
     }
 
     // Store reference for cleanup
     simulationRef.current = simulation;
-
-    // Set up a delayed update for smooth animation
-    timeoutRef.current = setTimeout(() => {
-      // Optional: trigger a second pass for fine-tuning
-      for (let i = 0; i < 60; i++) {
-        simulation.tick();
-      }
-
-      const finalPositions: Record<string, { x: number; y: number }> = {};
-      nodes.forEach((node) => {
-        finalPositions[node.id] = { x: node.x, y: node.y };
-      });
-
-      // Check if final positions changed
-      const finalChanged = JSON.stringify(finalPositions) !== JSON.stringify(lastPositionsRef.current);
-      if (finalChanged) {
-        lastPositionsRef.current = finalPositions;
-        onPositionsCalculated(finalPositions);
-      }
-    }, 100);
 
     return () => {
       if (timeoutRef.current) {
@@ -143,7 +182,7 @@ export function ForceGraphLayout({
         simulationRef.current.stop();
       }
     };
-  }, [widgetIds, centerKey, islandRadius, onPositionsCalculated]);
+  }, [widgetIds, centerKey, islandRadius]);
 
   // This component doesn't render anything
   return null;

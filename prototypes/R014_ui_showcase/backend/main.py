@@ -4,6 +4,7 @@
 # Minimal FastAPI app template for prototype development
 # =============================================================================
 
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -14,15 +15,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router
 from config.settings import settings
 
+# Configure DEBUG logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     # Startup
-    print(f"🚀 {settings.app_name} v{settings.app_version} starting...")
+    logger.debug(f"🚀 {settings.app_name} v{settings.app_version} starting...")
+    logger.debug(f"Debug mode: {settings.debug}")
+    logger.debug(f"LLM Provider: {settings.llm_provider}, Model: {settings.llm_model}")
     yield
     # Shutdown
-    print(f"👋 {settings.app_name} shutting down...")
+    logger.debug(f"👋 {settings.app_name} shutting down...")
 
 
 # Create FastAPI app

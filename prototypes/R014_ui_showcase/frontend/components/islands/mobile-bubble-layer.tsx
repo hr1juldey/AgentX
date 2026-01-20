@@ -23,7 +23,7 @@ interface UIDescriptor {
 
 interface MobileBubbleLayerProps {
   widgets: UIDescriptor[];
-  expandedId: string | null;
+  expandedIds: Set<string>;
   onExpand: (id: string) => void;
   onDismiss: (id: string) => void;
 }
@@ -67,12 +67,14 @@ const EDGE_MARGIN = 16;
  * - Vertical stack along right edge
  * - Edge snapping on drag end
  * - Max 6 islands constraint
- * - 1-2 expanded panels max
+ * - Max 4 expanded panels (mobile limit)
  * - Visible only on mobile (md:hidden breakpoint)
  */
+const MAX_EXPANDED_MOBILE = 4;
+
 export const MobileBubbleLayer = memo(function MobileBubbleLayer({
   widgets,
-  expandedId,
+  expandedIds,
   onExpand,
   onDismiss,
 }: MobileBubbleLayerProps) {
@@ -106,13 +108,17 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
 
   const handleClick = useCallback(
     (id: string) => {
-      if (expandedId === id) {
-        // If clicking the expanded bubble, do nothing (close is handled elsewhere)
-        return;
+      if (expandedIds.has(id)) {
+        // Toggle collapse if clicking the expanded bubble
+        onExpand(id); // Parent will handle removal from Set
+      } else if (expandedIds.size < MAX_EXPANDED_MOBILE) {
+        // Expand if under limit
+        onExpand(id);
+      } else {
+        console.warn(`Maximum ${MAX_EXPANDED_MOBILE} widgets can be expanded on mobile`);
       }
-      onExpand(id);
     },
-    [expandedId, onExpand]
+    [expandedIds, onExpand]
   );
 
   const handleDismiss = useCallback(
@@ -129,7 +135,7 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
         {visibleWidgets.map((widget, index) => {
           const IconComponent = widgetIcons[widget.descriptor_type] || FileText;
           const islandColor = widgetColors[widget.descriptor_type] || "var(--island-white)";
-          const isExpanded = expandedId === widget.descriptor_id;
+          const isExpanded = expandedIds.has(widget.descriptor_id);
 
           // Default position along right edge
           const defaultPosition = {
@@ -154,45 +160,47 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
               transition={{ duration: 0.22 }}
               className="absolute pointer-events-auto"
             >
-              <motion.button
-                onClick={() => handleClick(widget.descriptor_id)}
-                className="relative rounded-full shadow-lg"
-                style={{
-                  width: `${BUBBLE_SIZE}px`,
-                  height: `${BUBBLE_SIZE}px`,
-                  background: islandColor,
-                }}
-                whileTap={{ scale: 0.95 }}
-                aria-label={`${widget.descriptor_type} widget ${widget.title ? `: ${widget.title}` : ""}`}
-              >
-                {/* Icon */}
-                <IconComponent className="w-5 h-5 text-foreground absolute inset-0 m-auto" strokeWidth={2} />
+              <div className="relative">
+                <motion.button
+                  onClick={() => handleClick(widget.descriptor_id)}
+                  className="relative rounded-full shadow-lg"
+                  style={{
+                    width: `${BUBBLE_SIZE}px`,
+                    height: `${BUBBLE_SIZE}px`,
+                    background: islandColor,
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  aria-label={`${widget.descriptor_type} widget ${widget.title ? `: ${widget.title}` : ""}`}
+                >
+                  {/* Icon */}
+                  <IconComponent className="w-5 h-5 text-foreground absolute inset-0 m-auto" strokeWidth={2} />
 
-                {/* Expanded indicator */}
-                {isExpanded && (
-                  <motion.div
-                    className="absolute inset-0 rounded-full ring-2 ring-primary"
-                    animate={{
-                      scale: [1, 1.2, 1],
-                      opacity: [0.5, 0, 0.5],
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                  />
-                )}
+                  {/* Expanded indicator */}
+                  {isExpanded && (
+                    <motion.div
+                      className="absolute inset-0 rounded-full ring-2 ring-primary"
+                      animate={{
+                        scale: [1, 1.2, 1],
+                        opacity: [0.5, 0, 0.5],
+                      }}
+                      transition={{
+                        duration: 1.5,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    />
+                  )}
+                </motion.button>
 
-                {/* Dismiss button */}
+                {/* Dismiss button - outside the main button */}
                 <button
                   onClick={(e) => handleDismiss(e, widget.descriptor_id)}
-                  className="absolute -top-1 -right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 hover:opacity-100 transition-opacity"
+                  className="absolute -top-1 -right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 hover:opacity-100 transition-opacity shadow-sm"
                   aria-label="Dismiss widget"
                 >
                   <X className="w-3 h-3" />
                 </button>
-              </motion.button>
+              </div>
             </motion.div>
           );
         })}

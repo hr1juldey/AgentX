@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, memo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, MessageSquare, X, Sparkles, Images, History, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,7 @@ import { ConfirmationWidget } from "@/components/widgets/confirmation-widget";
 import { ImageWidget } from "@/components/widgets/image-widget";
 import { GalleryWidget } from "@/components/widgets/gallery-widget";
 import { ChartWidget } from "@/components/widgets/chart-widget";
-import { ToolIsland, IslandPanel, MobileBubbleLayer } from "@/components/islands";
-import { ForceGraphLayout } from "@/components/layout/force-graph-layout";
-import { resolveCollisions, createPanelBounds } from "@/lib/collision-resolver";
+import { ToolIsland, MobileBubbleLayer } from "@/components/islands";
 
 interface UIDescriptor {
   descriptor_id: string;
@@ -62,7 +60,243 @@ const appName = process.env.NEXT_PUBLIC_APP_NAME || "R014 UI Showcase";
 
 type View = "main" | "gallery" | "sessions" | "connectors";
 
-// Memoized widget renderer to prevent re-renders of other widgets
+// Widget content renderer without wrapper (for Island mode)
+const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
+  descriptor,
+  onDismiss,
+  dragPosition,
+  onDragEnd,
+}: {
+  descriptor: UIDescriptor;
+  onDismiss: () => void;
+  dragPosition?: { x: number; y: number };
+  onDragEnd: (x: number, y: number) => void;
+}) {
+  switch (descriptor.descriptor_type) {
+    case "markdown":
+      return descriptor.content ? (
+        <MarkdownWidget
+          content={descriptor.content}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      ) : null;
+    case "card":
+      return (
+        <CardWidget
+          title={descriptor.title || ""}
+          content={descriptor.content || ""}
+          actions={[]}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      );
+    case "form":
+      return (
+        <FormWidget
+          title={descriptor.title}
+          fields={descriptor.fields || []}
+          submitLabel={descriptor.submit_button_text}
+          onSubmit={() => {}}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      );
+    case "progress":
+      return (
+        <ProgressWidget
+          title={descriptor.title || "Processing"}
+          value={(descriptor.progress_percent || 0) / 100}
+          statusText={descriptor.status_text}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      );
+    case "action":
+      return (
+        <ActionWidget
+          title={descriptor.title}
+          content={descriptor.content}
+          buttonText={descriptor.button_text || "Action"}
+          onAction={() => {}}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      );
+    case "confirmation":
+      return (
+        <ConfirmationWidget
+          title={descriptor.title || "Confirm"}
+          message={descriptor.message || ""}
+          confirmLabel={descriptor.confirm_label}
+          cancelLabel={descriptor.cancel_label}
+          onConfirm={() => {}}
+          onCancel={() => {}}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      );
+    case "image":
+      return (
+        <ImageWidget
+          title={descriptor.title}
+          content={descriptor.content}
+          caption={descriptor.content}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      );
+    case "gallery":
+      return (
+        <GalleryWidget
+          title={descriptor.title}
+          content={descriptor.content}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      );
+    case "chart":
+      return (
+        <ChartWidget
+          title={descriptor.title}
+          content={descriptor.content}
+          chartType={(descriptor.metadata?.chart_type as "bar" | "line" | "pie" | "area") || "bar"}
+          data={descriptor.metadata?.data as Array<Record<string, string | number>>}
+          dataKeys={descriptor.metadata?.data_keys as string[]}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      );
+    default:
+      return null;
+  }
+});
+
+// Collapsible wrapper for widgets - shows mini island when collapsed (Traditional mode only)
+const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
+  descriptor,
+  onDismiss,
+  onDragEnd,
+  onToggleCollapse,
+  children,
+}: {
+  descriptor: UIDescriptor;
+  onDismiss: () => void;
+  onDragEnd: (x: number, y: number) => void;
+  onToggleCollapse: () => void;
+  children: React.ReactNode;
+}) {
+  const [isCollapsed, setIsCollapsed] = useState(descriptor.collapsed || false);
+
+  // Sync with descriptor state
+  useEffect(() => {
+    setIsCollapsed(descriptor.collapsed || false);
+  }, [descriptor.collapsed]);
+
+  const handleToggle = useCallback(() => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    onToggleCollapse();
+  }, [isCollapsed, onToggleCollapse]);
+
+  // Widget type icons
+  const getWidgetIcon = useCallback(() => {
+    switch (descriptor.descriptor_type) {
+      case "markdown": return "📝";
+      case "card": return "📇";
+      case "form": return "📋";
+      case "progress": return "📊";
+      case "action": return "⚡";
+      case "confirmation": return "❓";
+      case "image": return "🖼️";
+      case "gallery": return "🖼️";
+      case "chart": return "📈";
+      default: return "📦";
+    }
+  }, [descriptor.descriptor_type]);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      {/* Collapsed mini island */}
+      <AnimatePresence mode="wait">
+        {isCollapsed ? (
+          <motion.div
+            key="collapsed"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="relative"
+          >
+            <motion.div
+              drag
+              dragElastic={0.2}
+              dragMomentum={false}
+              dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
+              whileDrag={{ scale: 1.05, cursor: "grabbing", zIndex: 50 }}
+              onDragEnd={(_, info) => onDragEnd(
+                (descriptor.x || 0) + info.offset.x,
+                (descriptor.y || 0) + info.offset.y
+              )}
+              style={{ x: descriptor.x || 0, y: descriptor.y || 0 }}
+              className="relative bg-card border border-border rounded-full cursor-grab shadow-lg hover:shadow-xl px-4 py-2 flex items-center gap-2"
+            >
+              <span className="text-lg">{getWidgetIcon()}</span>
+              <span className="text-sm font-medium truncate max-w-[120px]">
+                {descriptor.title || descriptor.descriptor_type}
+              </span>
+              {/* Expand button */}
+              <button
+                onClick={handleToggle}
+                className="ml-1 p-1 rounded-full hover:bg-muted transition-colors"
+                aria-label="Expand"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {/* Dismiss button */}
+              {onDismiss && (
+                <button
+                  onClick={onDismiss}
+                  className="p-1 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </motion.div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="expanded"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+});
+
+// Traditional widget renderer with CollapsibleWidgetWrapper
 const WidgetRenderer = memo(function WidgetRenderer({
   descriptor,
   onDismiss,
@@ -254,164 +488,57 @@ const WidgetRenderer = memo(function WidgetRenderer({
   }
 });
 
-// Collapsible wrapper for widgets - shows mini island when collapsed
-const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
-  descriptor,
-  onDismiss,
-  onDragEnd,
-  onToggleCollapse,
-  children,
-}: {
-  descriptor: UIDescriptor;
-  onDismiss: () => void;
-  onDragEnd: (x: number, y: number) => void;
-  onToggleCollapse: () => void;
-  children: React.ReactNode;
-}) {
-  const [isCollapsed, setIsCollapsed] = useState(descriptor.collapsed || false)
-
-  // Sync with descriptor state
-  useEffect(() => {
-    setIsCollapsed(descriptor.collapsed || false)
-  }, [descriptor.collapsed])
-
-  const handleToggle = useCallback(() => {
-    const newState = !isCollapsed
-    setIsCollapsed(newState)
-    onToggleCollapse()
-  }, [isCollapsed, onToggleCollapse])
-
-  // Widget type icons
-  const getWidgetIcon = useCallback(() => {
-    switch (descriptor.descriptor_type) {
-      case "markdown": return "📝"
-      case "card": return "📇"
-      case "form": return "📋"
-      case "progress": return "📊"
-      case "action": return "⚡"
-      case "confirmation": return "❓"
-      case "image": return "🖼️"
-      case "gallery": return "🖼️"
-      case "chart": return "📈"
-      default: return "📦"
-    }
-  }, [descriptor.descriptor_type])
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      {/* Collapsed mini island */}
-      <AnimatePresence mode="wait">
-        {isCollapsed ? (
-          <motion.div
-            key="collapsed"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="relative"
-          >
-            <motion.div
-              drag
-              dragElastic={0.2}
-              dragMomentum={false}
-              dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
-              whileDrag={{ scale: 1.05, cursor: "grabbing", zIndex: 50 }}
-              onDragEnd={(_, info) => onDragEnd(
-                (descriptor.x || 0) + info.offset.x,
-                (descriptor.y || 0) + info.offset.y
-              )}
-              style={{ x: descriptor.x || 0, y: descriptor.y || 0 }}
-              className="relative bg-card border border-border rounded-full cursor-grab shadow-lg hover:shadow-xl px-4 py-2 flex items-center gap-2"
-            >
-              <span className="text-lg">{getWidgetIcon()}</span>
-              <span className="text-sm font-medium truncate max-w-[120px]">
-                {descriptor.title || descriptor.descriptor_type}
-              </span>
-              {/* Expand button */}
-              <button
-                onClick={handleToggle}
-                className="ml-1 p-1 rounded-full hover:bg-muted transition-colors"
-                aria-label="Expand"
-              >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              {/* Dismiss button */}
-              {onDismiss && (
-                <button
-                  onClick={onDismiss}
-                  className="p-1 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
-                  aria-label="Dismiss"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </motion.div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="expanded"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-          >
-            {/* Collapse button - absolute positioned */}
-            <div className="relative">
-              <button
-                onClick={handleToggle}
-                className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 p-1 rounded-full bg-card border border-border shadow-md hover:bg-muted transition-all"
-                aria-label="Collapse"
-              >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                </svg>
-              </button>
-              {children}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  )
-});
-
 export default function HomePage() {
   const [view, setView] = useState<View>("main");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [inputPrompt, setInputPrompt] = useState("");
-  const [widgets, setWidgets] = useState<UIDescriptor[]>([]);
   const [loading, setLoading] = useState(false);
-  const [health, setHealth] = useState<string>("checking...");
+  const [widgets, setWidgets] = useState<UIDescriptor[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [connectors, setConnectors] = useState<Record<string, boolean>>({
+    searxng: false,
+    mem0: false,
+    qdrant: false,
+  });
+  const [health, setHealth] = useState<string>("unknown");
 
   // Island UI state
   const [islandPositions, setIslandPositions] = useState<Record<string, { x: number; y: number }>>({});
-  const [expandedPanelId, setExpandedPanelId] = useState<string | null>(null);
-  const [panelPushes, setPanelPushes] = useState<Record<string, { x: number; y: number }>>({});
+  // Support multiple expanded widgets at once - use Set<string>
+  const [expandedPanelIds, setExpandedPanelIds] = useState<Set<string>>(new Set());
 
   // Feature flag for island UI
   const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
 
-  // Stable center value for force graph layout
-  const forceGraphCenter = useMemo(() => ({
-    x: typeof window !== "undefined" ? window.innerWidth / 2 : 400,
-    y: typeof window !== "undefined" ? window.innerHeight / 2 : 300,
-  }), []); // Empty deps - only compute once on mount
+  // Assign initial positions to new widgets (stack along right edge)
+  useEffect(() => {
+    if (!enableIslands) return;
 
-  // Stable callback for positions calculated
-  const handlePositionsCalculated = useCallback((positions: Record<string, { x: number; y: number }>) => {
-    setIslandPositions(positions);
-  }, []);
+    // Only track widget IDs, not the entire islandPositions object
+    const positionedWidgetIds = new Set(Object.keys(islandPositions));
+    const newWidgets = widgets.filter((w) => !positionedWidgetIds.has(w.descriptor_id));
+    if (newWidgets.length === 0) return;
+
+    const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
+    const edgeMargin = 80;
+    const spacing = 70;
+    const startY = 100;
+
+    const newPositions: Record<string, { x: number; y: number }> = {};
+    const existingCount = positionedWidgetIds.size;
+
+    newWidgets.forEach((widget, index) => {
+      newPositions[widget.descriptor_id] = {
+        x: viewportWidth - edgeMargin,
+        y: startY + (existingCount + index) * spacing,
+      };
+    });
+
+    setIslandPositions((prev) => ({ ...prev, ...newPositions }));
+  }, [widgets, enableIslands]);
 
   // Fetch health status
   useEffect(() => {
-    fetch(`${apiUrl}/health`)
+    fetch(`${apiUrl}/api/v1/health`)
       .then((res) => res.json())
       .then((data) => setHealth(data.status))
       .catch(() => setHealth("disconnected"));
@@ -421,18 +548,17 @@ export default function HomePage() {
   useEffect(() => {
     fetch(`${apiUrl}/api/v1/mock/sessions`)
       .then((res) => res.json())
-      .then((data) => setSessions(data || []))
+      .then((data) => setSessions(data.sessions || []))
       .catch(() => setSessions([]));
   }, [apiUrl]);
 
-  // Generate content - uses DSPy ReAct agent for auto widget selection
-  // Can now generate multiple widgets based on user query
   const generateContent = async (prompt: string, widgetType?: string) => {
     if (!prompt.trim()) return;
 
+    console.log("🟢 generateContent called:", { prompt, widgetType });
     setLoading(true);
     try {
-      // Use /generate-widget endpoint with DSPy ReAct agent for auto selection
+      console.log("🟢 Fetching from:", `${apiUrl}/api/v1/generate-widget`);
       const res = await fetch(`${apiUrl}/api/v1/generate-widget`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -441,58 +567,100 @@ export default function HomePage() {
           widget_type: widgetType,  // Optional - DSPy ReAct selects if not provided
         }),
       });
+
+      console.log("🟢 Response status:", res.status, res.statusText);
       const data = await res.json();
+      console.log("🟢 Response data:", data);
+      console.log("🟢 data.widgets:", data.widgets);
+      console.log("🟢 data.widgets length:", data.widgets?.length);
 
       // API now returns { widgets: [...], tools_used: [...], reasoning: "..." }
       // Map each widget from backend response to frontend format
-      const newWidgets: UIDescriptor[] = (data.widgets || []).map((w: any) => ({
-        descriptor_id: w.id,
-        descriptor_type: w.type,
-        title: w.title,
-        content: w.content,
-        dismissible: w.dismissible ?? true,
-        // Preserve the full metadata object for chart widgets
-        ...(w.metadata && { metadata: w.metadata }),
-        // Extract individual metadata fields for other widgets
-        ...(w.metadata?.fields && { fields: w.metadata.fields }),
-        ...(w.metadata?.submit_label && { submit_button_text: w.metadata.submit_label }),
-        ...(w.metadata?.status_text && { status_text: w.metadata.status_text }),
-        ...(w.metadata?.value !== undefined && { progress_percent: w.metadata.value * 100 }),
-        ...(w.metadata?.button_text && { button_text: w.metadata.button_text }),
-        ...(w.metadata?.action_id && { action_id: w.metadata.action_id }),
-        ...(w.metadata?.confirm_label && { confirm_label: w.metadata.confirm_label }),
-        ...(w.metadata?.cancel_label && { cancel_label: w.metadata.cancel_label }),
-      }));
+      const newWidgets: UIDescriptor[] = (data.widgets || []).map((w: any) => {
+        console.log("🟢 Mapping widget:", w);
+        return {
+          descriptor_id: w.id,
+          descriptor_type: w.type,
+          title: w.title,
+          content: w.content,
+          dismissible: w.dismissible ?? true,
+          // Preserve the full metadata object for chart widgets
+          ...(w.metadata && { metadata: w.metadata }),
+          // Extract individual metadata fields for other widgets
+          ...(w.metadata?.fields && { fields: w.metadata.fields }),
+          ...(w.metadata?.submit_label && { submit_button_text: w.metadata.submit_label }),
+          ...(w.metadata?.status_text && { status_text: w.metadata.status_text }),
+          ...(w.metadata?.value !== undefined && { progress_percent: w.metadata.value * 100 }),
+          ...(w.metadata?.button_text && { button_text: w.metadata.button_text }),
+          ...(w.metadata?.action_id && { action_id: w.metadata.action_id }),
+          ...(w.metadata?.confirm_label && { confirm_label: w.metadata.confirm_label }),
+          ...(w.metadata?.cancel_label && { cancel_label: w.metadata.cancel_label }),
+        };
+      });
 
       // Add all new widgets to the state (ReAct may have generated multiple)
-      setWidgets((prev) => [...newWidgets, ...prev]);
-      setInputPrompt(""); // Clear input after successful generation
+      console.log("🟢 Adding widgets to state:", newWidgets);
+      setWidgets((prev) => {
+        const updated = [...newWidgets, ...prev];
+        console.log("🟢 Updated widgets state:", updated);
+        console.log("🟢 Total widgets after update:", updated.length);
+        return updated;
+      });
 
       // Log reasoning if available (for debugging)
       if (data.reasoning) {
-        console.log("ReAct reasoning:", data.reasoning);
+        console.log("🟢 ReAct reasoning:", data.reasoning);
       }
       if (data.tools_used) {
-        console.log("Tools used:", data.tools_used);
+        console.log("🟢 Tools used:", data.tools_used);
       }
     } catch (error) {
-      console.error("Failed to generate content:", error);
+      console.error("🔴 Failed to generate content:", error);
     }
     setLoading(false);
   };
 
+  // Handle send message from CentralIsland
+  const handleSendMessage = useCallback((message: string) => {
+    generateContent(message);
+  }, []);
+
+  // Handle voice toggle (not implemented yet)
+  const handleVoiceToggle = useCallback(() => {
+    console.log("Voice toggle requested (not implemented)");
+  }, []);
+
   // Dismiss widget - memoized to prevent re-renders
   const dismissWidget = useCallback((id: string) => {
     setWidgets((prev) => prev.filter((w) => w.descriptor_id !== id));
+    // Also remove from island positions
+    setIslandPositions((prev) => {
+      const updated = { ...prev };
+      delete updated[id];
+      return updated;
+    });
+    // Also close expanded panel if this was the one
+    setExpandedPanelIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
   }, []);
 
   // Update widget position after drag - memoized to prevent re-renders
   const updateWidgetPosition = useCallback((id: string, x: number, y: number) => {
+    // Update widget descriptor x/y (for expanded widgets)
     setWidgets((prev) =>
       prev.map((w) =>
         w.descriptor_id === id ? { ...w, x, y } : w
       )
     );
+
+    // Also update island positions state (for island buttons)
+    setIslandPositions((prev) => ({
+      ...prev,
+      [id]: { x, y },
+    }));
   }, []);
 
   // Toggle widget collapse - memoized to prevent re-renders
@@ -511,44 +679,52 @@ export default function HomePage() {
     onToggleCollapse: () => toggleWidgetCollapse(id),
   }), [dismissWidget, updateWidgetPosition, toggleWidgetCollapse]);
 
-  // Island UI handlers
+  // Island UI handlers - support multiple open widgets (max 6)
+  const MAX_EXPANDED_WIDGETS = 6;
   const handleIslandClick = useCallback((id: string) => {
-    if (expandedPanelId === id) {
-      setExpandedPanelId(null);
-    } else {
-      setExpandedPanelId(id);
-    }
-  }, [expandedPanelId]);
+    setExpandedPanelIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id); // Collapse (toggle off)
+      } else if (newSet.size < MAX_EXPANDED_WIDGETS) {
+        newSet.add(id); // Expand (allows multiple, max 6)
+      } else {
+        console.warn(`Maximum ${MAX_EXPANDED_WIDGETS} widgets can be expanded at once`);
+      }
+      return newSet;
+    });
+  }, []);
 
   const handleIslandDragEnd = useCallback((id: string, x: number, y: number) => {
+    // Update island positions state (for island buttons)
     setIslandPositions((prev) => ({
       ...prev,
       [id]: { x, y },
     }));
+
+    // Also update widget descriptor x/y (for expanded widgets)
+    setWidgets((prev) =>
+      prev.map((w) =>
+        w.descriptor_id === id ? { ...w, x, y } : w
+      )
+    );
   }, []);
 
-  const handlePanelClose = useCallback(() => {
-    setExpandedPanelId(null);
+  const handlePanelClose = useCallback((id: string) => {
+    setExpandedPanelIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
   }, []);
 
   const handleMobileBubbleExpand = useCallback((id: string) => {
-    setExpandedPanelId(id);
+    setExpandedPanelIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(id);
+      return newSet;
+    });
   }, []);
-
-  // Resolve collisions when panels are expanded
-  useEffect(() => {
-    if (expandedPanelId && enableIslands) {
-      // Collect all expanded panel bounds
-      const panelBounds = [
-        createPanelBounds(expandedPanelId, islandPositions[expandedPanelId] || { x: 200, y: 200 }),
-      ];
-
-      const pushes = resolveCollisions(panelBounds);
-      setPanelPushes(pushes);
-    } else {
-      setPanelPushes({});
-    }
-  }, [expandedPanelId, islandPositions, enableIslands]);
 
   // Sidebar
   const Sidebar = () => (
@@ -571,8 +747,8 @@ export default function HomePage() {
           className="w-full justify-start"
           onClick={() => { setView("main"); setSidebarOpen(false); }}
         >
-          <Sparkles className="w-4 h-4 mr-2" />
-          Main Showcase
+          <MessageSquare className="w-4 h-4 mr-2" />
+          Main Workspace
         </Button>
         <Button
           variant={view === "gallery" ? "secondary" : "ghost"}
@@ -588,7 +764,7 @@ export default function HomePage() {
           onClick={() => { setView("sessions"); setSidebarOpen(false); }}
         >
           <History className="w-4 h-4 mr-2" />
-          Past Sessions
+          Sessions
         </Button>
         <Button
           variant={view === "connectors" ? "secondary" : "ghost"}
@@ -596,19 +772,12 @@ export default function HomePage() {
           onClick={() => { setView("connectors"); setSidebarOpen(false); }}
         >
           <Database className="w-4 h-4 mr-2" />
-          Data Connectors
+          Connectors
         </Button>
       </nav>
 
       <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Backend:</span>
-          <span className={`px-2 py-1 rounded text-xs font-medium ${
-            health === "healthy" ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-          }`}>
-            {health}
-          </span>
-        </div>
+        <ThemeToggle />
       </div>
     </motion.aside>
   );
@@ -616,80 +785,69 @@ export default function HomePage() {
   // Main view
   const MainView = () => (
     <div className="space-y-6 relative">
-      {/* Force Graph Layout - calculates island positions */}
-      {enableIslands && (
-        <ForceGraphLayout
-          widgets={widgets.map((w) => ({ id: w.descriptor_id }))}
-          center={forceGraphCenter}
-          islandRadius={28}
-          onPositionsCalculated={handlePositionsCalculated}
-        />
-      )}
-
       {/* Mobile Bubble Layer - visible only on mobile */}
       {enableIslands && (
         <MobileBubbleLayer
           widgets={widgets}
-          expandedId={expandedPanelId}
+          expandedIds={expandedPanelIds}
           onExpand={handleMobileBubbleExpand}
           onDismiss={dismissWidget}
         />
       )}
-      {/* Welcome Card */}
-      <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            {appName}
-          </CardTitle>
-          <CardDescription>
-            Generative UI showcase with DSPy + Ollama content hydration
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Click the Central Island button below to open the chat interface.
-            Describe what you want to see, and the AI will create an appropriate widget.
-          </p>
-        </CardContent>
-      </Card>
 
       {/* Generated Widgets - Island UI or Traditional Layout */}
       <AnimatePresence mode="popLayout">
-        {widgets.map((widget) => {
+        {widgets.map((widget, index) => {
           const handlers = createWidgetHandlers(widget.descriptor_id);
 
-          // Island UI mode (desktop only, hidden on mobile)
+          // Island UI mode - Use ToolIsland + DirectWidgetRenderer (no wrapper)
           if (enableIslands) {
-            const position = islandPositions[widget.descriptor_id] || { x: 0, y: 0 };
-            const isExpanded = expandedPanelId === widget.descriptor_id;
+            // FORCE CENTER OF SCREEN - always visible
+            const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
+            const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
+            const centerX = viewportWidth / 2;
+            const centerY = viewportHeight / 2;
+
+            // Stack islands in center with offset
+            const offset = (index - (widgets.length - 1) / 2) * 80;
+            const position = islandPositions[widget.descriptor_id] || { x: centerX + offset, y: centerY };
+            const isExpanded = expandedPanelIds.has(widget.descriptor_id);
+
+            const dragPos = { x: widget.x || position.x, y: widget.y || position.y };
 
             return (
-              <div key={widget.descriptor_id} className="hidden md:block">
-                <ToolIsland
-                  widget={widget}
-                  position={position}
-                  isActive={isExpanded}
-                  onClick={() => handleIslandClick(widget.descriptor_id)}
-                  onDragEnd={(x, y) => handleIslandDragEnd(widget.descriptor_id, x, y)}
-                  onDismiss={handlers.onDismiss}
-                />
-
-                {/* Expanded panel */}
-                {isExpanded && (
-                  <IslandPanel
+              <div key={widget.descriptor_id} style={{ position: "fixed", zIndex: 1000 + index }}>
+                {/* Only show island button when NOT expanded */}
+                {!isExpanded && (
+                  <ToolIsland
                     widget={widget}
-                    islandPosition={position}
-                    pushVector={panelPushes[widget.descriptor_id]}
-                    onClose={handlePanelClose}
-                  >
-                    <WidgetRenderer
+                    position={position}
+                    isActive={isExpanded}
+                    onClick={() => handleIslandClick(widget.descriptor_id)}
+                    onDragEnd={(x, y) => handleIslandDragEnd(widget.descriptor_id, x, y)}
+                    onDismiss={handlers.onDismiss}
+                  />
+                )}
+
+                {/* Expanded state - render widget WITH collapse button */}
+                {isExpanded && (
+                  <div className="relative">
+                    {/* Collapse button in top-left corner */}
+                    <button
+                      onClick={() => handleIslandClick(widget.descriptor_id)}
+                      className="absolute top-0 left-0 z-10 p-2 m-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-110"
+                      aria-label="Collapse widget"
+                      title="Collapse to island"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                    </button>
+                    <DirectWidgetRenderer
                       descriptor={widget}
                       onDismiss={handlers.onDismiss}
+                      dragPosition={dragPos}
                       onDragEnd={handlers.onDragEnd}
-                      onToggleCollapse={handlers.onToggleCollapse}
                     />
-                  </IslandPanel>
+                  </div>
                 )}
               </div>
             );
@@ -822,32 +980,29 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Past Sessions</CardTitle>
+          <CardTitle>Sessions</CardTitle>
           <CardDescription>
-            Review your previous conversations and generated widgets
+            Your previous conversation sessions and generated widgets
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {sessions.map((session) => (
-              <div
-                key={session.session_id || session.id}
-                className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
+          {sessions.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No sessions yet</p>
+          ) : (
+            <div className="space-y-2">
+              {sessions.map((session) => (
+                <div
+                  key={session.id || session.session_id}
+                  className="p-3 border rounded-lg hover:bg-muted cursor-pointer"
+                >
                   <h3 className="font-medium">{session.title}</h3>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(session.created_at || session.date || "").toLocaleDateString()}
-                  </span>
+                  <p className="text-sm text-muted-foreground">
+                    {session.created_at || session.date || "Unknown date"}
+                  </p>
                 </div>
-              </div>
-            ))}
-            {sessions.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No past sessions found. Start generating content to create a session.
-              </p>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -858,59 +1013,28 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Data Connectors</CardTitle>
+          <CardTitle>Connectors</CardTitle>
           <CardDescription>
-            System integration status and configuration
+            Configure external service connections
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
+        <CardContent className="space-y-4">
+          {Object.entries(connectors).map(([name, connected]) => (
+            <div key={name} className="flex items-center justify-between p-3 border rounded-lg">
               <div>
-                <h3 className="font-medium">Ollama LLM</h3>
-                <p className="text-sm text-muted-foreground">Local inference engine</p>
+                <h3 className="font-medium capitalize">{name}</h3>
+                <p className="text-sm text-muted-foreground capitalize">
+                  {connected ? "Connected" : "Not connected"}
+                </p>
               </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                health === "healthy" ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-              }`}>
-                {health === "healthy" ? "Connected" : "Disconnected"}
-              </span>
+              <Button
+                variant={connected ? "outline" : "default"}
+                onClick={() => setConnectors((prev) => ({ ...prev, [name]: !prev[name as keyof typeof prev] }))}
+              >
+                {connected ? "Disconnect" : "Connect"}
+              </Button>
             </div>
-
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h3 className="font-medium">DSPy Framework</h3>
-                <p className="text-sm text-muted-foreground">Programmatic LLM interactions</p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                health === "healthy" ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-              }`}>
-                {health === "healthy" ? "Active" : "Inactive"}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h3 className="font-medium">FastAPI Backend</h3>
-                <p className="text-sm text-muted-foreground">REST API server</p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                health === "healthy" ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-              }`}>
-                {health === "healthy" ? "Running" : "Stopped"}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <h3 className="font-medium">Next.js Frontend</h3>
-                <p className="text-sm text-muted-foreground">BFF (Backend For Frontend)</p>
-              </div>
-              <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-500">
-                Active
-              </span>
-            </div>
-          </div>
+          ))}
         </CardContent>
       </Card>
     </div>
@@ -918,95 +1042,78 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Overlay for sidebar */}
-      {sidebarOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 z-30"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
       {/* Sidebar */}
       <Sidebar />
 
       {/* Header */}
-      <header className="border-b border-border sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-20">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <MessageSquare className="w-5 h-5" />
-              </Button>
-              <h1 className="text-xl font-bold">{appName}</h1>
-            </div>
-            <ThemeToggle />
+      <header className="fixed top-0 left-0 right-0 h-16 border-b border-border bg-card z-30 flex items-center px-4 lg:px-6">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="mr-4"
+        >
+          <Plus className="w-5 h-5" />
+        </Button>
+        <h1 className="text-xl font-semibold">{appName}</h1>
+        <div className="ml-auto flex items-center gap-2">
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
+            health === "healthy" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" :
+            health === "disconnected" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100" :
+            "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
+          }`}>
+            <div className={`w-2 h-2 rounded-full ${
+              health === "healthy" ? "bg-green-500" :
+              health === "disconnected" ? "bg-red-500" :
+              "bg-gray-500"
+            }`} />
+            {health === "healthy" ? "Connected" : health}
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
+      <main className="pt-20 px-4 lg:px-6 pb-32">
         {view === "main" && <MainView />}
         {view === "gallery" && <GalleryView />}
         {view === "sessions" && <SessionsView />}
         {view === "connectors" && <ConnectorsView />}
       </main>
 
-      {/* Central Island - replaces FAB */}
+      {/* Central Island - always visible at bottom center */}
+      <CentralIsland
+        onSendMessage={handleSendMessage}
+        onVoiceToggle={handleVoiceToggle}
+      />
+
       {/* Mobile expanded panel */}
-      {enableIslands && expandedPanelId && (
+      {enableIslands && expandedPanelIds.size > 0 && (
         <div className="md:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           {widgets
-            .filter((w) => w.descriptor_id === expandedPanelId)
+            .filter((w) => expandedPanelIds.has(w.descriptor_id))
             .map((widget) => {
               const handlers = createWidgetHandlers(widget.descriptor_id);
+              const dragPos = { x: widget.x || 0, y: widget.y || 0 };
               return (
-                <div
-                  key={widget.descriptor_id}
-                  className="bg-card border border-border rounded-lg shadow-2xl max-w-[420px] max-h-[80vh] overflow-auto relative w-full"
-                >
-                  <button
-                    onClick={handlePanelClose}
-                    className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors z-10"
-                    aria-label="Close panel"
+                <div key={widget.descriptor_id} className="w-full max-w-md max-h-[80vh] overflow-auto">
+                  <DirectWidgetRenderer
+                    descriptor={widget}
+                    onDismiss={handlers.onDismiss}
+                    dragPosition={dragPos}
+                    onDragEnd={handlers.onDragEnd}
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full mt-4"
+                    onClick={() => handlePanelClose(widget.descriptor_id)}
                   >
-                    <X className="w-4 h-4" />
-                  </button>
-                  <div className="p-4">
-                    {widget.title && (
-                      <h3 className="text-lg font-semibold mb-2 pr-6">{widget.title}</h3>
-                    )}
-                    <WidgetRenderer
-                      descriptor={widget}
-                      onDismiss={handlers.onDismiss}
-                      onDragEnd={handlers.onDragEnd}
-                      onToggleCollapse={handlers.onToggleCollapse}
-                    />
-                  </div>
+                    Close
+                  </Button>
                 </div>
               );
             })}
         </div>
       )}
-
-      <CentralIsland
-        onSendMessage={(message) => {
-          setView("main")
-          setInputPrompt(message)
-          generateContent(message)
-        }}
-        onVoiceToggle={() => {
-          console.log("Voice mode toggled")
-          // TODO: Implement voice mode
-        }}
-      />
     </div>
   );
 }

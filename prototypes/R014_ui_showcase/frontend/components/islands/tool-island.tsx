@@ -2,6 +2,7 @@
 
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { X } from "lucide-react";
+import { memo, useCallback, useEffect } from "react";
 import {
   FileText,
   Layout,
@@ -13,7 +14,6 @@ import {
   Images,
   LineChart,
 } from "lucide-react";
-import { memo, useCallback } from "react";
 
 interface UIDescriptor {
   descriptor_id: string;
@@ -47,17 +47,17 @@ const widgetIcons: Record<string, React.ElementType> = {
   chart: LineChart,
 };
 
-// Widget type to CSS color variable mapping
+// Widget type to CSS color variable mapping (with hsl() wrapper)
 const widgetColors: Record<string, string> = {
-  markdown: "var(--island-markdown)",
-  card: "var(--island-card)",
-  form: "var(--island-form)",
-  progress: "var(--island-progress)",
-  action: "var(--island-action)",
-  confirmation: "var(--island-confirmation)",
-  image: "var(--island-image)",
-  gallery: "var(--island-gallery)",
-  chart: "var(--island-chart)",
+  markdown: "hsl(var(--island-markdown))",
+  card: "hsl(var(--island-card))",
+  form: "hsl(var(--island-form))",
+  progress: "hsl(var(--island-progress))",
+  action: "hsl(var(--island-action))",
+  confirmation: "hsl(var(--island-confirmation))",
+  image: "hsl(var(--island-image))",
+  gallery: "hsl(var(--island-gallery))",
+  chart: "hsl(var(--island-chart))",
 };
 
 export const ToolIsland = memo(function ToolIsland({
@@ -72,7 +72,13 @@ export const ToolIsland = memo(function ToolIsland({
   const dragY = useMotionValue(position.y);
 
   const IconComponent = widgetIcons[widget.descriptor_type] || FileText;
-  const islandColor = widgetColors[widget.descriptor_type] || "var(--island-white)";
+  const islandColor = widgetColors[widget.descriptor_type] || "hsl(var(--island-white))";
+
+  // Sync motion values with position prop changes
+  useEffect(() => {
+    dragX.set(position.x);
+    dragY.set(position.y);
+  }, [position.x, position.y, dragX, dragY]);
 
   const handleDragEnd = useCallback(
     (_: unknown, info: { offset: { x: number; y: number } }) => {
@@ -93,63 +99,64 @@ export const ToolIsland = memo(function ToolIsland({
     <motion.div
       style={{ x: dragX, y: dragY }}
       drag
-      dragElastic={0.2}
+      dragElastic={0}
       dragMomentum={false}
-      dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
       whileDrag={{ scale: 1.05, cursor: "grabbing", zIndex: 50 }}
       onDragEnd={handleDragEnd}
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: isActive ? 1.05 : 1 }}
       exit={{ opacity: 0, scale: 0.8 }}
       transition={{ duration: 0.22 }}
-      className="relative"
+      className="fixed pointer-events-auto"
     >
-      <motion.button
-        onClick={onClick}
-        className={`
-          relative rounded-full shadow-lg hover:shadow-xl
-          flex items-center justify-center
-          transition-all duration-220
-          ${isActive ? "ring-2 ring-primary" : ""}
-        `}
-        style={{
-          width: "var(--island-diameter)",
-          height: "var(--island-diameter)",
-          background: islandColor,
-        }}
-        whileHover={{ y: -6 }}
-        whileTap={{ scale: 0.95 }}
-        aria-label={`${widget.descriptor_type} widget ${widget.title ? `: ${widget.title}` : ""}`}
-      >
-        {/* Icon */}
-        <IconComponent className="w-5 h-5 text-foreground" strokeWidth={2} />
+      <div className="relative group">
+        <motion.button
+          onClick={onClick}
+          className={`
+            relative rounded-full shadow-lg hover:shadow-xl
+            flex items-center justify-center
+            transition-all duration-220
+            ${isActive ? "ring-2 ring-primary" : ""}
+          `}
+          style={{
+            width: "var(--island-diameter)",
+            height: "var(--island-diameter)",
+            background: islandColor,
+          }}
+          whileHover={{ y: -6 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label={`${widget.descriptor_type} widget ${widget.title ? `: ${widget.title}` : ""}`}
+        >
+          {/* Icon */}
+          <IconComponent className="w-5 h-5 text-foreground" strokeWidth={2} />
 
-        {/* Active glow */}
-        {isActive && (
-          <motion.div
-            className="absolute inset-0 rounded-full"
-            style={{ background: islandColor }}
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.5, 0, 0.5],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-        )}
+          {/* Active glow */}
+          {isActive && (
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ background: islandColor }}
+              animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.5, 0, 0.5],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          )}
+        </motion.button>
 
-        {/* Dismiss button */}
+        {/* Dismiss button - outside the main button, visible on hover */}
         <button
           onClick={handleDismiss}
-          className="absolute -top-1 -right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 hover:opacity-100 transition-opacity group-hover:opacity-100"
+          className="absolute -top-1 -right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity shadow-sm"
           aria-label="Dismiss widget"
         >
           <X className="w-3 h-3" />
         </button>
-      </motion.button>
+      </div>
 
       {/* Tooltip */}
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded whitespace-nowrap opacity-0 hover:opacity-100 pointer-events-none transition-opacity">

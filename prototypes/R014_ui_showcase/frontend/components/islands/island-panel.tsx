@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue } from "framer-motion";
 import { X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
@@ -24,98 +24,89 @@ interface UIDescriptor {
 interface IslandPanelProps {
   widget: UIDescriptor;
   islandPosition: { x: number; y: number };
-  pushVector?: { x: number; y: number };
   onClose: () => void;
+  onDragEnd?: (x: number, y: number) => void;
   children: React.ReactNode;
 }
 
 /**
- * IslandPanel - Expanded panel anchored to island with collision support
+ * IslandPanel - Expanded panel anchored to island
  *
  * Features:
  * - Max width: 420px
  * - Viewport bounds checking
+ * - Draggable panel
  * - Connection line to parent island
- * - Accepts push vector from collision resolver
  * - 220ms expand/collapse animation
  */
 export const IslandPanel = memo(function IslandPanel({
   widget,
   islandPosition,
-  pushVector,
   onClose,
+  onDragEnd,
   children,
 }: IslandPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const [adjustedPosition, setAdjustedPosition] = useState(islandPosition);
+  const [currentPosition, setCurrentPosition] = useState(islandPosition);
 
-  // Apply push vector and adjust for viewport bounds
+  // Update local position when islandPosition prop changes
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    setCurrentPosition(islandPosition);
+  }, [islandPosition]);
 
-    const panel = panelRef.current;
-    if (!panel) return;
+  // Motion values for drag
+  const dragX = useMotionValue(currentPosition.x);
+  const dragY = useMotionValue(currentPosition.y);
 
-    const panelWidth = 420;
-    const panelHeight = panel.offsetHeight || 300;
-
-    // Calculate position with push vector
-    let x = islandPosition.x + (pushVector?.x || 0);
-    let y = islandPosition.y + (pushVector?.y || 0);
-
-    // Get viewport dimensions
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    // Calculate panel bounds (assuming panel is centered on position)
-    const panelLeft = x - panelWidth / 2;
-    const panelRight = x + panelWidth / 2;
-    const panelTop = y - panelHeight / 2;
-    const panelBottom = y + panelHeight / 2;
-
-    // Adjust for viewport bounds
-    if (panelLeft < 16) {
-      x = 16 + panelWidth / 2;
-    } else if (panelRight > viewportWidth - 16) {
-      x = viewportWidth - 16 - panelWidth / 2;
-    }
-
-    if (panelTop < 16) {
-      y = 16 + panelHeight / 2;
-    } else if (panelBottom > viewportHeight - 16) {
-      y = viewportHeight - 16 - panelHeight / 2;
-    }
-
-    setAdjustedPosition({ x, y });
-  }, [islandPosition, pushVector]);
+  // Sync motion values when local position changes
+  useEffect(() => {
+    dragX.set(currentPosition.x);
+    dragY.set(currentPosition.y);
+  }, [currentPosition.x, currentPosition.y, dragX, dragY]);
 
   const handleClose = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onClose();
   }, [onClose]);
 
+  const handlePanelDragEnd = useCallback(
+    (_: unknown, info: { offset: { x: number; y: number } }) => {
+      // Calculate new position based on offset
+      const newX = currentPosition.x + info.offset.x;
+      const newY = currentPosition.y + info.offset.y;
+
+      // Update local state for smooth UI
+      setCurrentPosition({ x: newX, y: newY });
+
+      // Notify parent to save the position
+      onDragEnd?.(newX, newY);
+    },
+    [currentPosition, onDragEnd]
+  );
+
   return (
     <AnimatePresence>
       <motion.div
         ref={panelRef}
+        drag
+        dragElastic={0}
+        dragMomentum={false}
+        whileDrag={{ cursor: "grabbing", scale: 1.02 }}
+        onDragEnd={handlePanelDragEnd}
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.22 }}
-        className="fixed z-40"
-        style={{
-          left: adjustedPosition.x,
-          top: adjustedPosition.y,
-          transform: "translate(-50%, -50%)",
-        }}
+        className="fixed z-40 cursor-grab"
+        style={{ x: dragX, y: dragY }}
       >
         {/* Connection line to parent island */}
         <svg className="absolute inset-0 pointer-events-none overflow-visible" style={{ width: "200%", height: "200%", left: "-50%", top: "-50%" }}>
           <motion.line
             x1="50%"
             y1="50%"
-            x2={`${((islandPosition.x - adjustedPosition.x) / 420) * 100 + 50}%`}
-            y2={`${((islandPosition.y - adjustedPosition.y) / 300) * 100 + 50}%`}
+            x2={`${((islandPosition.x - currentPosition.x) / 420) * 100 + 50}%`}
+            y2={`${((islandPosition.y - currentPosition.y) / 300) * 100 + 50}%`}
             stroke="hsl(var(--border))"
             strokeWidth="2"
             strokeDasharray="4 4"

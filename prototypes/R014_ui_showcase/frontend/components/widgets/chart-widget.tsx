@@ -249,7 +249,7 @@ export const ChartWidget = memo(function ChartWidget({
         (dragPosition?.y || 0) + info.offset.y
       )}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
-      className="relative bg-card cursor-grab shadow-lg hover:shadow-xl border border-border rounded-lg p-6"
+      className="relative bg-card cursor-grab shadow-lg hover:shadow-xl border border-border rounded-lg p-6 min-w-[600px]"
     >
       {onDismiss && (
         <button

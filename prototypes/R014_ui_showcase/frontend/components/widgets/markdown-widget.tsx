@@ -4,7 +4,32 @@ import { motion } from "framer-motion"
 import { X } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { memo, useCallback } from "react"
+import { memo, useCallback, useMemo } from "react"
+
+// Strip markdown code block wrapper if present
+function stripMarkdownWrapper(content: string): string {
+  let cleaned = content
+
+  // Remove ```markdown or ``` at the start
+  if (cleaned.startsWith("```markdown")) {
+    cleaned = cleaned.slice(11) // Remove "```markdown"
+  } else if (cleaned.startsWith("```")) {
+    cleaned = cleaned.slice(3) // Remove "```"
+  }
+
+  // Remove leading newline after the opening marker
+  cleaned = cleaned.trimStart()
+
+  // Remove ``` at the end
+  if (cleaned.endsWith("```")) {
+    cleaned = cleaned.slice(0, -3)
+  }
+
+  // Remove trailing whitespace
+  cleaned = cleaned.trimEnd()
+
+  return cleaned
+}
 
 interface MarkdownWidgetProps {
   content: string
@@ -14,6 +39,9 @@ interface MarkdownWidgetProps {
 }
 
 export const MarkdownWidget = memo(function MarkdownWidget({ content, onDismiss, dragPosition, onDragEnd }: MarkdownWidgetProps) {
+  // Strip markdown code block wrapper if present (memoized to prevent re-renders)
+  const cleanedContent = useMemo(() => stripMarkdownWrapper(content), [content]);
+
   // Stable drag handler to prevent re-renders
   const handleDragEnd = useCallback((_: any, info: any) => {
     onDragEnd?.(
@@ -39,7 +67,7 @@ export const MarkdownWidget = memo(function MarkdownWidget({ content, onDismiss,
       whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
       onDragEnd={handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
-      className="relative bg-card border border-border rounded-lg p-6 cursor-grab shadow-lg hover:shadow-xl"
+      className="relative bg-card border border-border rounded-lg p-6 cursor-grab shadow-lg hover:shadow-xl max-w-[480px]"
     >
       {onDismiss && (
         <button
@@ -50,7 +78,8 @@ export const MarkdownWidget = memo(function MarkdownWidget({ content, onDismiss,
           <X className="w-4 h-4" />
         </button>
       )}
-      <div className="text-sm leading-relaxed space-y-3">
+      {/* Content with max-height and scrolling */}
+      <div className="text-sm leading-relaxed space-y-3 max-h-[60vh] overflow-y-auto pr-2">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
@@ -84,7 +113,7 @@ export const MarkdownWidget = memo(function MarkdownWidget({ content, onDismiss,
             em: ({ children }) => <em className="italic">{children}</em>,
           }}
         >
-          {content}
+          {cleanedContent}
         </ReactMarkdown>
       </div>
     </motion.div>

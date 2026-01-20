@@ -4,6 +4,7 @@
 # API endpoints for UI showcase
 # =============================================================================
 
+import logging
 from datetime import datetime
 from typing import Any
 
@@ -16,6 +17,7 @@ from config.dspy import configure_dspy, get_lm_info
 from services.widget_spawner import get_widget_spawner_service
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # Include example data endpoints
 router.include_router(examples_router)
@@ -106,15 +108,21 @@ async def generate_widget(request: GenerateRequest) -> dict[str, Any]:
             "reasoning": "..."  // Optional: ReAct reasoning trace
         }
     """
+    logger.debug(f"🔵 /generate-widget called: prompt='{request.prompt}', widget_type={request.widget_type}")
 
     service = get_widget_spawner_service()
 
     try:
         # widget_type is optional - if None, multi-widget ReAct agent will decide
+        logger.debug("🔵 Calling service.generate_widget...")
         response = await service.generate_widget(
             prompt=request.prompt,
             widget_type=request.widget_type if request.widget_type else None,
         )
+
+        logger.debug(f"🔵 Service returned {len(response.widgets)} widgets")
+        for i, widget in enumerate(response.widgets):
+            logger.debug(f"🔵   Widget {i+1}: id={widget.id}, type={widget.type}, title={widget.title}")
 
         # Convert all WidgetDescriptors to UIDescriptor format for frontend compatibility
         widgets = [
@@ -130,13 +138,16 @@ async def generate_widget(request: GenerateRequest) -> dict[str, Any]:
             for widget in response.widgets
         ]
 
-        return {
+        result = {
             "widgets": widgets,
             "tools_used": response.tools_used,
             "reasoning": response.reasoning,
         }
+        logger.debug(f"🔵 Returning result: {len(result['widgets'])} widgets")
+        return result
     except Exception as e:
         # Fallback on error - return single markdown widget with error message
+        logger.error(f"🔴 Error generating widget: {e}", exc_info=True)
         error_widget = UIDescriptor(
             id=f"error-{datetime.now().timestamp()}",
             type="markdown",

@@ -5,10 +5,13 @@
 # =============================================================================
 
 import json
+import logging
 
 import dspy
 
 from services.widget_spawner.config import AVAILABLE_WIDGET_TYPES
+
+logger = logging.getLogger(__name__)
 
 
 class PlanWidgetsSignature(dspy.Signature):
@@ -76,9 +79,12 @@ class WidgetPlannerAgent(dspy.Module):
             user_query=user_query, available_widgets=AVAILABLE_WIDGET_TYPES
         )
 
+        logger.debug(f"🟣 Planner raw output: {repr(result.widget_plan)}")
+
         # Parse the widget_plan JSON
         try:
             plan_json = result.widget_plan
+            logger.debug(f"🟣 Plan JSON before strip: {repr(plan_json)}")
 
             # Strip markdown code blocks if present
             if "```" in plan_json:
@@ -89,11 +95,13 @@ class WidgetPlannerAgent(dspy.Module):
                     if line.strip().startswith("```"):
                         in_code_block = not in_code_block
                         continue
-                    if not in_code_block:
+                    if in_code_block:
                         json_lines.append(line)
                 plan_json = "\n".join(json_lines).strip()
 
+            logger.debug(f"🟣 Plan JSON after strip: {repr(plan_json)}")
             plan = json.loads(plan_json)
+            logger.debug(f"🟣 Parsed plan: {plan}")
 
             # Validate plan structure
             if not isinstance(plan, list):
@@ -107,7 +115,8 @@ class WidgetPlannerAgent(dspy.Module):
                     item["context"] = user_query
 
         except (json.JSONDecodeError, TypeError, AttributeError) as e:
-            print(f"Warning: Failed to parse plan, using fallback: {e}")
+            logger.error(f"🔴 Failed to parse plan, using fallback: {e}")
+            logger.error(f"🔴 Raw plan that failed: {repr(result.widget_plan)}")
             # Fallback: single markdown widget
             plan = [{"type": "markdown", "context": user_query}]
 
