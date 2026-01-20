@@ -29,7 +29,9 @@ def get_dspy_lm() -> dspy.LM:
 
     if provider == "ollama":
         # Ollama requires "ollama_chat/" prefix for chat models
-        model_name = f"ollama_chat/{model}" if not model.startswith("ollama_chat/") else model
+        model_name = (
+            f"ollama_chat/{model}" if not model.startswith("ollama_chat/") else model
+        )
         return dspy.LM(
             model=model_name,
             api_base=settings.ollama_base_url,
@@ -49,7 +51,9 @@ def get_dspy_lm() -> dspy.LM:
 
     elif provider == "anthropic":
         if not settings.anthropic_api_key:
-            raise ValueError("ANTHROPIC_API_KEY must be set when using Anthropic provider")
+            raise ValueError(
+                "ANTHROPIC_API_KEY must be set when using Anthropic provider"
+            )
         return dspy.LM(
             model=f"anthropic/{model}",
             api_key=settings.anthropic_api_key,
@@ -78,6 +82,7 @@ def configure_dspy() -> None:
 # Convenience function for getting current LM info
 # =============================================================================
 
+
 def get_lm_info() -> dict[str, str]:
     """Get information about the current LLM configuration.
 
@@ -89,5 +94,7 @@ def get_lm_info() -> dict[str, str]:
         "model": settings.llm_model,
         "temperature": str(settings.llm_temperature),
         "max_tokens": str(settings.llm_max_tokens),
-        "api_base": settings.ollama_base_url if settings.llm_provider == "ollama" else "N/A",
+        "api_base": settings.ollama_base_url
+        if settings.llm_provider == "ollama"
+        else "N/A",
     }

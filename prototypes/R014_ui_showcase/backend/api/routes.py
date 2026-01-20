@@ -7,7 +7,6 @@
 from datetime import datetime
 from typing import Any
 
-import dspy
 from fastapi import APIRouter
 
 from api.content_generator import ContentGenerator
@@ -107,7 +106,6 @@ async def generate_widget(request: GenerateRequest) -> dict[str, Any]:
             "reasoning": "..."  // Optional: ReAct reasoning trace
         }
     """
-    from typing import Any
 
     service = get_widget_spawner_service()
 

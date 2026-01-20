@@ -36,14 +36,17 @@ class GenerateRequest(BaseModel):
     """Request to generate content."""
 
     prompt: str
-    widget_type: Literal[
-        "markdown",
-        "card",
-        "form",
-        "progress",
-        "action",
-        "confirmation",
-        "image",
-        "gallery",
-        "chart",
-    ] | None = None
+    widget_type: (
+        Literal[
+            "markdown",
+            "card",
+            "form",
+            "progress",
+            "action",
+            "confirmation",
+            "image",
+            "gallery",
+            "chart",
+        ]
+        | None
+    ) = None

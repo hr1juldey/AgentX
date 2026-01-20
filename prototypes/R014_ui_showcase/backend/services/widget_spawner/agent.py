@@ -64,7 +64,9 @@ class MultiWidgetSpawnerAgent(dspy.Module):
 
         # Parse the widget_results from the agent
         # Each result is a JSON string like: {"widget": {...}, "tool_used": "..."}
-        widget_results = result.widget_results if hasattr(result, "widget_results") else []
+        widget_results = (
+            result.widget_results if hasattr(result, "widget_results") else []
+        )
 
         widgets = []
         tools_used = []

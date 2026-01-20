@@ -37,8 +37,12 @@ class SelectWidgetSignature(dspy.Signature):
     available_widgets: list[str] = dspy.InputField(
         desc="List of available widget types: markdown, card, form, progress, chart, action, confirmation, image, gallery"
     )
-    selected_widget: str = dspy.OutputField(desc="Selected widget type (must be one of: markdown, card, form, progress, chart, action, confirmation, image, gallery)")
-    widget_rationale: str = dspy.OutputField(desc="Brief explanation of why this widget type was chosen")
+    selected_widget: str = dspy.OutputField(
+        desc="Selected widget type (must be one of: markdown, card, form, progress, chart, action, confirmation, image, gallery)"
+    )
+    widget_rationale: str = dspy.OutputField(
+        desc="Brief explanation of why this widget type was chosen"
+    )
 
 
 class GenerateMarkdownSignature(dspy.Signature):
@@ -85,5 +89,5 @@ class GenerateChartSignature(dspy.Signature):
     chart_type: str = dspy.OutputField(desc="Chart type: bar, line, pie, or area")
     chart_title: str = dspy.OutputField(desc="Chart title")
     chart_data_json: str = dspy.OutputField(
-        desc="JSON array of chart data points. MUST be valid JSON only, no markdown code blocks. Example: [{\"year\": 2023, \"sales\": 80000}]"
+        desc='JSON array of chart data points. MUST be valid JSON only, no markdown code blocks. Example: [{"year": 2023, "sales": 80000}]'
     )

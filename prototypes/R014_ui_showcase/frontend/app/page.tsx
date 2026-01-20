@@ -17,6 +17,9 @@ import { ConfirmationWidget } from "@/components/widgets/confirmation-widget";
 import { ImageWidget } from "@/components/widgets/image-widget";
 import { GalleryWidget } from "@/components/widgets/gallery-widget";
 import { ChartWidget } from "@/components/widgets/chart-widget";
+import { ToolIsland, IslandPanel, MobileBubbleLayer } from "@/components/islands";
+import { ForceGraphLayout } from "@/components/layout/force-graph-layout";
+import { resolveCollisions, createPanelBounds } from "@/lib/collision-resolver";
 
 interface UIDescriptor {
   descriptor_id: string;
@@ -387,6 +390,25 @@ export default function HomePage() {
   const [health, setHealth] = useState<string>("checking...");
   const [sessions, setSessions] = useState<Session[]>([]);
 
+  // Island UI state
+  const [islandPositions, setIslandPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [expandedPanelId, setExpandedPanelId] = useState<string | null>(null);
+  const [panelPushes, setPanelPushes] = useState<Record<string, { x: number; y: number }>>({});
+
+  // Feature flag for island UI
+  const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
+
+  // Stable center value for force graph layout
+  const forceGraphCenter = useMemo(() => ({
+    x: typeof window !== "undefined" ? window.innerWidth / 2 : 400,
+    y: typeof window !== "undefined" ? window.innerHeight / 2 : 300,
+  }), []); // Empty deps - only compute once on mount
+
+  // Stable callback for positions calculated
+  const handlePositionsCalculated = useCallback((positions: Record<string, { x: number; y: number }>) => {
+    setIslandPositions(positions);
+  }, []);
+
   // Fetch health status
   useEffect(() => {
     fetch(`${apiUrl}/health`)
@@ -489,6 +511,45 @@ export default function HomePage() {
     onToggleCollapse: () => toggleWidgetCollapse(id),
   }), [dismissWidget, updateWidgetPosition, toggleWidgetCollapse]);
 
+  // Island UI handlers
+  const handleIslandClick = useCallback((id: string) => {
+    if (expandedPanelId === id) {
+      setExpandedPanelId(null);
+    } else {
+      setExpandedPanelId(id);
+    }
+  }, [expandedPanelId]);
+
+  const handleIslandDragEnd = useCallback((id: string, x: number, y: number) => {
+    setIslandPositions((prev) => ({
+      ...prev,
+      [id]: { x, y },
+    }));
+  }, []);
+
+  const handlePanelClose = useCallback(() => {
+    setExpandedPanelId(null);
+  }, []);
+
+  const handleMobileBubbleExpand = useCallback((id: string) => {
+    setExpandedPanelId(id);
+  }, []);
+
+  // Resolve collisions when panels are expanded
+  useEffect(() => {
+    if (expandedPanelId && enableIslands) {
+      // Collect all expanded panel bounds
+      const panelBounds = [
+        createPanelBounds(expandedPanelId, islandPositions[expandedPanelId] || { x: 200, y: 200 }),
+      ];
+
+      const pushes = resolveCollisions(panelBounds);
+      setPanelPushes(pushes);
+    } else {
+      setPanelPushes({});
+    }
+  }, [expandedPanelId, islandPositions, enableIslands]);
+
   // Sidebar
   const Sidebar = () => (
     <motion.aside
@@ -554,7 +615,26 @@ export default function HomePage() {
 
   // Main view
   const MainView = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Force Graph Layout - calculates island positions */}
+      {enableIslands && (
+        <ForceGraphLayout
+          widgets={widgets.map((w) => ({ id: w.descriptor_id }))}
+          center={forceGraphCenter}
+          islandRadius={28}
+          onPositionsCalculated={handlePositionsCalculated}
+        />
+      )}
+
+      {/* Mobile Bubble Layer - visible only on mobile */}
+      {enableIslands && (
+        <MobileBubbleLayer
+          widgets={widgets}
+          expandedId={expandedPanelId}
+          onExpand={handleMobileBubbleExpand}
+          onDismiss={dismissWidget}
+        />
+      )}
       {/* Welcome Card */}
       <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
         <CardHeader>
@@ -574,10 +654,48 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      {/* Generated Widgets - Simple layout without Voronoi */}
+      {/* Generated Widgets - Island UI or Traditional Layout */}
       <AnimatePresence mode="popLayout">
         {widgets.map((widget) => {
           const handlers = createWidgetHandlers(widget.descriptor_id);
+
+          // Island UI mode (desktop only, hidden on mobile)
+          if (enableIslands) {
+            const position = islandPositions[widget.descriptor_id] || { x: 0, y: 0 };
+            const isExpanded = expandedPanelId === widget.descriptor_id;
+
+            return (
+              <div key={widget.descriptor_id} className="hidden md:block">
+                <ToolIsland
+                  widget={widget}
+                  position={position}
+                  isActive={isExpanded}
+                  onClick={() => handleIslandClick(widget.descriptor_id)}
+                  onDragEnd={(x, y) => handleIslandDragEnd(widget.descriptor_id, x, y)}
+                  onDismiss={handlers.onDismiss}
+                />
+
+                {/* Expanded panel */}
+                {isExpanded && (
+                  <IslandPanel
+                    widget={widget}
+                    islandPosition={position}
+                    pushVector={panelPushes[widget.descriptor_id]}
+                    onClose={handlePanelClose}
+                  >
+                    <WidgetRenderer
+                      descriptor={widget}
+                      onDismiss={handlers.onDismiss}
+                      onDragEnd={handlers.onDragEnd}
+                      onToggleCollapse={handlers.onToggleCollapse}
+                    />
+                  </IslandPanel>
+                )}
+              </div>
+            );
+          }
+
+          // Traditional mode (CollapsibleWidgetWrapper)
           return (
             <WidgetRenderer
               key={widget.descriptor_id}
@@ -842,6 +960,42 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
       </main>
 
       {/* Central Island - replaces FAB */}
+      {/* Mobile expanded panel */}
+      {enableIslands && expandedPanelId && (
+        <div className="md:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          {widgets
+            .filter((w) => w.descriptor_id === expandedPanelId)
+            .map((widget) => {
+              const handlers = createWidgetHandlers(widget.descriptor_id);
+              return (
+                <div
+                  key={widget.descriptor_id}
+                  className="bg-card border border-border rounded-lg shadow-2xl max-w-[420px] max-h-[80vh] overflow-auto relative w-full"
+                >
+                  <button
+                    onClick={handlePanelClose}
+                    className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors z-10"
+                    aria-label="Close panel"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <div className="p-4">
+                    {widget.title && (
+                      <h3 className="text-lg font-semibold mb-2 pr-6">{widget.title}</h3>
+                    )}
+                    <WidgetRenderer
+                      descriptor={widget}
+                      onDismiss={handlers.onDismiss}
+                      onDragEnd={handlers.onDragEnd}
+                      onToggleCollapse={handlers.onToggleCollapse}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      )}
+
       <CentralIsland
         onSendMessage={(message) => {
           setView("main")

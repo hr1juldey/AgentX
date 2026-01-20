@@ -147,8 +147,8 @@ export function CentralIsland({ onSendMessage, onVoiceToggle }: CentralIslandPro
         className={`
           relative rounded-full shadow-2xl transition-all duration-300
           ${mode === "idle"
-            ? "w-16 h-16 bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-            : "w-12 h-12 bg-muted hover:bg-muted/80"
+            ? "w-22 h-22 bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            : "w-16 h-16 bg-muted hover:bg-muted/80"
           }
         `}
         whileHover={{ scale: mode === "idle" ? 1.05 : 1 }}
@@ -166,7 +166,7 @@ export function CentralIsland({ onSendMessage, onVoiceToggle }: CentralIslandPro
           transition={{ duration: 0.2 }}
           className="absolute inset-0 flex items-center justify-center"
         >
-          <MessageCircle className="w-6 h-6 text-primary-foreground" />
+          <MessageCircle className="w-8 h-8 text-primary-foreground" />
         </motion.div>
 
         <motion.div
@@ -177,23 +177,38 @@ export function CentralIsland({ onSendMessage, onVoiceToggle }: CentralIslandPro
           transition={{ duration: 0.2 }}
           className="absolute inset-0 flex items-center justify-center"
         >
-          <X className="w-5 h-5 text-foreground" />
+          <X className="w-6 h-6 text-foreground" />
         </motion.div>
 
-        {/* Pulse animation when idle */}
+        {/* Enhanced pulse animation when idle - orchestrator mode */}
         {mode === "idle" && (
-          <motion.div
-            className="absolute inset-0 rounded-full bg-primary/50"
-            animate={{
-              scale: [1, 1.5, 1],
-              opacity: [0.5, 0, 0.5],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
+          <>
+            <motion.div
+              className="absolute inset-0 rounded-full bg-primary/30"
+              animate={{
+                scale: [1, 1.3, 1],
+                opacity: [0.6, 0, 0.6],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-full bg-primary/20"
+              animate={{
+                scale: [1, 1.6, 1],
+                opacity: [0.4, 0, 0.4],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 0.5,
+              }}
+            />
+          </>
         )}
       </motion.button>
 

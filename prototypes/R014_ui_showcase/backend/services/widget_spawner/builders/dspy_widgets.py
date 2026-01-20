@@ -120,7 +120,8 @@ def build_chart_widget(
             label_keys = {"year", "month", "name", "label", "category", "date"}
             # Find numeric keys (value keys)
             extracted_keys = [
-                k for k in first_item.keys()
+                k
+                for k in first_item.keys()
                 if k not in label_keys and isinstance(first_item[k], (int, float))
             ]
             data_keys = extracted_keys if extracted_keys else DEFAULT_CHART_DATA_KEYS

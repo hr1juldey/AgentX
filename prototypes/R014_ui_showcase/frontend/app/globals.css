@@ -74,3 +74,45 @@
   --chart-4: 280 65% 60%;
   --chart-5: 340 75% 55%;
 }
+
+/* Island UI colors */
+:root {
+  /* Pastel island colors */
+  --island-white: 250 100% 97%;
+  --island-cream: 40 30% 96%;
+  --island-mint: 170 40% 95%;
+  --island-lavender: 260 40% 95%;
+  --island-peach: 20 60% 95%;
+
+  /* Widget-type colors */
+  --island-chart: 217 91% 60%;
+  --island-form: 142 76% 36%;
+  --island-markdown: 220 70% 50%;
+  --island-image: 280 65% 60%;
+  --island-progress: 30 80% 55%;
+  --island-card: 200 80% 55%;
+  --island-action: 25 95% 53%;
+  --island-confirmation: 330 81% 60%;
+  --island-gallery: 280 65% 60%;
+
+  /* Neon effects */
+  --island-neon-blue: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  --island-neon-glow: 0 0 20px rgba(59, 130, 246, 0.3);
+
+  /* Island sizes */
+  --island-diameter: 56px;
+  --agent-diameter: 88px;
+}
+
+.dark {
+  /* Widget-type colors - dark mode with higher saturation */
+  --island-chart: 220 70% 50%;
+  --island-form: 160 60% 45%;
+  --island-markdown: 210 40% 98%;
+  --island-image: 280 65% 60%;
+  --island-progress: 30 80% 55%;
+  --island-card: 200 70% 50%;
+  --island-action: 25 95% 53%;
+  --island-confirmation: 330 81% 60%;
+  --island-gallery: 280 65% 60%;
+}
