@@ -10,16 +10,37 @@ interface ProgressWidgetProps {
   indeterminate?: boolean
   statusText?: string
   onDismiss?: () => void
+  dragPosition?: { x: number; y: number }
+  onDragEnd?: (x: number, y: number) => void
 }
 
-export function ProgressWidget({ title, content, value = 0, indeterminate = false, statusText, onDismiss }: ProgressWidgetProps) {
+export function ProgressWidget({
+  title,
+  content,
+  value = 0,
+  indeterminate = false,
+  statusText,
+  onDismiss,
+  dragPosition,
+  onDragEnd
+}: ProgressWidgetProps) {
   return (
     <motion.div
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: "auto" }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.2 }}
-      className="relative bg-card border border-border rounded-lg p-6 overflow-hidden"
+      drag
+      dragElastic={0.2}
+      dragMomentum={false}
+      dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
+      whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
+      onDragEnd={(_, info) => onDragEnd?.(
+        (dragPosition?.x || 0) + info.offset.x,
+        (dragPosition?.y || 0) + info.offset.y
+      )}
+      style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
+      className="relative bg-card cursor-grab shadow-lg hover:shadow-xl border border-border rounded-lg p-6 overflow-hidden"
     >
       {onDismiss && (
         <button

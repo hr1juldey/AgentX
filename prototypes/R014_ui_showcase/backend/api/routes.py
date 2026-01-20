@@ -83,6 +83,27 @@ class ConfirmationContentSignature(dspy.Signature):
     message = dspy.OutputField(desc="Confirmation message")
 
 
+class ImageContentSignature(dspy.Signature):
+    """Generate image widget content."""
+    subject = dspy.InputField(desc="Image subject or theme")
+    title = dspy.OutputField(desc="Image title")
+    caption = dspy.OutputField(desc="Image caption or description")
+
+
+class GalleryContentSignature(dspy.Signature):
+    """Generate gallery widget content."""
+    theme = dspy.InputField(desc="Gallery theme")
+    title = dspy.OutputField(desc="Gallery title")
+    description = dspy.OutputField(desc="Gallery description")
+
+
+class ChartContentSignature(dspy.Signature):
+    """Generate chart widget content."""
+    data_topic = dspy.InputField(desc="Chart data topic")
+    title = dspy.OutputField(desc="Chart title")
+    description = dspy.OutputField(desc="Chart description")
+
+
 # =============================================================================
 # Pydantic Models
 # =============================================================================
@@ -90,7 +111,7 @@ class ConfirmationContentSignature(dspy.Signature):
 class UIDescriptor(BaseModel):
     """UI descriptor model."""
     id: str
-    type: Literal["markdown", "card", "form", "progress", "action", "confirmation", "voice"]
+    type: Literal["markdown", "card", "form", "progress", "action", "confirmation", "voice", "image", "gallery", "chart"]
     timestamp: str
     dismissible: bool = True
     content: str | None = None
@@ -101,7 +122,7 @@ class UIDescriptor(BaseModel):
 class GenerateRequest(BaseModel):
     """Request to generate content."""
     prompt: str
-    widget_type: Literal["markdown", "card", "form", "progress", "action", "confirmation"]
+    widget_type: Literal["markdown", "card", "form", "progress", "action", "confirmation", "image", "gallery", "chart"]
 
 
 # =============================================================================
@@ -273,6 +294,55 @@ class ContentGenerator:
             }
         )
 
+    @staticmethod
+    async def generate_image(prompt: str) -> UIDescriptor:
+        """Generate image widget content."""
+        generator = dspy.Predict(ImageContentSignature)
+        result = generator(subject=prompt)
+        return UIDescriptor(
+            id=f"image-{datetime.now().timestamp()}",
+            type="image",
+            timestamp=datetime.now().isoformat(),
+            title=result.title,
+            content=result.caption,
+            metadata={"image_url": f"https://picsum.photos/800/600?random={datetime.now().timestamp()}"}
+        )
+
+    @staticmethod
+    async def generate_gallery(prompt: str) -> UIDescriptor:
+        """Generate gallery widget content."""
+        generator = dspy.Predict(GalleryContentSignature)
+        result = generator(theme=prompt)
+        return UIDescriptor(
+            id=f"gallery-{datetime.now().timestamp()}",
+            type="gallery",
+            timestamp=datetime.now().isoformat(),
+            title=result.title,
+            content=result.description,
+            metadata={
+                "images": [
+                    {"url": "https://picsum.photos/seed/nature1/400/400", "title": "Nature Scene"},
+                    {"url": "https://picsum.photos/seed/nature2/400/400", "title": "Landscape"},
+                    {"url": "https://picsum.photos/seed/nature3/400/400", "title": "Water View"},
+                    {"url": "https://picsum.photos/seed/nature4/400/400", "title": "Mountain"}
+                ]
+            }
+        )
+
+    @staticmethod
+    async def generate_chart(prompt: str) -> UIDescriptor:
+        """Generate chart widget content."""
+        generator = dspy.Predict(ChartContentSignature)
+        result = generator(data_topic=prompt)
+        return UIDescriptor(
+            id=f"chart-{datetime.now().timestamp()}",
+            type="chart",
+            timestamp=datetime.now().isoformat(),
+            title=result.title,
+            content=result.description,
+            metadata={"chart_type": "bar"}
+        )
+
 
 # =============================================================================
 # Routes
@@ -302,6 +372,12 @@ async def generate_content(request: GenerateRequest) -> UIDescriptor:
             return await generator.generate_action(request.prompt)
         elif request.widget_type == "confirmation":
             return await generator.generate_confirmation(request.prompt)
+        elif request.widget_type == "image":
+            return await generator.generate_image(request.prompt)
+        elif request.widget_type == "gallery":
+            return await generator.generate_gallery(request.prompt)
+        elif request.widget_type == "chart":
+            return await generator.generate_chart(request.prompt)
         else:
             raise ValueError(f"Unknown widget type: {request.widget_type}")
     except Exception as e:

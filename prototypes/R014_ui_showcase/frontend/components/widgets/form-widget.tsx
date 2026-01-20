@@ -14,10 +14,12 @@ interface FormWidgetProps {
   submitLabel?: string
   onSubmit?: (data: Record<string, string>) => void
   onDismiss?: () => void
+  dragPosition?: { x: number; y: number }
+  onDragEnd?: (x: number, y: number) => void
 }
 
-export function FormWidget({ title, content, fields, submitLabel = "Submit", onSubmit, onDismiss }: FormWidgetProps) {
-  const handleSubmit = (e: React.FormEvent) => {
+export function FormWidget({ title, content, fields, submitLabel = "Submit", onSubmit, onDismiss, dragPosition, onDragEnd }: FormWidgetProps) {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     const data = Object.fromEntries(formData)
@@ -30,7 +32,17 @@ export function FormWidget({ title, content, fields, submitLabel = "Submit", onS
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.25 }}
-      className="relative bg-card border border-border rounded-lg p-6"
+      drag
+      dragElastic={0.2}
+      dragMomentum={false}
+      dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
+      whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
+      onDragEnd={(_, info) => onDragEnd?.(
+        (dragPosition?.x || 0) + info.offset.x,
+        (dragPosition?.y || 0) + info.offset.y
+      )}
+      style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
+      className="relative bg-card border border-border rounded-lg p-6 cursor-grab shadow-lg hover:shadow-xl"
     >
       {onDismiss && (
         <button

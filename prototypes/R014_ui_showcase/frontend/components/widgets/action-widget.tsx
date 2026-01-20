@@ -11,9 +11,11 @@ interface ActionWidgetProps {
   variant?: "default" | "destructive" | "outline"
   onAction?: () => void
   onDismiss?: () => void
+  dragPosition?: { x: number; y: number }
+  onDragEnd?: (x: number, y: number) => void
 }
 
-export function ActionWidget({ title, content, buttonText = "Click Me", variant = "default", onAction, onDismiss }: ActionWidgetProps) {
+export function ActionWidget({ title, content, buttonText = "Click Me", variant = "default", onAction, onDismiss, dragPosition, onDragEnd }: ActionWidgetProps) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -21,7 +23,17 @@ export function ActionWidget({ title, content, buttonText = "Click Me", variant 
       whileHover={{ scale: 1.02 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.15 }}
-      className="relative bg-card border border-border rounded-lg p-6 text-center"
+      drag
+      dragElastic={0.2}
+      dragMomentum={false}
+      dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
+      whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
+      onDragEnd={(_, info) => onDragEnd?.(
+        (dragPosition?.x || 0) + info.offset.x,
+        (dragPosition?.y || 0) + info.offset.y
+      )}
+      style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
+      className="relative bg-card cursor-grab shadow-lg hover:shadow-xl border border-border rounded-lg p-6 text-center"
     >
       {onDismiss && (
         <button

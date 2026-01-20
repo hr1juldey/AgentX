@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, MessageSquare, X, Sparkles, Gallery, History, Database } from "lucide-react";
+import { Plus, MessageSquare, X, Sparkles, Images, History, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,9 @@ import { FormWidget } from "@/components/widgets/form-widget";
 import { ProgressWidget } from "@/components/widgets/progress-widget";
 import { ActionWidget } from "@/components/widgets/action-widget";
 import { ConfirmationWidget } from "@/components/widgets/confirmation-widget";
+import { ImageWidget } from "@/components/widgets/image-widget";
+import { GalleryWidget } from "@/components/widgets/gallery-widget";
+import { ChartWidget } from "@/components/widgets/chart-widget";
 
 interface UIDescriptor {
   descriptor_id: string;
@@ -30,6 +33,9 @@ interface UIDescriptor {
   confirm_label?: string;
   cancel_label?: string;
   dismissible?: boolean;
+  // Position tracking for draggable widgets
+  x?: number;
+  y?: number;
   // Backend response fields
   id?: string;
   type?: string;
@@ -77,6 +83,8 @@ export default function HomePage() {
 
   // Generate content
   const generateContent = async (prompt: string, widgetType?: string) => {
+    if (!prompt.trim()) return;
+
     setLoading(true);
     try {
       const res = await fetch(`${apiUrl}/api/v1/mock/generate`, {
@@ -106,6 +114,7 @@ export default function HomePage() {
         ...(data.metadata?.cancel_label && { cancel_label: data.metadata.cancel_label }),
       };
       setWidgets((prev) => [widget, ...prev]);
+      setInputPrompt(""); // Clear input after successful generation
     } catch (error) {
       console.error("Failed to generate content:", error);
     }
@@ -117,38 +126,136 @@ export default function HomePage() {
     setWidgets((prev) => prev.filter((w) => w.descriptor_id !== id));
   };
 
+  // Update widget position after drag
+  const updateWidgetPosition = (id: string, x: number, y: number) => {
+    setWidgets((prev) =>
+      prev.map((w) =>
+        w.descriptor_id === id ? { ...w, x, y } : w
+      )
+    );
+  };
+
   // Render widget based on type
   const renderWidget = (descriptor: UIDescriptor) => {
-    const props = {
-      key: descriptor.descriptor_id,
-      id: descriptor.descriptor_id,
-      onDismiss: () => dismissWidget(descriptor.descriptor_id),
-      dismissible: descriptor.dismissible !== false,
-      ...(descriptor.title && { title: descriptor.title }),
-      ...(descriptor.content && { content: descriptor.content }),
-      ...(descriptor.fields && { fields: descriptor.fields }),
-      ...(descriptor.submit_button_text && { submitButtonText: descriptor.submit_button_text }),
-      ...(descriptor.task_name && { taskName: descriptor.task_name }),
-      ...(descriptor.progress_percent !== undefined && { progress: descriptor.progress_percent }),
-      ...(descriptor.status_text && { statusText: descriptor.status_text }),
-      ...(descriptor.button_text && { buttonText: descriptor.button_text }),
-      ...(descriptor.action_id && { actionId: descriptor.action_id }),
-      ...(descriptor.message && { message: descriptor.message }),
-      ...(descriptor.confirm_label && { confirmLabel: descriptor.confirm_label }),
-      ...(descriptor.cancel_label && { cancelLabel: descriptor.cancel_label }),
-    };
+    const onDismiss = () => dismissWidget(descriptor.descriptor_id);
+    const dragPosition = descriptor.x !== undefined || descriptor.y !== undefined
+      ? { x: descriptor.x || 0, y: descriptor.y || 0 }
+      : undefined;
+    const onDragEnd = (x: number, y: number) => updateWidgetPosition(descriptor.descriptor_id, x, y);
 
-    // Map backend widget types to frontend components
-    const typeMap: Record<string, JSX.Element> = {
-      markdown: <MarkdownWidget {...props} />,
-      card: <CardWidget {...props} />,
-      form: <FormWidget {...props} />,
-      progress: <ProgressWidget {...props} />,
-      action: <ActionWidget {...props} />,
-      confirmation: <ConfirmationWidget {...props} />,
-    };
-
-    return typeMap[descriptor.descriptor_type] || null;
+    switch (descriptor.descriptor_type) {
+      case "markdown":
+        return descriptor.content ? (
+          <MarkdownWidget
+            key={descriptor.descriptor_id}
+            content={descriptor.content}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        ) : null;
+      case "card":
+        return (
+          <CardWidget
+            key={descriptor.descriptor_id}
+            title={descriptor.title || ""}
+            content={descriptor.content || ""}
+            actions={[]}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        );
+      case "form":
+        return (
+          <FormWidget
+            key={descriptor.descriptor_id}
+            title={descriptor.title}
+            fields={descriptor.fields || []}
+            submitLabel={descriptor.submit_button_text}
+            onSubmit={() => {}}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        );
+      case "progress":
+        return (
+          <ProgressWidget
+            key={descriptor.descriptor_id}
+            title={descriptor.title || "Processing"}
+            value={(descriptor.progress_percent || 0) / 100}
+            statusText={descriptor.status_text}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        );
+      case "action":
+        return (
+          <ActionWidget
+            key={descriptor.descriptor_id}
+            title={descriptor.title}
+            content={descriptor.content}
+            buttonText={descriptor.button_text || "Action"}
+            onAction={() => {}}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        );
+      case "confirmation":
+        return (
+          <ConfirmationWidget
+            key={descriptor.descriptor_id}
+            title={descriptor.title || "Confirm"}
+            message={descriptor.message || ""}
+            confirmLabel={descriptor.confirm_label}
+            cancelLabel={descriptor.cancel_label}
+            onConfirm={() => {}}
+            onCancel={() => {}}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        );
+      case "image":
+        return (
+          <ImageWidget
+            key={descriptor.descriptor_id}
+            title={descriptor.title}
+            content={descriptor.content}
+            caption={descriptor.content}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        );
+      case "gallery":
+        return (
+          <GalleryWidget
+            key={descriptor.descriptor_id}
+            title={descriptor.title}
+            content={descriptor.content}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        );
+      case "chart":
+        return (
+          <ChartWidget
+            key={descriptor.descriptor_id}
+            title={descriptor.title}
+            content={descriptor.content}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   // Sidebar
@@ -180,7 +287,7 @@ export default function HomePage() {
           className="w-full justify-start"
           onClick={() => { setView("gallery"); setSidebarOpen(false); }}
         >
-          <Gallery className="w-4 h-4 mr-2" />
+          <Images className="w-4 h-4 mr-2" />
           Widget Gallery
         </Button>
         <Button
@@ -251,17 +358,18 @@ export default function HomePage() {
               value={inputPrompt}
               onChange={(e) => setInputPrompt(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && inputPrompt.trim()) {
+                if (e.key === "Enter" && inputPrompt.trim() && !loading) {
                   generateContent(inputPrompt);
-                  setInputPrompt("");
                 }
               }}
               disabled={loading}
+              autoFocus
             />
             <Button
               onClick={() => {
-                generateContent(inputPrompt);
-                setInputPrompt("");
+                if (inputPrompt.trim()) {
+                  generateContent(inputPrompt);
+                }
               }}
               disabled={loading || !inputPrompt.trim()}
             >
@@ -274,7 +382,10 @@ export default function HomePage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => generateContent("Explain the benefits of meditation", "markdown")}
+              onClick={() => {
+                setInputPrompt("Explain the benefits of meditation");
+                setTimeout(() => generateContent("Explain the benefits of meditation", "markdown"), 100);
+              }}
               disabled={loading}
             >
               Markdown Demo
@@ -282,7 +393,10 @@ export default function HomePage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => generateContent("Travel tips for Japan", "card")}
+              onClick={() => {
+                setInputPrompt("Travel tips for Japan");
+                setTimeout(() => generateContent("Travel tips for Japan", "card"), 100);
+              }}
               disabled={loading}
             >
               Card Demo
@@ -290,7 +404,10 @@ export default function HomePage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => generateContent("User feedback form", "form")}
+              onClick={() => {
+                setInputPrompt("User feedback form");
+                setTimeout(() => generateContent("User feedback form", "form"), 100);
+              }}
               disabled={loading}
             >
               Form Demo
@@ -298,28 +415,54 @@ export default function HomePage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => generateContent("Loading data", "progress")}
+              onClick={() => {
+                setInputPrompt("Loading data");
+                setTimeout(() => generateContent("Loading data", "progress"), 100);
+              }}
               disabled={loading}
             >
               Progress Demo
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setInputPrompt("Beautiful landscape photo");
+                setTimeout(() => generateContent("Beautiful landscape photo", "image"), 100);
+              }}
+              disabled={loading}
+            >
+              Image Demo
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setInputPrompt("Photo gallery of nature");
+                setTimeout(() => generateContent("Photo gallery of nature", "gallery"), 100);
+              }}
+              disabled={loading}
+            >
+              Gallery Demo
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setInputPrompt("Sales data chart");
+                setTimeout(() => generateContent("Sales data chart", "chart"), 100);
+              }}
+              disabled={loading}
+            >
+              Chart Demo
             </Button>
           </div>
         </CardContent>
       </Card>
 
       {/* Generated Widgets */}
-      <AnimatePresence>
-        {widgets.map((widget) => (
-          <motion.div
-            key={widget.descriptor_id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-          >
-            {renderWidget(widget)}
-          </motion.div>
-        ))}
+      <AnimatePresence mode="popLayout">
+        {widgets.map((widget) => renderWidget(widget))}
       </AnimatePresence>
 
       {widgets.length === 0 && (
@@ -342,14 +485,12 @@ export default function HomePage() {
         <CardHeader>
           <CardTitle>Widget Gallery</CardTitle>
           <CardDescription>
-            All 7 generative UI widget types showcased with example content
+            All 10 generative UI widget types showcased with example content
           </CardDescription>
         </CardHeader>
       </Card>
 
       <MarkdownWidget
-        id="example-markdown"
-        title="Markdown Block"
         content={`# Markdown Heading
 
 This is a **markdown block** widget that supports:
@@ -368,56 +509,67 @@ console.log(greeting);
 
 This widget is perfect for displaying AI-generated explanations, documentation, and formatted text.
         `}
-        dismissible={false}
       />
 
       <CardWidget
-        id="example-card"
         title="Travel Tips: Japan"
         content="### Best Time to Visit\n\nSpring (March-May) for cherry blossoms or Autumn (November) for fall colors.\n\n### Must-Visit Places\n- Tokyo (modern culture)\n- Kyoto (temples and traditions)\n- Osaka (food capital)\n\n### Travel Tips\n- Get a JR Pass for unlimited train travel\n- Learn basic Japanese phrases\n- Cash is still king in many places"
         actions={[
-          { label: "View Details", id: "view-details" },
-          { label: "Book Now", id: "book-now" },
+          { label: "View Details", action: "view-details" },
+          { label: "Book Now", action: "book-now" },
         ]}
-        dismissible={false}
       />
 
       <FormWidget
-        id="example-form"
         title="User Feedback Form"
         fields={[
-          { name: "name", type: "text", label: "Your Name", required: true },
-          { name: "email", type: "email", label: "Email Address", required: true },
-          { name: "feedback", type: "textarea", label: "Your Feedback", required: true },
-          { name: "rating", type: "select", label: "Rating", required: true, options: ["Excellent", "Good", "Fair", "Poor"] },
+          { name: "name", type: "text", label: "Your Name" },
+          { name: "email", type: "email", label: "Email Address" },
+          { name: "feedback", type: "textarea", label: "Your Feedback" },
+          { name: "rating", type: "select", label: "Rating", options: ["Excellent", "Good", "Fair", "Poor"] },
         ]}
-        submitButtonText="Submit Feedback"
-        dismissible={false}
+        submitLabel="Submit Feedback"
+        onSubmit={() => {}}
       />
 
       <ProgressWidget
-        id="example-progress"
-        taskName="Processing Documents"
-        progress={65}
+        title="Processing Documents"
+        value={0.65}
         statusText="15 of 23 documents processed"
-        dismissible={false}
       />
 
       <ActionWidget
-        id="example-action"
+        title="Start Analysis"
+        content="Click to begin processing your data"
         buttonText="Start New Analysis"
-        actionId="start-analysis"
-        dismissible={false}
+        onAction={() => {}}
       />
 
       <ConfirmationWidget
-        id="example-confirmation"
         title="Delete Document"
         message="Are you sure you want to delete this document? This action cannot be undone."
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="destructive"
-        dismissible={false}
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />
+
+      <ImageWidget
+        title="Mountain Landscape"
+        content="A beautiful mountain landscape showcasing nature's grandeur"
+        caption="Photo from Picsum Photos"
+      />
+
+      <GalleryWidget
+        title="Nature Collection"
+        content="A curated gallery of stunning nature photographs"
+      />
+
+      <ChartWidget
+        title="Monthly Sales Data"
+        content="Revenue trends over the past 6 months showing consistent growth"
+        chartType="bar"
       />
     </div>
   );

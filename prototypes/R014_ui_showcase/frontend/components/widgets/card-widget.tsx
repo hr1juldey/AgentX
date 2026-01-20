@@ -11,16 +11,28 @@ interface CardWidgetProps {
   icon?: string
   actions?: Array<{ label: string; action: string; variant?: string }>
   onDismiss?: () => void
+  dragPosition?: { x: number; y: number }
+  onDragEnd?: (x: number, y: number) => void
 }
 
-export function CardWidget({ title, content, icon, actions, onDismiss }: CardWidgetProps) {
+export function CardWidget({ title, content, icon, actions, onDismiss, dragPosition, onDragEnd }: CardWidgetProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      className="relative bg-card border border-border rounded-lg overflow-hidden"
+      drag
+      dragElastic={0.2}
+      dragMomentum={false}
+      dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
+      whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
+      onDragEnd={(_, info) => onDragEnd?.(
+        (dragPosition?.x || 0) + info.offset.x,
+        (dragPosition?.y || 0) + info.offset.y
+      )}
+      style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
+      className="relative bg-card border border-border rounded-lg overflow-hidden cursor-grab shadow-lg hover:shadow-xl"
     >
       {onDismiss && (
         <button
@@ -38,7 +50,7 @@ export function CardWidget({ title, content, icon, actions, onDismiss }: CardWid
             <h3 className="text-lg font-semibold">{title}</h3>
           </div>
         )}
-        <div className="prose prose-sm dark:prose-invert max-w-none">
+        <div className="text-sm leading-relaxed">
           <p>{content}</p>
         </div>
         {actions && actions.length > 0 && (
