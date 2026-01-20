@@ -2,7 +2,14 @@
 name = "r014-ui-showcase"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "dspy-ai>=2.5.0",
+    "ollama>=0.4.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+]
 
 [tool.pyrefly]
 project-includes = ["**/*.py"]

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { X } from "lucide-react"
-import { useState } from "react"
+import { memo, useCallback, useState } from "react"
 
 interface ImageItem {
   url: string
@@ -42,7 +42,19 @@ const DEFAULT_IMAGES: ImageItem[] = [
   }
 ]
 
-export function GalleryWidget({ title, content, images = DEFAULT_IMAGES, onDismiss, dragPosition, onDragEnd }: GalleryWidgetProps) {
+export const GalleryWidget = memo(function GalleryWidget({ title, content, images = DEFAULT_IMAGES, onDismiss, dragPosition, onDragEnd }: GalleryWidgetProps) {
+  const handleDragEnd = useCallback((_: any, info: any) => {
+    onDragEnd?.(
+      (dragPosition?.x || 0) + info.offset.x,
+      (dragPosition?.y || 0) + info.offset.y
+    );
+  }, [onDragEnd, dragPosition]);
+
+  const handleDismiss = useCallback(() => {
+    onDismiss?.();
+  }, [onDismiss]);
+
+
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
   return (
@@ -65,7 +77,7 @@ export function GalleryWidget({ title, content, images = DEFAULT_IMAGES, onDismi
     >
       {onDismiss && (
         <button
-          onClick={onDismiss}
+          onClick={handleDismiss}
           className="absolute top-2 right-2 p-1 rounded bg-black/50 hover:bg-black/70 transition-colors z-10"
           aria-label="Dismiss"
         >
@@ -141,4 +153,4 @@ export function GalleryWidget({ title, content, images = DEFAULT_IMAGES, onDismi
       </div>
     </motion.div>
   )
-}
+});

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import { X } from "lucide-react"
-import { useState } from "react"
+import { memo, useCallback, useState } from "react"
 
 interface ImageWidgetProps {
   title?: string
@@ -14,7 +14,19 @@ interface ImageWidgetProps {
   onDragEnd?: (x: number, y: number) => void
 }
 
-export function ImageWidget({ title, content, imageUrl, caption, onDismiss, dragPosition, onDragEnd }: ImageWidgetProps) {
+export const ImageWidget = memo(function ImageWidget({ title, content, imageUrl, caption, onDismiss, dragPosition, onDragEnd }: ImageWidgetProps) {
+  const handleDragEnd = useCallback((_: any, info: any) => {
+    onDragEnd?.(
+      (dragPosition?.x || 0) + info.offset.x,
+      (dragPosition?.y || 0) + info.offset.y
+    );
+  }, [onDragEnd, dragPosition]);
+
+  const handleDismiss = useCallback(() => {
+    onDismiss?.();
+  }, [onDismiss]);
+
+
   const [imageError, setImageError] = useState(false)
 
   // Use picsum.photos for placeholder images
@@ -40,7 +52,7 @@ export function ImageWidget({ title, content, imageUrl, caption, onDismiss, drag
     >
       {onDismiss && (
         <button
-          onClick={onDismiss}
+          onClick={handleDismiss}
           className="absolute top-2 right-2 p-1 rounded bg-black/50 hover:bg-black/70 transition-colors z-10"
           aria-label="Dismiss"
         >
@@ -80,4 +92,4 @@ export function ImageWidget({ title, content, imageUrl, caption, onDismiss, drag
       )}
     </motion.div>
   )
-}
+});

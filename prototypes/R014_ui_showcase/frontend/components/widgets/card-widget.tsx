@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LucideIcon } from "@/components/ui/icon"
+import { memo, useCallback } from "react"
 
 interface CardWidgetProps {
   title?: string
@@ -15,7 +16,17 @@ interface CardWidgetProps {
   onDragEnd?: (x: number, y: number) => void
 }
 
-export function CardWidget({ title, content, icon, actions, onDismiss, dragPosition, onDragEnd }: CardWidgetProps) {
+export const CardWidget = memo(function CardWidget({ title, content, icon, actions, onDismiss, dragPosition, onDragEnd }: CardWidgetProps) {
+  const handleDragEnd = useCallback((_: any, info: any) => {
+    onDragEnd?.(
+      (dragPosition?.x || 0) + info.offset.x,
+      (dragPosition?.y || 0) + info.offset.y
+    );
+  }, [onDragEnd, dragPosition]);
+
+  const handleDismiss = useCallback(() => {
+    onDismiss?.();
+  }, [onDismiss]);
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -27,16 +38,13 @@ export function CardWidget({ title, content, icon, actions, onDismiss, dragPosit
       dragMomentum={false}
       dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
       whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
-      onDragEnd={(_, info) => onDragEnd?.(
-        (dragPosition?.x || 0) + info.offset.x,
-        (dragPosition?.y || 0) + info.offset.y
-      )}
+      onDragEnd={handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
       className="relative bg-card border border-border rounded-lg overflow-hidden cursor-grab shadow-lg hover:shadow-xl"
     >
       {onDismiss && (
         <button
-          onClick={onDismiss}
+          onClick={handleDismiss}
           className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors z-10"
           aria-label="Dismiss"
         >
@@ -69,5 +77,5 @@ export function CardWidget({ title, content, icon, actions, onDismiss, dragPosit
         )}
       </div>
     </motion.div>
-  )
-}
+  );
+});

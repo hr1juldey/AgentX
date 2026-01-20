@@ -56,12 +56,6 @@ async def root() -> dict[str, str]:
     }
 
 
-@app.get("/health")
-async def health() -> dict[str, str]:
-    """Health check endpoint."""
-    return {"status": "healthy"}
-
-
 def main() -> None:
     """Run the application server."""
     uvicorn.run(

@@ -1,4 +1,5 @@
 "use client"
+import { memo, useCallback } from "react"
 
 import { motion } from "framer-motion"
 import { X } from "lucide-react"
@@ -17,7 +18,7 @@ interface ConfirmationWidgetProps {
   onDragEnd?: (x: number, y: number) => void
 }
 
-export function ConfirmationWidget({
+export const ConfirmationWidget = memo(function ConfirmationWidget({
   title,
   message,
   confirmLabel = "Confirm",
@@ -29,6 +30,18 @@ export function ConfirmationWidget({
   dragPosition,
   onDragEnd
 }: ConfirmationWidgetProps) {
+  const handleDragEnd = useCallback((_: any, info: any) => {
+    onDragEnd?.(
+      (dragPosition?.x || 0) + info.offset.x,
+      (dragPosition?.y || 0) + info.offset.y
+    );
+  }, [onDragEnd, dragPosition]);
+
+  const handleDismiss = useCallback(() => {
+    onDismiss?.();
+  }, [onDismiss]);
+
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -49,7 +62,7 @@ export function ConfirmationWidget({
     >
       {onDismiss && (
         <button
-          onClick={onDismiss}
+          onClick={handleDismiss}
           className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors"
           aria-label="Dismiss"
         >
@@ -74,4 +87,4 @@ export function ConfirmationWidget({
       </div>
     </motion.div>
   )
-}
+});

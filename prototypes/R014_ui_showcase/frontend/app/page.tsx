@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, memo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, MessageSquare, X, Sparkles, Images, History, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/showcase/theme-toggle";
+import { CentralIsland } from "@/components/ui/central-island";
 import { MarkdownWidget } from "@/components/widgets/markdown-widget";
 import { CardWidget } from "@/components/widgets/card-widget";
 import { FormWidget } from "@/components/widgets/form-widget";
@@ -36,6 +37,8 @@ interface UIDescriptor {
   // Position tracking for draggable widgets
   x?: number;
   y?: number;
+  // Collapsible widget state
+  collapsed?: boolean;
   // Backend response fields
   id?: string;
   type?: string;
@@ -55,6 +58,325 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8014";
 const appName = process.env.NEXT_PUBLIC_APP_NAME || "R014 UI Showcase";
 
 type View = "main" | "gallery" | "sessions" | "connectors";
+
+// Memoized widget renderer to prevent re-renders of other widgets
+const WidgetRenderer = memo(function WidgetRenderer({
+  descriptor,
+  onDismiss,
+  onDragEnd,
+  onToggleCollapse,
+}: {
+  descriptor: UIDescriptor;
+  onDismiss: () => void;
+  onDragEnd: (x: number, y: number) => void;
+  onToggleCollapse: () => void;
+}) {
+  const dragPosition = useMemo(
+    () =>
+      descriptor.x !== undefined || descriptor.y !== undefined
+        ? { x: descriptor.x || 0, y: descriptor.y || 0 }
+        : undefined,
+    [descriptor.x, descriptor.y]
+  );
+
+  switch (descriptor.descriptor_type) {
+    case "markdown":
+      return descriptor.content ? (
+        <CollapsibleWidgetWrapper
+          descriptor={descriptor}
+          onDismiss={onDismiss}
+          onDragEnd={onDragEnd}
+          onToggleCollapse={onToggleCollapse}
+        >
+          <MarkdownWidget
+            content={descriptor.content}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        </CollapsibleWidgetWrapper>
+      ) : null;
+    case "card":
+      return (
+        <CollapsibleWidgetWrapper
+          descriptor={descriptor}
+          onDismiss={onDismiss}
+          onDragEnd={onDragEnd}
+          onToggleCollapse={onToggleCollapse}
+        >
+          <CardWidget
+            title={descriptor.title || ""}
+            content={descriptor.content || ""}
+            actions={[]}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        </CollapsibleWidgetWrapper>
+      );
+    case "form":
+      return (
+        <CollapsibleWidgetWrapper
+          descriptor={descriptor}
+          onDismiss={onDismiss}
+          onDragEnd={onDragEnd}
+          onToggleCollapse={onToggleCollapse}
+        >
+          <FormWidget
+            title={descriptor.title}
+            fields={descriptor.fields || []}
+            submitLabel={descriptor.submit_button_text}
+            onSubmit={() => {}}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        </CollapsibleWidgetWrapper>
+      );
+    case "progress":
+      return (
+        <CollapsibleWidgetWrapper
+          descriptor={descriptor}
+          onDismiss={onDismiss}
+          onDragEnd={onDragEnd}
+          onToggleCollapse={onToggleCollapse}
+        >
+          <ProgressWidget
+            title={descriptor.title || "Processing"}
+            value={(descriptor.progress_percent || 0) / 100}
+            statusText={descriptor.status_text}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        </CollapsibleWidgetWrapper>
+      );
+    case "action":
+      return (
+        <CollapsibleWidgetWrapper
+          descriptor={descriptor}
+          onDismiss={onDismiss}
+          onDragEnd={onDragEnd}
+          onToggleCollapse={onToggleCollapse}
+        >
+          <ActionWidget
+            title={descriptor.title}
+            content={descriptor.content}
+            buttonText={descriptor.button_text || "Action"}
+            onAction={() => {}}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        </CollapsibleWidgetWrapper>
+      );
+    case "confirmation":
+      return (
+        <CollapsibleWidgetWrapper
+          descriptor={descriptor}
+          onDismiss={onDismiss}
+          onDragEnd={onDragEnd}
+          onToggleCollapse={onToggleCollapse}
+        >
+          <ConfirmationWidget
+            title={descriptor.title || "Confirm"}
+            message={descriptor.message || ""}
+            confirmLabel={descriptor.confirm_label}
+            cancelLabel={descriptor.cancel_label}
+            onConfirm={() => {}}
+            onCancel={() => {}}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        </CollapsibleWidgetWrapper>
+      );
+    case "image":
+      return (
+        <CollapsibleWidgetWrapper
+          descriptor={descriptor}
+          onDismiss={onDismiss}
+          onDragEnd={onDragEnd}
+          onToggleCollapse={onToggleCollapse}
+        >
+          <ImageWidget
+            title={descriptor.title}
+            content={descriptor.content}
+            caption={descriptor.content}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        </CollapsibleWidgetWrapper>
+      );
+    case "gallery":
+      return (
+        <CollapsibleWidgetWrapper
+          descriptor={descriptor}
+          onDismiss={onDismiss}
+          onDragEnd={onDragEnd}
+          onToggleCollapse={onToggleCollapse}
+        >
+          <GalleryWidget
+            title={descriptor.title}
+            content={descriptor.content}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        </CollapsibleWidgetWrapper>
+      );
+    case "chart":
+      return (
+        <CollapsibleWidgetWrapper
+          descriptor={descriptor}
+          onDismiss={onDismiss}
+          onDragEnd={onDragEnd}
+          onToggleCollapse={onToggleCollapse}
+        >
+          <ChartWidget
+            title={descriptor.title}
+            content={descriptor.content}
+            chartType={(descriptor.metadata?.chart_type as "bar" | "line" | "pie" | "area") || "bar"}
+            data={descriptor.metadata?.data as Array<Record<string, string | number>>}
+            dataKeys={descriptor.metadata?.data_keys as string[]}
+            onDismiss={onDismiss}
+            dragPosition={dragPosition}
+            onDragEnd={onDragEnd}
+          />
+        </CollapsibleWidgetWrapper>
+      );
+    default:
+      return null;
+  }
+});
+
+// Collapsible wrapper for widgets - shows mini island when collapsed
+const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
+  descriptor,
+  onDismiss,
+  onDragEnd,
+  onToggleCollapse,
+  children,
+}: {
+  descriptor: UIDescriptor;
+  onDismiss: () => void;
+  onDragEnd: (x: number, y: number) => void;
+  onToggleCollapse: () => void;
+  children: React.ReactNode;
+}) {
+  const [isCollapsed, setIsCollapsed] = useState(descriptor.collapsed || false)
+
+  // Sync with descriptor state
+  useEffect(() => {
+    setIsCollapsed(descriptor.collapsed || false)
+  }, [descriptor.collapsed])
+
+  const handleToggle = useCallback(() => {
+    const newState = !isCollapsed
+    setIsCollapsed(newState)
+    onToggleCollapse()
+  }, [isCollapsed, onToggleCollapse])
+
+  // Widget type icons
+  const getWidgetIcon = useCallback(() => {
+    switch (descriptor.descriptor_type) {
+      case "markdown": return "📝"
+      case "card": return "📇"
+      case "form": return "📋"
+      case "progress": return "📊"
+      case "action": return "⚡"
+      case "confirmation": return "❓"
+      case "image": return "🖼️"
+      case "gallery": return "🖼️"
+      case "chart": return "📈"
+      default: return "📦"
+    }
+  }, [descriptor.descriptor_type])
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      {/* Collapsed mini island */}
+      <AnimatePresence mode="wait">
+        {isCollapsed ? (
+          <motion.div
+            key="collapsed"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="relative"
+          >
+            <motion.div
+              drag
+              dragElastic={0.2}
+              dragMomentum={false}
+              dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
+              whileDrag={{ scale: 1.05, cursor: "grabbing", zIndex: 50 }}
+              onDragEnd={(_, info) => onDragEnd(
+                (descriptor.x || 0) + info.offset.x,
+                (descriptor.y || 0) + info.offset.y
+              )}
+              style={{ x: descriptor.x || 0, y: descriptor.y || 0 }}
+              className="relative bg-card border border-border rounded-full cursor-grab shadow-lg hover:shadow-xl px-4 py-2 flex items-center gap-2"
+            >
+              <span className="text-lg">{getWidgetIcon()}</span>
+              <span className="text-sm font-medium truncate max-w-[120px]">
+                {descriptor.title || descriptor.descriptor_type}
+              </span>
+              {/* Expand button */}
+              <button
+                onClick={handleToggle}
+                className="ml-1 p-1 rounded-full hover:bg-muted transition-colors"
+                aria-label="Expand"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {/* Dismiss button */}
+              {onDismiss && (
+                <button
+                  onClick={onDismiss}
+                  className="p-1 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </motion.div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="expanded"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+          >
+            {/* Collapse button - absolute positioned */}
+            <div className="relative">
+              <button
+                onClick={handleToggle}
+                className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 p-1 rounded-full bg-card border border-border shadow-md hover:bg-muted transition-all"
+                aria-label="Collapse"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+});
 
 export default function HomePage() {
   const [view, setView] = useState<View>("main");
@@ -81,182 +403,91 @@ export default function HomePage() {
       .catch(() => setSessions([]));
   }, [apiUrl]);
 
-  // Generate content
+  // Generate content - uses DSPy ReAct agent for auto widget selection
+  // Can now generate multiple widgets based on user query
   const generateContent = async (prompt: string, widgetType?: string) => {
     if (!prompt.trim()) return;
 
     setLoading(true);
     try {
-      const res = await fetch(`${apiUrl}/api/v1/mock/generate`, {
+      // Use /generate-widget endpoint with DSPy ReAct agent for auto selection
+      const res = await fetch(`${apiUrl}/api/v1/generate-widget`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          widget_type: widgetType || "markdown",
+          widget_type: widgetType,  // Optional - DSPy ReAct selects if not provided
         }),
       });
       const data = await res.json();
-      // Map backend response to frontend format
-      const widget: UIDescriptor = {
-        descriptor_id: data.id,
-        descriptor_type: data.type,
-        title: data.title,
-        content: data.content,
-        dismissible: data.dismissible ?? true,
-        // Extract metadata fields
-        ...(data.metadata?.fields && { fields: data.metadata.fields }),
-        ...(data.metadata?.submit_label && { submit_button_text: data.metadata.submit_label }),
-        ...(data.metadata?.status_text && { status_text: data.metadata.status_text }),
-        ...(data.metadata?.value !== undefined && { progress_percent: data.metadata.value * 100 }),
-        ...(data.metadata?.button_text && { button_text: data.metadata.button_text }),
-        ...(data.metadata?.action_id && { action_id: data.metadata.action_id }),
-        ...(data.metadata?.confirm_label && { confirm_label: data.metadata.confirm_label }),
-        ...(data.metadata?.cancel_label && { cancel_label: data.metadata.cancel_label }),
-      };
-      setWidgets((prev) => [widget, ...prev]);
+
+      // API now returns { widgets: [...], tools_used: [...], reasoning: "..." }
+      // Map each widget from backend response to frontend format
+      const newWidgets: UIDescriptor[] = (data.widgets || []).map((w: any) => ({
+        descriptor_id: w.id,
+        descriptor_type: w.type,
+        title: w.title,
+        content: w.content,
+        dismissible: w.dismissible ?? true,
+        // Preserve the full metadata object for chart widgets
+        ...(w.metadata && { metadata: w.metadata }),
+        // Extract individual metadata fields for other widgets
+        ...(w.metadata?.fields && { fields: w.metadata.fields }),
+        ...(w.metadata?.submit_label && { submit_button_text: w.metadata.submit_label }),
+        ...(w.metadata?.status_text && { status_text: w.metadata.status_text }),
+        ...(w.metadata?.value !== undefined && { progress_percent: w.metadata.value * 100 }),
+        ...(w.metadata?.button_text && { button_text: w.metadata.button_text }),
+        ...(w.metadata?.action_id && { action_id: w.metadata.action_id }),
+        ...(w.metadata?.confirm_label && { confirm_label: w.metadata.confirm_label }),
+        ...(w.metadata?.cancel_label && { cancel_label: w.metadata.cancel_label }),
+      }));
+
+      // Add all new widgets to the state (ReAct may have generated multiple)
+      setWidgets((prev) => [...newWidgets, ...prev]);
       setInputPrompt(""); // Clear input after successful generation
+
+      // Log reasoning if available (for debugging)
+      if (data.reasoning) {
+        console.log("ReAct reasoning:", data.reasoning);
+      }
+      if (data.tools_used) {
+        console.log("Tools used:", data.tools_used);
+      }
     } catch (error) {
       console.error("Failed to generate content:", error);
     }
     setLoading(false);
   };
 
-  // Dismiss widget
-  const dismissWidget = (id: string) => {
+  // Dismiss widget - memoized to prevent re-renders
+  const dismissWidget = useCallback((id: string) => {
     setWidgets((prev) => prev.filter((w) => w.descriptor_id !== id));
-  };
+  }, []);
 
-  // Update widget position after drag
-  const updateWidgetPosition = (id: string, x: number, y: number) => {
+  // Update widget position after drag - memoized to prevent re-renders
+  const updateWidgetPosition = useCallback((id: string, x: number, y: number) => {
     setWidgets((prev) =>
       prev.map((w) =>
         w.descriptor_id === id ? { ...w, x, y } : w
       )
     );
-  };
+  }, []);
 
-  // Render widget based on type
-  const renderWidget = (descriptor: UIDescriptor) => {
-    const onDismiss = () => dismissWidget(descriptor.descriptor_id);
-    const dragPosition = descriptor.x !== undefined || descriptor.y !== undefined
-      ? { x: descriptor.x || 0, y: descriptor.y || 0 }
-      : undefined;
-    const onDragEnd = (x: number, y: number) => updateWidgetPosition(descriptor.descriptor_id, x, y);
+  // Toggle widget collapse - memoized to prevent re-renders
+  const toggleWidgetCollapse = useCallback((id: string) => {
+    setWidgets((prev) =>
+      prev.map((w) =>
+        w.descriptor_id === id ? { ...w, collapsed: !w.collapsed } : w
+      )
+    );
+  }, []);
 
-    switch (descriptor.descriptor_type) {
-      case "markdown":
-        return descriptor.content ? (
-          <MarkdownWidget
-            key={descriptor.descriptor_id}
-            content={descriptor.content}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        ) : null;
-      case "card":
-        return (
-          <CardWidget
-            key={descriptor.descriptor_id}
-            title={descriptor.title || ""}
-            content={descriptor.content || ""}
-            actions={[]}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        );
-      case "form":
-        return (
-          <FormWidget
-            key={descriptor.descriptor_id}
-            title={descriptor.title}
-            fields={descriptor.fields || []}
-            submitLabel={descriptor.submit_button_text}
-            onSubmit={() => {}}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        );
-      case "progress":
-        return (
-          <ProgressWidget
-            key={descriptor.descriptor_id}
-            title={descriptor.title || "Processing"}
-            value={(descriptor.progress_percent || 0) / 100}
-            statusText={descriptor.status_text}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        );
-      case "action":
-        return (
-          <ActionWidget
-            key={descriptor.descriptor_id}
-            title={descriptor.title}
-            content={descriptor.content}
-            buttonText={descriptor.button_text || "Action"}
-            onAction={() => {}}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        );
-      case "confirmation":
-        return (
-          <ConfirmationWidget
-            key={descriptor.descriptor_id}
-            title={descriptor.title || "Confirm"}
-            message={descriptor.message || ""}
-            confirmLabel={descriptor.confirm_label}
-            cancelLabel={descriptor.cancel_label}
-            onConfirm={() => {}}
-            onCancel={() => {}}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        );
-      case "image":
-        return (
-          <ImageWidget
-            key={descriptor.descriptor_id}
-            title={descriptor.title}
-            content={descriptor.content}
-            caption={descriptor.content}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        );
-      case "gallery":
-        return (
-          <GalleryWidget
-            key={descriptor.descriptor_id}
-            title={descriptor.title}
-            content={descriptor.content}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        );
-      case "chart":
-        return (
-          <ChartWidget
-            key={descriptor.descriptor_id}
-            title={descriptor.title}
-            content={descriptor.content}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        );
-      default:
-        return null;
-    }
-  };
+  // Create stable handlers for each widget - memoized to prevent re-renders
+  const createWidgetHandlers = useCallback((id: string) => ({
+    onDismiss: () => dismissWidget(id),
+    onDragEnd: (x: number, y: number) => updateWidgetPosition(id, x, y),
+    onToggleCollapse: () => toggleWidgetCollapse(id),
+  }), [dismissWidget, updateWidgetPosition, toggleWidgetCollapse]);
 
   // Sidebar
   const Sidebar = () => (
@@ -337,132 +568,26 @@ export default function HomePage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Enter a prompt below to generate dynamic content using DSPy and Ollama.
-            The backend will select the appropriate widget type and generate content for it.
+            Click the Central Island button below to open the chat interface.
+            Describe what you want to see, and the AI will create an appropriate widget.
           </p>
         </CardContent>
       </Card>
 
-      {/* Input Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Generate Content</CardTitle>
-          <CardDescription>
-            Describe what you want to see, and the AI will create an appropriate widget
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            <Input
-              placeholder="e.g., 'Explain quantum computing', 'What's the weather?', 'Create a survey form'"
-              value={inputPrompt}
-              onChange={(e) => setInputPrompt(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && inputPrompt.trim() && !loading) {
-                  generateContent(inputPrompt);
-                }
-              }}
-              disabled={loading}
-              autoFocus
-            />
-            <Button
-              onClick={() => {
-                if (inputPrompt.trim()) {
-                  generateContent(inputPrompt);
-                }
-              }}
-              disabled={loading || !inputPrompt.trim()}
-            >
-              {loading ? "Generating..." : "Generate"}
-            </Button>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setInputPrompt("Explain the benefits of meditation");
-                setTimeout(() => generateContent("Explain the benefits of meditation", "markdown"), 100);
-              }}
-              disabled={loading}
-            >
-              Markdown Demo
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setInputPrompt("Travel tips for Japan");
-                setTimeout(() => generateContent("Travel tips for Japan", "card"), 100);
-              }}
-              disabled={loading}
-            >
-              Card Demo
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setInputPrompt("User feedback form");
-                setTimeout(() => generateContent("User feedback form", "form"), 100);
-              }}
-              disabled={loading}
-            >
-              Form Demo
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setInputPrompt("Loading data");
-                setTimeout(() => generateContent("Loading data", "progress"), 100);
-              }}
-              disabled={loading}
-            >
-              Progress Demo
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setInputPrompt("Beautiful landscape photo");
-                setTimeout(() => generateContent("Beautiful landscape photo", "image"), 100);
-              }}
-              disabled={loading}
-            >
-              Image Demo
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setInputPrompt("Photo gallery of nature");
-                setTimeout(() => generateContent("Photo gallery of nature", "gallery"), 100);
-              }}
-              disabled={loading}
-            >
-              Gallery Demo
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setInputPrompt("Sales data chart");
-                setTimeout(() => generateContent("Sales data chart", "chart"), 100);
-              }}
-              disabled={loading}
-            >
-              Chart Demo
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Generated Widgets */}
+      {/* Generated Widgets - Simple layout without Voronoi */}
       <AnimatePresence mode="popLayout">
-        {widgets.map((widget) => renderWidget(widget))}
+        {widgets.map((widget) => {
+          const handlers = createWidgetHandlers(widget.descriptor_id);
+          return (
+            <WidgetRenderer
+              key={widget.descriptor_id}
+              descriptor={widget}
+              onDismiss={handlers.onDismiss}
+              onDragEnd={handlers.onDragEnd}
+              onToggleCollapse={handlers.onToggleCollapse}
+            />
+          );
+        })}
       </AnimatePresence>
 
       {widgets.length === 0 && (
@@ -470,7 +595,7 @@ export default function HomePage() {
           <CardContent className="py-12 text-center">
             <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
             <p className="text-muted-foreground">
-              No widgets yet. Enter a prompt above to generate your first widget.
+              No widgets yet. Click the Central Island button below to generate your first widget.
             </p>
           </CardContent>
         </Card>
@@ -716,24 +841,18 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
         {view === "connectors" && <ConnectorsView />}
       </main>
 
-      {/* FAB */}
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        className="fixed bottom-6 right-6 z-50"
-      >
-        <Button
-          size="lg"
-          className="rounded-full w-14 h-14 shadow-lg"
-          onClick={() => {
-            setView("main");
-            setInputPrompt("");
-            setWidgets([]);
-          }}
-        >
-          <Plus className="w-6 h-6" />
-        </Button>
-      </motion.div>
+      {/* Central Island - replaces FAB */}
+      <CentralIsland
+        onSendMessage={(message) => {
+          setView("main")
+          setInputPrompt(message)
+          generateContent(message)
+        }}
+        onVoiceToggle={() => {
+          console.log("Voice mode toggled")
+          // TODO: Implement voice mode
+        }}
+      />
     </div>
   );
 }

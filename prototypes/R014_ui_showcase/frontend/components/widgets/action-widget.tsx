@@ -1,4 +1,5 @@
 "use client"
+import { memo, useCallback } from "react"
 
 import { motion } from "framer-motion"
 import { X } from "lucide-react"
@@ -15,7 +16,19 @@ interface ActionWidgetProps {
   onDragEnd?: (x: number, y: number) => void
 }
 
-export function ActionWidget({ title, content, buttonText = "Click Me", variant = "default", onAction, onDismiss, dragPosition, onDragEnd }: ActionWidgetProps) {
+export const ActionWidget = memo(function ActionWidget({ title, content, buttonText = "Click Me", variant = "default", onAction, onDismiss, dragPosition, onDragEnd }: ActionWidgetProps) {
+  const handleDragEnd = useCallback((_: any, info: any) => {
+    onDragEnd?.(
+      (dragPosition?.x || 0) + info.offset.x,
+      (dragPosition?.y || 0) + info.offset.y
+    );
+  }, [onDragEnd, dragPosition]);
+
+  const handleDismiss = useCallback(() => {
+    onDismiss?.();
+  }, [onDismiss]);
+
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -37,7 +50,7 @@ export function ActionWidget({ title, content, buttonText = "Click Me", variant 
     >
       {onDismiss && (
         <button
-          onClick={onDismiss}
+          onClick={handleDismiss}
           className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors"
           aria-label="Dismiss"
         >
@@ -52,4 +65,4 @@ export function ActionWidget({ title, content, buttonText = "Click Me", variant 
       </Button>
     </motion.div>
   )
-}
+});

@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { X } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { memo, useCallback } from "react"
 
 interface MarkdownWidgetProps {
   content: string
@@ -12,7 +13,19 @@ interface MarkdownWidgetProps {
   onDragEnd?: (x: number, y: number) => void
 }
 
-export function MarkdownWidget({ content, onDismiss, dragPosition, onDragEnd }: MarkdownWidgetProps) {
+export const MarkdownWidget = memo(function MarkdownWidget({ content, onDismiss, dragPosition, onDragEnd }: MarkdownWidgetProps) {
+  // Stable drag handler to prevent re-renders
+  const handleDragEnd = useCallback((_: any, info: any) => {
+    onDragEnd?.(
+      (dragPosition?.x || 0) + info.offset.x,
+      (dragPosition?.y || 0) + info.offset.y
+    );
+  }, [onDragEnd, dragPosition]);
+
+  // Stable dismiss handler
+  const handleDismiss = useCallback(() => {
+    onDismiss?.();
+  }, [onDismiss]);
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -24,16 +37,13 @@ export function MarkdownWidget({ content, onDismiss, dragPosition, onDragEnd }: 
       dragMomentum={false}
       dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
       whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
-      onDragEnd={(_, info) => onDragEnd?.(
-        (dragPosition?.x || 0) + info.offset.x,
-        (dragPosition?.y || 0) + info.offset.y
-      )}
+      onDragEnd={handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
       className="relative bg-card border border-border rounded-lg p-6 cursor-grab shadow-lg hover:shadow-xl"
     >
       {onDismiss && (
         <button
-          onClick={onDismiss}
+          onClick={handleDismiss}
           className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors"
           aria-label="Dismiss"
         >
@@ -78,5 +88,5 @@ export function MarkdownWidget({ content, onDismiss, dragPosition, onDragEnd }: 
         </ReactMarkdown>
       </div>
     </motion.div>
-  )
-}
+  );
+});

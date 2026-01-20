@@ -1,4 +1,5 @@
 "use client"
+import { memo } from "react"
 
 import { motion } from "framer-motion"
 import { X } from "lucide-react"
@@ -49,17 +50,64 @@ const DEFAULT_DATA = [
   { month: "Jun", value: 700, target: 650 },
 ]
 
-export function ChartWidget({
+// Helper to detect X-axis key (string column)
+const detectXAxisKey = (data: Array<Record<string, string | number>>): string => {
+  if (!data || data.length === 0) return "month"
+  const firstItem = data[0]
+  const keys = Object.keys(firstItem)
+
+  // Common label keys
+  const labelKeys = new Set(["month", "year", "name", "label", "category", "date"])
+
+  // Find the first key that has a string value or is a common label key
+  for (const key of keys) {
+    if (labelKeys.has(key.toLowerCase()) || typeof firstItem[key] === "string") {
+      return key
+    }
+  }
+
+  return keys[0] || "month"
+}
+
+// Helper to detect value keys (numeric columns)
+const detectValueKeys = (
+  data: Array<Record<string, string | number>>,
+  xAxisKey: string
+): string[] => {
+  if (!data || data.length === 0) return ["value"]
+  const firstItem = data[0]
+  const keys = Object.keys(firstItem)
+
+  // Find numeric keys (excluding the X-axis key)
+  const numericKeys = keys.filter(
+    key => key !== xAxisKey && typeof firstItem[key] === "number"
+  )
+
+  return numericKeys.length > 0 ? numericKeys : ["value"]
+}
+
+export const ChartWidget = memo(function ChartWidget({
   title,
   content,
   chartType = "bar",
   data = DEFAULT_DATA,
-  dataKeys = ["value", "target"],
+  dataKeys,
   colors = DEFAULT_COLORS,
   onDismiss,
   dragPosition,
   onDragEnd
 }: ChartWidgetProps) {
+  // Simple, direct computation - no memoization
+  const isValidData = Array.isArray(data) && data.length > 0
+
+  // Detect X-axis and value keys
+  const xAxisKey = isValidData ? detectXAxisKey(data) : "month"
+  const effectiveDataKeys = isValidData && dataKeys && dataKeys.length > 0
+    ? dataKeys
+    : isValidData
+    ? detectValueKeys(data, xAxisKey)
+    : ["value", "target"]
+
   const renderChart = () => {
     const chartProps = {
       data,
@@ -72,7 +120,7 @@ export function ChartWidget({
           <ResponsiveContainer width="100%" height={250}>
             <BarChart {...chartProps}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="month" className="text-xs" />
+              <XAxis dataKey={xAxisKey} className="text-xs" />
               <YAxis className="text-xs" />
               <Tooltip
                 contentStyle={{
@@ -82,7 +130,7 @@ export function ChartWidget({
                 }}
               />
               <Legend />
-              {dataKeys.map((key, index) => (
+              {effectiveDataKeys.map((key, index) => (
                 <Bar key={key} dataKey={key} fill={colors[index % colors.length]} />
               ))}
             </BarChart>
@@ -94,7 +142,7 @@ export function ChartWidget({
           <ResponsiveContainer width="100%" height={250}>
             <LineChart {...chartProps}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="month" className="text-xs" />
+              <XAxis dataKey={xAxisKey} className="text-xs" />
               <YAxis className="text-xs" />
               <Tooltip
                 contentStyle={{
@@ -104,7 +152,7 @@ export function ChartWidget({
                 }}
               />
               <Legend />
-              {dataKeys.map((key, index) => (
+              {effectiveDataKeys.map((key, index) => (
                 <Line
                   key={key}
                   type="monotone"
@@ -123,7 +171,7 @@ export function ChartWidget({
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart {...chartProps}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="month" className="text-xs" />
+              <XAxis dataKey={xAxisKey} className="text-xs" />
               <YAxis className="text-xs" />
               <Tooltip
                 contentStyle={{
@@ -133,7 +181,7 @@ export function ChartWidget({
                 }}
               />
               <Legend />
-              {dataKeys.map((key, index) => (
+              {effectiveDataKeys.map((key, index) => (
                 <Area
                   key={key}
                   type="monotone"
@@ -205,7 +253,7 @@ export function ChartWidget({
     >
       {onDismiss && (
         <button
-          onClick={onDismiss}
+          onClick={() => onDismiss?.()}
           className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors"
           aria-label="Dismiss"
         >
@@ -216,7 +264,16 @@ export function ChartWidget({
       {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
       {content && <p className="text-sm text-muted-foreground mb-4">{content}</p>}
 
-      <div className="w-full">{renderChart()}</div>
+      {/* Show chart if data is valid, otherwise show fallback */}
+      {isValidData ? (
+        <div className="w-full">{renderChart()}</div>
+      ) : (
+        <div className="w-full p-4 bg-muted/50 rounded-lg border border-dashed border-muted-foreground/50">
+          <p className="text-sm text-muted-foreground text-center">
+            {content || "Chart data is being generated..."}
+          </p>
+        </div>
+      )}
     </motion.div>
   )
-}
+});

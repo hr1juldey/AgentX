@@ -1,4 +1,5 @@
 "use client"
+import { memo, useCallback } from "react"
 
 import { motion } from "framer-motion"
 import { X } from "lucide-react"
@@ -18,7 +19,19 @@ interface FormWidgetProps {
   onDragEnd?: (x: number, y: number) => void
 }
 
-export function FormWidget({ title, content, fields, submitLabel = "Submit", onSubmit, onDismiss, dragPosition, onDragEnd }: FormWidgetProps) {
+export const FormWidget = memo(function FormWidget({ title, content, fields, submitLabel = "Submit", onSubmit, onDismiss, dragPosition, onDragEnd }: FormWidgetProps) {
+  const handleDragEnd = useCallback((_: any, info: any) => {
+    onDragEnd?.(
+      (dragPosition?.x || 0) + info.offset.x,
+      (dragPosition?.y || 0) + info.offset.y
+    );
+  }, [onDragEnd, dragPosition]);
+
+  const handleDismiss = useCallback(() => {
+    onDismiss?.();
+  }, [onDismiss]);
+
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
@@ -46,7 +59,7 @@ export function FormWidget({ title, content, fields, submitLabel = "Submit", onS
     >
       {onDismiss && (
         <button
-          onClick={onDismiss}
+          onClick={handleDismiss}
           className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors"
           aria-label="Dismiss"
         >
@@ -95,4 +108,4 @@ export function FormWidget({ title, content, fields, submitLabel = "Submit", onS
       </form>
     </motion.div>
   )
-}
+});
