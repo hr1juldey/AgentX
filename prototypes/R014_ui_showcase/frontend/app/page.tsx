@@ -509,28 +509,58 @@ export default function HomePage() {
   // Feature flag for island UI
   const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
 
-  // Assign initial positions to new widgets (stack along right edge)
+  // Assign initial positions to new widgets (random cluster in center)
   useEffect(() => {
     if (!enableIslands) return;
 
-    // Only track widget IDs, not the entire islandPositions object
     const positionedWidgetIds = new Set(Object.keys(islandPositions));
     const newWidgets = widgets.filter((w) => !positionedWidgetIds.has(w.descriptor_id));
     if (newWidgets.length === 0) return;
 
+    // Positioning constants
+    const SPREAD_X = 300;
+    const SPREAD_Y = 150;
+    const PADDING_RIGHT = 100;
+    const MIN_SPACING = 80;
+
     const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
-    const edgeMargin = 80;
-    const spacing = 70;
-    const startY = 100;
+    const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
+    const centerX = viewportWidth / 2;
+    const centerY = viewportHeight / 2;
+
+    const maxX = Math.min(centerX + SPREAD_X, viewportWidth - PADDING_RIGHT);
+    const minX = Math.max(centerX - SPREAD_X, PADDING_RIGHT);
+    const maxY = centerY + SPREAD_Y;
+    const minY = centerY - SPREAD_Y;
 
     const newPositions: Record<string, { x: number; y: number }> = {};
-    const existingCount = positionedWidgetIds.size;
+    const existingPositions = Object.values(islandPositions);
 
-    newWidgets.forEach((widget, index) => {
+    newWidgets.forEach((widget) => {
+      // Try to find non-overlapping position
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const randomX = Math.random() * (maxX - minX) + minX;
+        const randomY = Math.random() * (maxY - minY) + minY;
+
+        const hasCollision = existingPositions.some((pos) => {
+          const dx = pos.x - randomX;
+          const dy = pos.y - randomY;
+          return Math.sqrt(dx * dx + dy * dy) < MIN_SPACING;
+        });
+
+        if (!hasCollision) {
+          newPositions[widget.descriptor_id] = { x: randomX, y: randomY };
+          existingPositions.push({ x: randomX, y: randomY });
+          return;
+        }
+      }
+
+      // Fallback: center with slight offset
       newPositions[widget.descriptor_id] = {
-        x: viewportWidth - edgeMargin,
-        y: startY + (existingCount + index) * spacing,
+        x: centerX + (Math.random() - 0.5) * 100,
+        y: centerY + (Math.random() - 0.5) * 100,
       };
+      existingPositions.push(newPositions[widget.descriptor_id]);
     });
 
     setIslandPositions((prev) => ({ ...prev, ...newPositions }));
@@ -802,15 +832,13 @@ export default function HomePage() {
 
           // Island UI mode - Use ToolIsland + DirectWidgetRenderer (no wrapper)
           if (enableIslands) {
-            // FORCE CENTER OF SCREEN - always visible
             const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
             const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
             const centerX = viewportWidth / 2;
             const centerY = viewportHeight / 2;
 
-            // Stack islands in center with offset
-            const offset = (index - (widgets.length - 1) / 2) * 80;
-            const position = islandPositions[widget.descriptor_id] || { x: centerX + offset, y: centerY };
+            // Use saved position from useEffect, fallback to center
+            const position = islandPositions[widget.descriptor_id] || { x: centerX, y: centerY };
             const isExpanded = expandedPanelIds.has(widget.descriptor_id);
 
             const dragPos = { x: widget.x || position.x, y: widget.y || position.y };
