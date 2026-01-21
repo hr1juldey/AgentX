@@ -240,10 +240,10 @@ export const ChartWidget = memo(function ChartWidget({
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25 }}
       drag
-      dragElastic={0.2}
+      dragElastic={0.1}
       dragMomentum={false}
-      dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
-      whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
+      dragConstraints={false}
+      whileDrag={{ scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
       onDragEnd={(_, info) => onDragEnd?.(
         (dragPosition?.x || 0) + info.offset.x,
         (dragPosition?.y || 0) + info.offset.y

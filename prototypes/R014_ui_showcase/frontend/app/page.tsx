@@ -814,9 +814,10 @@ export default function HomePage() {
             const isExpanded = expandedPanelIds.has(widget.descriptor_id);
 
             const dragPos = { x: widget.x || position.x, y: widget.y || position.y };
+            const baseZIndex = 1000 + index;
 
             return (
-              <div key={widget.descriptor_id} style={{ position: "fixed", zIndex: 1000 + index }}>
+              <div key={widget.descriptor_id} style={{ position: "fixed", zIndex: baseZIndex }}>
                 {/* Only show island button when NOT expanded */}
                 {!isExpanded && (
                   <ToolIsland
@@ -835,7 +836,8 @@ export default function HomePage() {
                     {/* Collapse button in top-left corner */}
                     <button
                       onClick={() => handleIslandClick(widget.descriptor_id)}
-                      className="absolute top-0 left-0 z-10 p-2 m-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-110"
+                      className="absolute top-0 left-0 z-50 p-2 m-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-110"
+                      style={{ pointerEvents: "auto" }}
                       aria-label="Collapse widget"
                       title="Collapse to island"
                     >

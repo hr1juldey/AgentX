@@ -61,10 +61,10 @@ export const MarkdownWidget = memo(function MarkdownWidget({ content, onDismiss,
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
       drag
-      dragElastic={0.2}
+      dragElastic={0.1}
       dragMomentum={false}
-      dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
-      whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
+      dragConstraints={false}
+      whileDrag={{ scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
       onDragEnd={handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
       className="relative bg-card border border-border rounded-lg p-6 cursor-grab shadow-lg hover:shadow-xl max-w-[480px]"
@@ -111,6 +111,16 @@ export const MarkdownWidget = memo(function MarkdownWidget({ content, onDismiss,
             ),
             strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
             em: ({ children }) => <em className="italic">{children}</em>,
+            table: ({ children }) => (
+              <div className="overflow-x-auto my-4">
+                <table className="min-w-full border-collapse border border-border">{children}</table>
+              </div>
+            ),
+            thead: ({ children }) => <thead className="bg-muted">{children}</thead>,
+            tbody: ({ children }) => <tbody>{children}</tbody>,
+            tr: ({ children }) => <tr className="border-b border-border">{children}</tr>,
+            th: ({ children }) => <th className="px-4 py-2 text-left font-semibold">{children}</th>,
+            td: ({ children }) => <td className="px-4 py-2">{children}</td>,
           }}
         >
           {cleanedContent}

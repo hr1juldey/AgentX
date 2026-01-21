@@ -4,6 +4,8 @@ import { motion } from "framer-motion"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LucideIcon } from "@/components/ui/icon"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { memo, useCallback } from "react"
 
 interface CardWidgetProps {
@@ -34,10 +36,10 @@ export const CardWidget = memo(function CardWidget({ title, content, icon, actio
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
       drag
-      dragElastic={0.2}
+      dragElastic={0.1}
       dragMomentum={false}
-      dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
-      whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
+      dragConstraints={false}
+      whileDrag={{ scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
       onDragEnd={handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
       className="relative bg-card border border-border rounded-lg overflow-hidden cursor-grab shadow-lg hover:shadow-xl"
@@ -58,8 +60,8 @@ export const CardWidget = memo(function CardWidget({ title, content, icon, actio
             <h3 className="text-lg font-semibold">{title}</h3>
           </div>
         )}
-        <div className="text-sm leading-relaxed">
-          <p>{content}</p>
+        <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
         {actions && actions.length > 0 && (
           <div className="flex gap-2 mt-4">

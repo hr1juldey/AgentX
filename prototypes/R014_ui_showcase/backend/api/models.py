@@ -50,3 +50,14 @@ class GenerateRequest(BaseModel):
         ]
         | None
     ) = None
+
+
+class IntelligentGenerateRequest(BaseModel):
+    """Request for intelligent UI generation with device context."""
+
+    prompt: str
+    device_context: dict[str, Any] = {
+        "type": "desktop",
+        "screen_width": 1920,
+        "screen_height": 1080,
+    }
