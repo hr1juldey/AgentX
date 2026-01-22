@@ -10,7 +10,13 @@ from pydantic import BaseModel
 
 
 class UIDescriptor(BaseModel):
-    """UI descriptor model."""
+    """UI descriptor model.
+
+    Extended with multi-hop search widget types:
+    - search-result: Final answer with citations
+    - hop-progress: Real-time hop progress with expandable details
+    - citation-card: Expandable citation cards
+    """
 
     id: str
     type: Literal[
@@ -24,12 +30,23 @@ class UIDescriptor(BaseModel):
         "image",
         "gallery",
         "chart",
+        "search-result",
+        "hop-progress",
+        "citation-card",
     ]
     timestamp: str
     dismissible: bool = True
     content: str | None = None
     title: str | None = None
     metadata: dict[str, Any] = {}
+    # Multi-hop search optional fields
+    progress: float | None = None
+    hops_completed: int | None = None
+    total_hops: int | None = None
+    reflection_reasoning: str | None = None
+    citations: list[dict[str, Any]] | None = None
+    hop_events: list[dict[str, Any]] | None = None
+    eta_seconds: float | None = None
 
 
 class GenerateRequest(BaseModel):

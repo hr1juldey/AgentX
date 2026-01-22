@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class GenerateWidgetSignature(dspy.Signature):
     """Generate widget content with design system constraints."""
+
     widget_spec: str = dspy.InputField(desc="Widget type, context, requirements")
     design_system: str = dspy.InputField(desc="Colors, typography")
     widget_content: str = dspy.OutputField(desc="Generated widget content")
@@ -49,14 +50,14 @@ class EnhancedExecutorAgent(dspy.Module):
             module=dspy.ChainOfThought(GenerateWidgetSignature),
             N=n,
             reward_fn=accessibility_compliance_score,
-            threshold=threshold
+            threshold=threshold,
         )
 
     def forward(
         self,
         widget_spec: Dict[str, Any],
         design_system: Dict[str, Any],
-        accessibility_requirements: str = "WCAG_AA"
+        accessibility_requirements: str = "WCAG_AA",
     ) -> dspy.Prediction:
         """
         Generate widget content with self-improving accessibility.
@@ -75,8 +76,7 @@ class EnhancedExecutorAgent(dspy.Module):
         )
 
         result = self.generator(
-            widget_spec=json.dumps(widget_spec),
-            design_system=json.dumps(design_system)
+            widget_spec=json.dumps(widget_spec), design_system=json.dumps(design_system)
         )
 
         logger.debug(

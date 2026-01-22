@@ -129,35 +129,47 @@ def widget_appropriateness_score(content_analysis: str, widget_type: str) -> flo
     content_type = content_analysis.lower()
 
     # Data-heavy content
-    if any(kw in content_type for kw in ["data", "trends", "statistics", "analytics", "metrics"]):
+    if any(
+        kw in content_type
+        for kw in ["data", "trends", "statistics", "analytics", "metrics"]
+    ):
         if widget_type in ["chart", "table", "card"]:
             return 0.9
         elif widget_type == "markdown":
             return 0.3
 
     # Text-heavy content
-    if any(kw in content_type for kw in ["article", "blog", "guide", "explanation", "summary"]):
+    if any(
+        kw in content_type
+        for kw in ["article", "blog", "guide", "explanation", "summary"]
+    ):
         if widget_type in ["markdown", "card"]:
             return 0.9
         elif widget_type == "chart":
             return 0.2
 
     # Form/input content
-    if any(kw in content_type for kw in ["input", "form", "survey", "feedback", "collect"]):
+    if any(
+        kw in content_type for kw in ["input", "form", "survey", "feedback", "collect"]
+    ):
         if widget_type == "form":
             return 1.0
         elif widget_type == "card":
             return 0.4
 
     # Visual/gallery content
-    if any(kw in content_type for kw in ["images", "photos", "gallery", "visual", "media"]):
+    if any(
+        kw in content_type for kw in ["images", "photos", "gallery", "visual", "media"]
+    ):
         if widget_type in ["gallery", "image"]:
             return 0.95
         elif widget_type == "card":
             return 0.5
 
     # Progress/status content
-    if any(kw in content_type for kw in ["loading", "progress", "status", "processing"]):
+    if any(
+        kw in content_type for kw in ["loading", "progress", "status", "processing"]
+    ):
         if widget_type == "progress":
             return 1.0
         elif widget_type == "card":

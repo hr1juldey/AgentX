@@ -56,6 +56,18 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.7
     llm_max_tokens: int = 2048
 
+    # =============================================================================
+    # Multi-Hop Search Configuration
+    # =============================================================================
+    # SearXNG Configuration
+    searxng_url: str = "http://192.168.1.4:8080"
+    searxng_timeout: float = 10.0
+
+    # Multi-Hop Search Parameters
+    max_hops: int = 5
+    docs_per_hop: int = 5
+    stop_threshold: float = 0.85
+
 
 @lru_cache
 def get_settings() -> Settings:

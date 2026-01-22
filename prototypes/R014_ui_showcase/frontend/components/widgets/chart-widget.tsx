@@ -1,8 +1,8 @@
 "use client"
-import { memo } from "react"
+import { memo, useCallback } from "react"
 
-import { motion } from "framer-motion"
-import { X } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { X, BarChart3, ChevronDown } from "lucide-react"
 import {
   BarChart,
   Bar,
@@ -28,6 +28,8 @@ interface ChartWidgetProps {
   data?: Array<Record<string, string | number>>
   dataKeys?: string[]
   colors?: string[]
+  collapsed?: boolean
+  onToggleCollapse?: () => void
   onDismiss?: () => void
   dragPosition?: { x: number; y: number }
   onDragEnd?: (x: number, y: number) => void
@@ -93,6 +95,8 @@ export const ChartWidget = memo(function ChartWidget({
   data = DEFAULT_DATA,
   dataKeys,
   colors = DEFAULT_COLORS,
+  collapsed = false,
+  onToggleCollapse,
   onDismiss,
   dragPosition,
   onDragEnd
@@ -107,6 +111,17 @@ export const ChartWidget = memo(function ChartWidget({
     : isValidData
     ? detectValueKeys(data, xAxisKey)
     : ["value", "target"]
+
+  const handleDragEnd = useCallback((_: any, info: any) => {
+    onDragEnd?.(
+      (dragPosition?.x || 0) + info.offset.x,
+      (dragPosition?.y || 0) + info.offset.y
+    );
+  }, [onDragEnd, dragPosition]);
+
+  const handleDismiss = useCallback(() => {
+    onDismiss?.();
+  }, [onDismiss]);
 
   const renderChart = () => {
     const chartProps = {
@@ -244,36 +259,78 @@ export const ChartWidget = memo(function ChartWidget({
       dragMomentum={false}
       dragConstraints={false}
       whileDrag={{ scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
-      onDragEnd={(_, info) => onDragEnd?.(
-        (dragPosition?.x || 0) + info.offset.x,
-        (dragPosition?.y || 0) + info.offset.y
-      )}
+      onDragEnd={handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
-      className="relative bg-card cursor-grab shadow-lg hover:shadow-xl border border-border rounded-lg p-6 min-w-[600px]"
+      className="relative bg-card cursor-grab shadow-lg hover:shadow-xl border border-border rounded-lg min-w-[600px]"
     >
-      {onDismiss && (
-        <button
-          onClick={() => onDismiss?.()}
-          className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors"
-          aria-label="Dismiss"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      )}
-
-      {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
-      {content && <p className="text-sm text-muted-foreground mb-4">{content}</p>}
-
-      {/* Show chart if data is valid, otherwise show fallback */}
-      {isValidData ? (
-        <div className="w-full">{renderChart()}</div>
-      ) : (
-        <div className="w-full p-4 bg-muted/50 rounded-lg border border-dashed border-muted-foreground/50">
-          <p className="text-sm text-muted-foreground text-center">
-            {content || "Chart data is being generated..."}
-          </p>
+      {/* Widget Header - Click to toggle (Jira-style) */}
+      <div
+        className="flex items-center justify-between px-4 py-2 border-b bg-muted/30 cursor-pointer hover:bg-muted/50"
+        onClick={() => onToggleCollapse?.()}
+      >
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium">{title || "Chart"}</span>
         </div>
-      )}
+
+        <div className="flex items-center gap-2">
+          {/* Chevron indicator - rotates based on collapsed state */}
+          <motion.div
+            animate={{ rotate: collapsed ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </motion.div>
+
+          {/* Dismiss button - stopPropagation to prevent collapse */}
+          {onDismiss && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDismiss();
+              }}
+              className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Chart Content - Collapsible with smart animation */}
+      <AnimatePresence initial={false} mode="wait">
+        {!collapsed && (
+          <motion.div
+            layout="position"
+            initial={{ height: 0, opacity: 0, scaleY: 0.95 }}
+            animate={{ height: "auto", opacity: 1, scaleY: 1 }}
+            exit={{ height: 0, opacity: 0, scaleY: 0.95 }}
+            transition={{
+              height: { type: "spring", stiffness: 400, damping: 30 },
+              opacity: { duration: 0.15 },
+              scaleY: { type: "spring", stiffness: 400, damping: 30 }
+            }}
+            style={{ originY: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-6">
+              {content && <p className="text-sm text-muted-foreground mb-4">{content}</p>}
+
+              {/* Show chart if data is valid, otherwise show fallback */}
+              {isValidData ? (
+                <div className="w-full">{renderChart()}</div>
+              ) : (
+                <div className="w-full p-4 bg-muted/50 rounded-lg border border-dashed border-muted-foreground/50">
+                  <p className="text-sm text-muted-foreground text-center">
+                    {content || "Chart data is being generated..."}
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 });

@@ -18,11 +18,28 @@ def detect_content_type(query: str) -> str:
     """Detect content type from keywords."""
     query_lower = query.lower()
 
-    if any(kw in query_lower for kw in ["data", "trends", "sales", "chart", "graph", "statistics", "analytics", "metrics"]):
+    if any(
+        kw in query_lower
+        for kw in [
+            "data",
+            "trends",
+            "sales",
+            "chart",
+            "graph",
+            "statistics",
+            "analytics",
+            "metrics",
+        ]
+    ):
         return "data-heavy"
-    elif any(kw in query_lower for kw in ["explain", "guide", "article", "summary", "blog", "description"]):
+    elif any(
+        kw in query_lower
+        for kw in ["explain", "guide", "article", "summary", "blog", "description"]
+    ):
         return "text-heavy"
-    elif any(kw in query_lower for kw in ["image", "photo", "gallery", "picture", "visual"]):
+    elif any(
+        kw in query_lower for kw in ["image", "photo", "gallery", "picture", "visual"]
+    ):
         return "visual-heavy"
     return "mixed"
 
@@ -31,11 +48,17 @@ def infer_user_goal(query: str) -> str:
     """Infer user intent from query."""
     query_lower = query.lower()
 
-    if any(kw in query_lower for kw in ["compare", "vs", "versus", "difference", "better", "between"]):
+    if any(
+        kw in query_lower
+        for kw in ["compare", "vs", "versus", "difference", "better", "between"]
+    ):
         return "comparison"
     elif any(kw in query_lower for kw in ["show", "display", "what", "list", "all"]):
         return "exploration"
-    elif any(kw in query_lower for kw in ["should", "recommend", "best", "choose", "decision"]):
+    elif any(
+        kw in query_lower
+        for kw in ["should", "recommend", "best", "choose", "decision"]
+    ):
         return "decision"
     elif any(kw in query_lower for kw in ["monitor", "track", "status", "progress"]):
         return "monitor"
@@ -60,11 +83,14 @@ def check_device_capabilities(device_context_str: str) -> str:
 
 class AnalyzeContextSignature(dspy.Signature):
     """Analyze user query and context to understand requirements."""
+
     user_query: str = dspy.InputField(desc="User's natural language request")
     device_context: str = dspy.InputField(desc="Device type, screen size")
     content_analysis: str = dspy.OutputField(desc="Content type, complexity, structure")
     user_intent: str = dspy.OutputField(desc="Goal: explore/compare/decide/monitor")
-    presentation_constraints: str = dspy.OutputField(desc="Layout limits, accessibility needs")
+    presentation_constraints: str = dspy.OutputField(
+        desc="Layout limits, accessibility needs"
+    )
 
 
 class ContextAnalyzerAgent(dspy.Module):
@@ -88,7 +114,9 @@ class ContextAnalyzerAgent(dspy.Module):
             max_iters=3,
         )
 
-    def forward(self, user_query: str, device_context: Dict[str, Any]) -> dspy.Prediction:
+    def forward(
+        self, user_query: str, device_context: Dict[str, Any]
+    ) -> dspy.Prediction:
         """
         Analyze the user's query to understand context.
 
@@ -102,10 +130,11 @@ class ContextAnalyzerAgent(dspy.Module):
         logger.debug(f"🔍 ContextAnalyzer analyzing: {user_query[:100]}")
 
         result = self.analyzer(
-            user_query=user_query,
-            device_context=json.dumps(device_context)
+            user_query=user_query, device_context=json.dumps(device_context)
         )
 
-        logger.debug(f"🔍 Context analysis: {result.content_analysis}, intent: {result.user_intent}")
+        logger.debug(
+            f"🔍 Context analysis: {result.content_analysis}, intent: {result.user_intent}"
+        )
 
         return result

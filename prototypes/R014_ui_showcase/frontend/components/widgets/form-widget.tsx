@@ -1,8 +1,8 @@
 "use client"
 import { memo, useCallback } from "react"
 
-import { motion } from "framer-motion"
-import { X } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { X, FileEdit, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,12 +14,25 @@ interface FormWidgetProps {
   fields?: Array<{ name: string; type: string; label: string; placeholder?: string; options?: string[] }>
   submitLabel?: string
   onSubmit?: (data: Record<string, string>) => void
+  collapsed?: boolean
+  onToggleCollapse?: () => void
   onDismiss?: () => void
   dragPosition?: { x: number; y: number }
   onDragEnd?: (x: number, y: number) => void
 }
 
-export const FormWidget = memo(function FormWidget({ title, content, fields, submitLabel = "Submit", onSubmit, onDismiss, dragPosition, onDragEnd }: FormWidgetProps) {
+export const FormWidget = memo(function FormWidget({
+  title,
+  content,
+  fields,
+  submitLabel = "Submit",
+  onSubmit,
+  collapsed = false,
+  onToggleCollapse,
+  onDismiss,
+  dragPosition,
+  onDragEnd
+}: FormWidgetProps) {
   const handleDragEnd = useCallback((_: any, info: any) => {
     onDragEnd?.(
       (dragPosition?.x || 0) + info.offset.x,
@@ -30,7 +43,6 @@ export const FormWidget = memo(function FormWidget({ title, content, fields, sub
   const handleDismiss = useCallback(() => {
     onDismiss?.();
   }, [onDismiss]);
-
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -55,57 +67,103 @@ export const FormWidget = memo(function FormWidget({ title, content, fields, sub
         (dragPosition?.y || 0) + info.offset.y
       )}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
-      className="relative bg-card border border-border rounded-lg p-6 cursor-grab shadow-lg hover:shadow-xl"
+      className="relative bg-card border border-border rounded-lg cursor-grab shadow-lg hover:shadow-xl"
     >
-      {onDismiss && (
-        <button
-          onClick={handleDismiss}
-          className="absolute top-2 right-2 p-1 rounded hover:bg-muted transition-colors"
-          aria-label="Dismiss"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      )}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {title && <h3 className="text-lg font-semibold">{title}</h3>}
-        {content && <p className="text-sm text-muted-foreground">{content}</p>}
+      {/* Widget Header - Click to toggle (Jira-style) */}
+      <div
+        className="flex items-center justify-between px-4 py-2 border-b bg-muted/30 cursor-pointer hover:bg-muted/50"
+        onClick={() => onToggleCollapse?.()}
+      >
+        <div className="flex items-center gap-2">
+          <FileEdit className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium">{title || "Form"}</span>
+        </div>
 
-        {fields?.map((field) => (
-          <div key={field.name} className="space-y-2">
-            <Label htmlFor={field.name}>{field.label}</Label>
-            {field.type === "textarea" ? (
-              <Textarea
-                id={field.name}
-                name={field.name}
-                placeholder={field.placeholder}
-                className="min-h-[100px]"
-              />
-            ) : field.type === "select" ? (
-              <select
-                id={field.name}
-                name={field.name}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                <option value="">Select...</option>
-                {field.options?.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
+        <div className="flex items-center gap-2">
+          {/* Chevron indicator - rotates based on collapsed state */}
+          <motion.div
+            animate={{ rotate: collapsed ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </motion.div>
+
+          {/* Dismiss button - stopPropagation to prevent collapse */}
+          {onDismiss && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDismiss();
+              }}
+              className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Form Content - Collapsible with smart animation */}
+      <AnimatePresence initial={false} mode="wait">
+        {!collapsed && (
+          <motion.div
+            layout="position"
+            initial={{ height: 0, opacity: 0, scaleY: 0.95 }}
+            animate={{ height: "auto", opacity: 1, scaleY: 1 }}
+            exit={{ height: 0, opacity: 0, scaleY: 0.95 }}
+            transition={{
+              height: { type: "spring", stiffness: 400, damping: 30 },
+              opacity: { duration: 0.15 },
+              scaleY: { type: "spring", stiffness: 400, damping: 30 }
+            }}
+            style={{ originY: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {content && <p className="text-sm text-muted-foreground">{content}</p>}
+
+                {fields?.map((field) => (
+                  <div key={field.name} className="space-y-2">
+                    <Label htmlFor={field.name}>{field.label}</Label>
+                    {field.type === "textarea" ? (
+                      <Textarea
+                        id={field.name}
+                        name={field.name}
+                        placeholder={field.placeholder}
+                        className="min-h-[100px]"
+                      />
+                    ) : field.type === "select" ? (
+                      <select
+                        id={field.name}
+                        name={field.name}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">Select...</option>
+                        {field.options?.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Input
+                        id={field.name}
+                        name={field.name}
+                        type={field.type}
+                        placeholder={field.placeholder}
+                      />
+                    )}
+                  </div>
                 ))}
-              </select>
-            ) : (
-              <Input
-                id={field.name}
-                name={field.name}
-                type={field.type}
-                placeholder={field.placeholder}
-              />
-            )}
-          </div>
-        ))}
 
-        <Button type="submit" className="w-full">
-          {submitLabel}
-        </Button>
-      </form>
+                <Button type="submit" className="w-full">
+                  {submitLabel}
+                </Button>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 });

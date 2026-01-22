@@ -94,6 +94,9 @@
   --island-action: 25 95% 53%;
   --island-confirmation: 330 81% 60%;
   --island-gallery: 280 65% 60%;
+  --island-search-result: 262 83% 58%;
+  --island-hop-progress: 25 95% 53%;
+  --island-citation-card: 142 76% 36%;
 
   /* Neon effects */
   --island-neon-blue: 0 0 0 2px rgba(59, 130, 246, 0.5);
@@ -115,4 +118,7 @@
   --island-action: 25 95% 53%;
   --island-confirmation: 330 81% 60%;
   --island-gallery: 280 65% 60%;
+  --island-search-result: 262 83% 58%;
+  --island-hop-progress: 25 95% 53%;
+  --island-citation-card: 142 76% 36%;
 }

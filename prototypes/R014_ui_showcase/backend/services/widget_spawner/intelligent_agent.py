@@ -8,7 +8,7 @@
 import json
 import logging
 import uuid
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 import dspy
 
@@ -37,10 +37,7 @@ class IntelligentUIGenerator(dspy.Module):
         self.content_generator = EnhancedExecutorAgent()
 
     def forward(
-        self,
-        user_query: str,
-        device_context: Dict[str, Any],
-        user_id: str = None
+        self, user_query: str, device_context: Dict[str, Any], user_id: str = None
     ) -> dspy.Prediction:
         """
         Generate intelligent UI based on user query.
@@ -57,21 +54,22 @@ class IntelligentUIGenerator(dspy.Module):
 
         # Tier 1: Analyze context
         context = self.context_analyzer(
-            user_query=user_query,
-            device_context=device_context
+            user_query=user_query, device_context=device_context
         )
-        logger.info(f"🔍 Tier 1 - Context: {getattr(context, 'content_analysis', 'N/A')}, Intent: {getattr(context, 'user_intent', 'N/A')}")
+        logger.info(
+            f"🔍 Tier 1 - Context: {getattr(context, 'content_analysis', 'N/A')}, Intent: {getattr(context, 'user_intent', 'N/A')}"
+        )
 
         # Tier 2: Plan presentation
         presentation = self.presentation_planner(
-            content_analysis=getattr(context, 'content_analysis', 'mixed'),
-            user_intent=getattr(context, 'user_intent', 'general'),
-            device_context=device_context
+            content_analysis=getattr(context, "content_analysis", "mixed"),
+            user_intent=getattr(context, "user_intent", "general"),
+            device_context=device_context,
         )
 
         # Parse the presentation plan
         try:
-            plan = json.loads(getattr(presentation, 'presentation_plan', '{}'))
+            plan = json.loads(getattr(presentation, "presentation_plan", "{}"))
             logger.info(f"📋 Tier 2 - Layout: {plan.get('layout', 'unknown')}")
         except (json.JSONDecodeError, TypeError) as e:
             logger.error(f"📋 Failed to parse presentation plan: {e}")
@@ -87,32 +85,33 @@ class IntelligentUIGenerator(dspy.Module):
                         "x": None,
                         "y": None,
                     }
-                ]
+                ],
             }
         widgets = []
 
         for widget_spec in plan.get("widgets", []):
             widget = self.content_generator(
-                widget_spec=widget_spec,
-                design_system=plan.get("color_scheme", {})
+                widget_spec=widget_spec, design_system=plan.get("color_scheme", {})
             )
 
             # Create widget with optional positions
-            widgets.append({
-                "id": str(uuid.uuid4()),
-                "type": widget_spec.get("type"),
-                "title": widget_spec.get("context", "")[:50],
-                "content": widget.widget_content,
-                "x": widget_spec.get("x"),  # Optional: backend suggestion
-                "y": widget_spec.get("y"),  # Optional: backend suggestion
-                "dismissible": True,
-                "metadata": {
-                    "layout": plan.get("layout"),
-                    "design_system": plan.get("color_scheme", {}),
-                    "priority": widget_spec.get("priority"),
-                    "accessibility_score": widget.accessibility_score,
+            widgets.append(
+                {
+                    "id": str(uuid.uuid4()),
+                    "type": widget_spec.get("type"),
+                    "title": widget_spec.get("context", "")[:50],
+                    "content": widget.widget_content,
+                    "x": widget_spec.get("x"),  # Optional: backend suggestion
+                    "y": widget_spec.get("y"),  # Optional: backend suggestion
+                    "dismissible": True,
+                    "metadata": {
+                        "layout": plan.get("layout"),
+                        "design_system": plan.get("color_scheme", {}),
+                        "priority": widget_spec.get("priority"),
+                        "accessibility_score": widget.accessibility_score,
+                    },
                 }
-            })
+            )
 
         logger.info(f"✅ Tier 3 - Generated {len(widgets)} widgets")
 

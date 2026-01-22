@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class PlanPresentationSignature(dspy.Signature):
     """Plan multi-dimensional presentation (widgets, layout, colors)."""
+
     content_analysis: str = dspy.InputField(desc="Content type, complexity")
     user_intent: str = dspy.InputField(desc="Goal: explore/compare/decide")
     device_context: str = dspy.InputField(desc="Mobile, desktop, tablet")
@@ -50,14 +51,11 @@ class PresentationPlannerAgent(dspy.Module):
             module=dspy.ChainOfThought(PlanPresentationSignature),
             N=n,
             reward_fn=presentation_quality_score,
-            threshold=threshold
+            threshold=threshold,
         )
 
     def forward(
-        self,
-        content_analysis: str,
-        user_intent: str,
-        device_context: Dict[str, Any]
+        self, content_analysis: str, user_intent: str, device_context: Dict[str, Any]
     ) -> dspy.Prediction:
         """
         Generate presentation plan with BestOfN selection.
@@ -79,22 +77,26 @@ class PresentationPlannerAgent(dspy.Module):
         result = self.planner(
             content_analysis=content_analysis,
             user_intent=user_intent,
-            device_context=json.dumps(device_context)
+            device_context=json.dumps(device_context),
         )
 
-        logger.debug(f"📋 BestOfN selected plan with score: {getattr(result, 'reward_score', 'N/A')}")
+        logger.debug(
+            f"📋 BestOfN selected plan with score: {getattr(result, 'reward_score', 'N/A')}"
+        )
 
         # Add optional positions to the selected plan
         try:
             plan = json.loads(result.presentation_plan)
             positioned_plan = generate_positions(plan, device_context)
 
-            logger.debug(f"📋 Positioned {len(positioned_plan['widgets'])} widgets for layout: {plan.get('layout')}")
+            logger.debug(
+                f"📋 Positioned {len(positioned_plan['widgets'])} widgets for layout: {plan.get('layout')}"
+            )
 
             return dspy.Prediction(
                 presentation_plan=json.dumps(positioned_plan),
                 raw_plan=result.presentation_plan,
-                reward_score=getattr(result, "reward_score", None)
+                reward_score=getattr(result, "reward_score", None),
             )
         except (json.JSONDecodeError, TypeError) as e:
             logger.error(f"📋 Failed to process plan: {e}")

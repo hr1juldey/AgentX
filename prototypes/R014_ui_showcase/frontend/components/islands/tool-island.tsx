@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useMotionValue, useTransform } from "framer-motion";
-import { X } from "lucide-react";
+import { X, Search, Activity, FileSearch } from "lucide-react";
 import { memo, useCallback, useEffect } from "react";
 import {
   FileText,
@@ -45,6 +45,9 @@ const widgetIcons: Record<string, React.ElementType> = {
   image: ImageIcon,
   gallery: Images,
   chart: LineChart,
+  "search-result": Search,
+  "hop-progress": Activity,
+  "citation-card": FileSearch,
 };
 
 // Widget type to CSS color variable mapping (with hsl() wrapper)
@@ -58,6 +61,9 @@ const widgetColors: Record<string, string> = {
   image: "hsl(var(--island-image))",
   gallery: "hsl(var(--island-gallery))",
   chart: "hsl(var(--island-chart))",
+  "search-result": "hsl(var(--island-search-result))",
+  "hop-progress": "hsl(var(--island-hop-progress))",
+  "citation-card": "hsl(var(--island-citation-card))",
 };
 
 export const ToolIsland = memo(function ToolIsland({

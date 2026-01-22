@@ -10,7 +10,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def generate_positions(plan: Dict[str, Any], device_context: Dict[str, Any]) -> Dict[str, Any]:
+def generate_positions(
+    plan: Dict[str, Any], device_context: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Generate suggested x, y positions for widgets.
 
@@ -30,23 +32,31 @@ def generate_positions(plan: Dict[str, Any], device_context: Dict[str, Any]) -> 
     layout = plan.get("layout", "simple_vertical")
 
     if layout == "simple_vertical":
-        positioned_widgets = _generate_vertical_layout(widgets, screen_width, screen_height)
+        positioned_widgets = _generate_vertical_layout(
+            widgets, screen_width, screen_height
+        )
     elif layout == "grid_2column":
-        positioned_widgets = _generate_grid_2column_layout(widgets, screen_width, screen_height)
+        positioned_widgets = _generate_grid_2column_layout(
+            widgets, screen_width, screen_height
+        )
     elif layout == "grid_3column":
-        positioned_widgets = _generate_grid_3column_layout(widgets, screen_width, screen_height)
+        positioned_widgets = _generate_grid_3column_layout(
+            widgets, screen_width, screen_height
+        )
     elif layout == "masonry":
-        positioned_widgets = _generate_masonry_layout(widgets, screen_width, screen_height)
+        positioned_widgets = _generate_masonry_layout(
+            widgets, screen_width, screen_height
+        )
     else:
-        positioned_widgets = _generate_default_layout(widgets, screen_width, screen_height)
+        positioned_widgets = _generate_default_layout(
+            widgets, screen_width, screen_height
+        )
 
     return {**plan, "widgets": positioned_widgets}
 
 
 def _generate_vertical_layout(
-    widgets: List[Dict[str, Any]],
-    screen_width: int,
-    screen_height: int
+    widgets: List[Dict[str, Any]], screen_width: int, screen_height: int
 ) -> List[Dict[str, Any]]:
     """Stack widgets vertically with spacing."""
     positioned_widgets = []
@@ -54,20 +64,20 @@ def _generate_vertical_layout(
     widget_height = 350
 
     for widget in widgets:
-        positioned_widgets.append({
-            **widget,
-            "x": screen_width // 2 - 250,
-            "y": y_offset,
-        })
+        positioned_widgets.append(
+            {
+                **widget,
+                "x": screen_width // 2 - 250,
+                "y": y_offset,
+            }
+        )
         y_offset += widget_height + 50
 
     return positioned_widgets
 
 
 def _generate_grid_2column_layout(
-    widgets: List[Dict[str, Any]],
-    screen_width: int,
-    screen_height: int
+    widgets: List[Dict[str, Any]], screen_width: int, screen_height: int
 ) -> List[Dict[str, Any]]:
     """Two column grid layout."""
     positioned_widgets = []
@@ -81,11 +91,13 @@ def _generate_grid_2column_layout(
         else:
             x = screen_width // 2 + 50
 
-        positioned_widgets.append({
-            **widget,
-            "x": x,
-            "y": y_offset,
-        })
+        positioned_widgets.append(
+            {
+                **widget,
+                "x": x,
+                "y": y_offset,
+            }
+        )
 
         if not left_column:
             y_offset += widget_height + 50
@@ -96,9 +108,7 @@ def _generate_grid_2column_layout(
 
 
 def _generate_grid_3column_layout(
-    widgets: List[Dict[str, Any]],
-    screen_width: int,
-    screen_height: int
+    widgets: List[Dict[str, Any]], screen_width: int, screen_height: int
 ) -> List[Dict[str, Any]]:
     """Three column grid layout."""
     positioned_widgets = []
@@ -109,11 +119,13 @@ def _generate_grid_3column_layout(
     column_width = screen_width // 3
 
     for widget in widgets:
-        positioned_widgets.append({
-            **widget,
-            "x": (column * column_width) + 50,
-            "y": y_offset,
-        })
+        positioned_widgets.append(
+            {
+                **widget,
+                "x": (column * column_width) + 50,
+                "y": y_offset,
+            }
+        )
 
         column += 1
         if column >= 3:
@@ -124,9 +136,7 @@ def _generate_grid_3column_layout(
 
 
 def _generate_masonry_layout(
-    widgets: List[Dict[str, Any]],
-    screen_width: int,
-    screen_height: int
+    widgets: List[Dict[str, Any]], screen_width: int, screen_height: int
 ) -> List[Dict[str, Any]]:
     """Masonry-style layout with varying heights."""
     positioned_widgets = []
@@ -146,11 +156,13 @@ def _generate_masonry_layout(
         else:
             widget_height = 150
 
-        positioned_widgets.append({
-            **widget,
-            "x": (shortest_col * column_width) + 50,
-            "y": column_heights[shortest_col],
-        })
+        positioned_widgets.append(
+            {
+                **widget,
+                "x": (shortest_col * column_width) + 50,
+                "y": column_heights[shortest_col],
+            }
+        )
 
         column_heights[shortest_col] += widget_height + 20
 
@@ -158,9 +170,7 @@ def _generate_masonry_layout(
 
 
 def _generate_default_layout(
-    widgets: List[Dict[str, Any]],
-    screen_width: int,
-    screen_height: int
+    widgets: List[Dict[str, Any]], screen_width: int, screen_height: int
 ) -> List[Dict[str, Any]]:
     """Fallback layout - centered stack."""
     return _generate_vertical_layout(widgets, screen_width, screen_height)

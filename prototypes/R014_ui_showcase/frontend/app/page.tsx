@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, memo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, MessageSquare, X, Sparkles, Images, History, Database } from "lucide-react";
+import { motion, AnimatePresence, PanInfo, LayoutGroup } from "framer-motion";
+import { Plus, MessageSquare, X, Sparkles, Images, History, Database, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/showcase/theme-toggle";
+import { QAProgressDisplay } from "@/components/ui/qa-progress";
 import { CentralIsland } from "@/components/ui/central-island";
 import { MarkdownWidget } from "@/components/widgets/markdown-widget";
 import { CardWidget } from "@/components/widgets/card-widget";
@@ -17,6 +18,9 @@ import { ConfirmationWidget } from "@/components/widgets/confirmation-widget";
 import { ImageWidget } from "@/components/widgets/image-widget";
 import { GalleryWidget } from "@/components/widgets/gallery-widget";
 import { ChartWidget } from "@/components/widgets/chart-widget";
+import { SearchResultWidget } from "@/components/widgets/search-result-widget";
+import { HopProgressWidget } from "@/components/widgets/hop-progress-widget";
+import { CitationCardWidget } from "@/components/widgets/citation-card-widget";
 import { ToolIsland, MobileBubbleLayer } from "@/components/islands";
 
 interface UIDescriptor {
@@ -45,6 +49,29 @@ interface UIDescriptor {
   type?: string;
   timestamp?: string;
   metadata?: Record<string, unknown>;
+  // Multi-hop search optional fields
+  progress?: number;
+  hops_completed?: number;
+  total_hops?: number;
+  reflection_reasoning?: string;
+  citations?: Array<{
+    cited_text: string;
+    document_index: number;
+    document_title?: string;
+    url?: string;
+  }>;
+  hop_events?: Array<{
+    event_type: string;
+    hop_number: number;
+    total_hops: number;
+    message: string;
+    progress: number;
+    eta_seconds?: number;
+    documents_found?: number;
+    query_used?: string;
+    reflection_reasoning?: string;
+  }>;
+  eta_seconds?: number;
 }
 
 interface Session {
@@ -66,17 +93,24 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
   onDismiss,
   dragPosition,
   onDragEnd,
+  collapsed,
+  onToggleCollapse,
 }: {
   descriptor: UIDescriptor;
   onDismiss: () => void;
   dragPosition?: { x: number; y: number };
   onDragEnd: (x: number, y: number) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }) {
   switch (descriptor.descriptor_type) {
     case "markdown":
       return descriptor.content ? (
         <MarkdownWidget
           content={descriptor.content}
+          title={descriptor.title}
+          collapsed={collapsed}
+          onToggleCollapse={onToggleCollapse}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -88,6 +122,8 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           title={descriptor.title || ""}
           content={descriptor.content || ""}
           actions={[]}
+          collapsed={collapsed}
+          onToggleCollapse={onToggleCollapse}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -100,6 +136,8 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           fields={descriptor.fields || []}
           submitLabel={descriptor.submit_button_text}
           onSubmit={() => {}}
+          collapsed={collapsed}
+          onToggleCollapse={onToggleCollapse}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -148,9 +186,12 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           title={descriptor.title}
           content={descriptor.content}
           caption={descriptor.content}
+          collapsed={collapsed}
+          onToggleCollapse={onToggleCollapse}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
+          descriptor_id={descriptor.descriptor_id}
         />
       );
     case "gallery":
@@ -158,9 +199,13 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         <GalleryWidget
           title={descriptor.title}
           content={descriptor.content}
+          images={descriptor.metadata?.images as Array<{ url: string; caption?: string; title?: string }> | undefined}
+          collapsed={collapsed}
+          onToggleCollapse={onToggleCollapse}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
+          descriptor_id={descriptor.descriptor_id}
         />
       );
     case "chart":
@@ -171,6 +216,37 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           chartType={(descriptor.metadata?.chart_type as "bar" | "line" | "pie" | "area") || "bar"}
           data={descriptor.metadata?.data as Array<Record<string, string | number>>}
           dataKeys={descriptor.metadata?.data_keys as string[]}
+          collapsed={collapsed}
+          onToggleCollapse={onToggleCollapse}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      );
+    case "search-result":
+      return descriptor.content ? (
+        <SearchResultWidget
+          content={descriptor.content}
+          citations={descriptor.citations}
+          metadata={descriptor.metadata}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      ) : null;
+    case "hop-progress":
+      return (
+        <HopProgressWidget
+          events={descriptor.hop_events || []}
+          onDismiss={onDismiss}
+          dragPosition={dragPosition}
+          onDragEnd={onDragEnd}
+        />
+      );
+    case "citation-card":
+      return (
+        <CitationCardWidget
+          citations={descriptor.citations || []}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -220,6 +296,9 @@ const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
       case "image": return "🖼️";
       case "gallery": return "🖼️";
       case "chart": return "📈";
+      case "search-result": return "🔍";
+      case "hop-progress": return "🔄";
+      case "citation-card": return "📚";
       default: return "📦";
     }
   }, [descriptor.descriptor_type]);
@@ -506,10 +585,106 @@ export default function HomePage() {
   // Support multiple expanded widgets at once - use Set<string>
   const [expandedPanelIds, setExpandedPanelIds] = useState<Set<string>>(new Set());
 
+  // Click vs drag detection state
+  const [dragState, setDragState] = useState<Record<string, {
+    startPos: { x: number; y: number };
+    hasMoved: boolean;
+    moveDistance: number;
+  }>>({});
+
+  // Threshold for click vs drag (in pixels)
+  const CLICK_THRESHOLD = 5;
+
+  // WebSocket connection state
+  const [wsConnection, setWsConnection] = useState<WebSocket | null>(null);
+
+  // QA progress state
+  type QACheckpointStatus = "running" | "passed" | "failed";
+  type QACheckpoint = {
+    status: QACheckpointStatus;
+    checkpoint: string;
+    details: Record<string, unknown>;
+  };
+
+  const [qaProgress, setQaProgress] = useState<Record<string, QACheckpoint>>({});
+
+  // Update QA checkpoint
+  const updateQACheckpoint = useCallback((checkpoint: string, status: QACheckpointStatus, details: Record<string, unknown> = {}) => {
+    setQaProgress(prev => ({
+      ...prev,
+      [checkpoint]: { status, checkpoint, details }
+    }));
+    console.log(`✓ QA ${checkpoint}: ${status}`);
+  }, []);
+
+  // Reset QA progress
+  const resetQAProgress = useCallback(() => {
+    setQaProgress({});
+  }, []);
+
+  // Handle incoming widget message
+  const handleWidgetMessage = useCallback((data: { id: string; type: string; title?: string; content?: string; metadata?: Record<string, unknown> }) => {
+    const widget: UIDescriptor = {
+      descriptor_id: data.id || `widget-${Date.now()}`,
+      descriptor_type: data.type as any,
+      title: data.title,
+      content: data.content,
+      metadata: data.metadata,
+      dismissible: true,
+    };
+
+    setWidgets(prev => [...prev, widget]);
+    console.log(`📦 Widget delivered: ${widget.descriptor_type}`);
+  }, []);
+
+  // Complete message handler
+  const [generationComplete, setGenerationComplete] = useState(false);
+
+  const handleCompleteMessage = useCallback((data: Record<string, unknown>) => {
+    console.log("🎯 Generation complete:", data);
+    setGenerationComplete(true);
+    setLoading(false);
+  }, []);
+
+  // Message router - dispatches to appropriate handler
+  const setupWebSocketHandlers = useCallback((ws: WebSocket) => {
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        switch (data.type) {
+          case "qa_progress":
+            updateQACheckpoint(data.data.checkpoint, data.data.status as QACheckpointStatus, data.data.details);
+            break;
+
+          case "widget":
+            handleWidgetMessage(data.data);
+            break;
+
+          case "complete":
+            handleCompleteMessage(data.data);
+            ws.close();
+            break;
+
+          case "error":
+            console.error("🔴 Error:", data.message);
+            setLoading(false);
+            ws.close();
+            break;
+
+          default:
+            console.warn("Unknown message type:", data);
+        }
+      } catch (e) {
+        console.error("Failed to parse WebSocket message:", e);
+      }
+    };
+  }, [updateQACheckpoint, handleWidgetMessage, handleCompleteMessage, setLoading]);
+
   // Feature flag for island UI
   const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
 
-  // Assign initial positions to new widgets (random cluster in center)
+  // Assign initial positions to new widgets (two-side layout)
   useEffect(() => {
     if (!enableIslands) return;
 
@@ -517,30 +692,33 @@ export default function HomePage() {
     const newWidgets = widgets.filter((w) => !positionedWidgetIds.has(w.descriptor_id));
     if (newWidgets.length === 0) return;
 
-    // Positioning constants
-    const SPREAD_X = 300;
-    const SPREAD_Y = 150;
-    const PADDING_RIGHT = 100;
-    const MIN_SPACING = 80;
+    // Screen zones (left and right)
+    const ZONES = {
+      left: { minX: 50, maxX: "48%" },
+      right: { minX: "52%", maxX: "95%" }
+    };
 
     const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
     const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
-    const centerX = viewportWidth / 2;
     const centerY = viewportHeight / 2;
 
-    const maxX = Math.min(centerX + SPREAD_X, viewportWidth - PADDING_RIGHT);
-    const minX = Math.max(centerX - SPREAD_X, PADDING_RIGHT);
-    const maxY = centerY + SPREAD_Y;
-    const minY = centerY - SPREAD_Y;
+    const MIN_SPACING = 100;
 
     const newPositions: Record<string, { x: number; y: number }> = {};
     const existingPositions = Object.values(islandPositions);
 
-    newWidgets.forEach((widget) => {
-      // Try to find non-overlapping position
-      for (let attempt = 0; attempt < 10; attempt++) {
-        const randomX = Math.random() * (maxX - minX) + minX;
-        const randomY = Math.random() * (maxY - minY) + minY;
+    newWidgets.forEach((widget, index) => {
+      // Alternate between left and right zones
+      const zone = index % 2 === 0 ? "left" : "right";
+      const { minX, maxX } = ZONES[zone];
+
+      const minXVal = typeof minX === "number" ? minX : (parseFloat(minX) / 100) * viewportWidth;
+      const maxXVal = typeof maxX === "number" ? maxX : (parseFloat(maxX) / 100) * viewportWidth;
+
+      // Try to find non-overlapping position in chosen zone
+      for (let attempt = 0; attempt < 15; attempt++) {
+        const randomX = Math.random() * (maxXVal - minXVal) + minXVal;
+        const randomY = Math.random() * (viewportHeight * 0.6) + (viewportHeight * 0.2);
 
         const hasCollision = existingPositions.some((pos) => {
           const dx = pos.x - randomX;
@@ -555,10 +733,10 @@ export default function HomePage() {
         }
       }
 
-      // Fallback: center with slight offset
+      // Fallback
       newPositions[widget.descriptor_id] = {
-        x: centerX + (Math.random() - 0.5) * 100,
-        y: centerY + (Math.random() - 0.5) * 100,
+        x: (minXVal + maxXVal) / 2,
+        y: centerY + (Math.random() - 0.5) * 200,
       };
       existingPositions.push(newPositions[widget.descriptor_id]);
     });
@@ -651,9 +829,51 @@ export default function HomePage() {
   };
 
   // Handle send message from CentralIsland
+  // Connect to WebSocket
+  const connectWebSocket = useCallback(() => {
+    const ws = new WebSocket(`${apiUrl.replace("http", "ws")}/api/v1/ws/generate-widget`);
+
+    ws.onopen = () => {
+      console.log("🔌 WebSocket connected");
+      setWsConnection(ws);
+    };
+
+    ws.onerror = (error) => {
+      console.error("🔴 WebSocket error:", error);
+    };
+
+    ws.onclose = () => {
+      console.log("🔌 WebSocket closed");
+      setWsConnection(null);
+    };
+
+    return ws;
+  }, [apiUrl]);
+
+  // Main generation function using WebSocket
+  const generateContentWithWebSocket = useCallback(async (prompt: string) => {
+    if (!prompt.trim()) return;
+
+    setLoading(true);
+    resetQAProgress();
+    setGenerationComplete(false);
+
+    const ws = connectWebSocket();
+    setupWebSocketHandlers(ws);
+
+    // Send query once connected
+    ws.onopen = () => {
+      console.log("🔌 WebSocket connected, sending query");
+      ws.send(JSON.stringify({
+        query: prompt,
+        device_context: "desktop",
+      }));
+    };
+  }, [connectWebSocket, resetQAProgress, setupWebSocketHandlers]);
+
   const handleSendMessage = useCallback((message: string) => {
-    generateContent(message);
-  }, []);
+    generateContentWithWebSocket(message);
+  }, [generateContentWithWebSocket]);
 
   // Handle voice toggle (not implemented yet)
   const handleVoiceToggle = useCallback(() => {
@@ -703,11 +923,89 @@ export default function HomePage() {
   }, []);
 
   // Create stable handlers for each widget - memoized to prevent re-renders
-  const createWidgetHandlers = useCallback((id: string) => ({
-    onDismiss: () => dismissWidget(id),
-    onDragEnd: (x: number, y: number) => updateWidgetPosition(id, x, y),
-    onToggleCollapse: () => toggleWidgetCollapse(id),
-  }), [dismissWidget, updateWidgetPosition, toggleWidgetCollapse]);
+  // Includes click vs drag detection
+  const createWidgetHandlers = useCallback((id: string) => {
+    // Internal handlers with full drag tracking
+    const handleDragStart = (_: any, info: PanInfo) => {
+      setDragState(prev => ({
+        ...prev,
+        [id]: {
+          startPos: { x: info.point.x, y: info.point.y },
+          hasMoved: false,
+          moveDistance: 0,
+        },
+      }));
+    };
+
+    const handleDrag = (_: any, info: PanInfo) => {
+      setDragState(prev => {
+        const state = prev[id];
+        if (!state) return prev;
+        const distance = Math.hypot(
+          info.point.x - state.startPos.x,
+          info.point.y - state.startPos.y
+        );
+        return {
+          ...prev,
+          [id]: { ...state, hasMoved: distance > CLICK_THRESHOLD, moveDistance: distance },
+        };
+      });
+    };
+
+    const handleDragEnd = (_: any, info: PanInfo) => {
+      const state = dragState[id];
+      const isClick = state && state.moveDistance < CLICK_THRESHOLD;
+
+      // Only update position if it's a drag (not a click)
+      if (!isClick) {
+        updateWidgetPosition(id, info.offset.x, info.offset.y);
+      }
+
+      // Clear drag state
+      setDragState(prev => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
+    };
+
+    const handleClick = (e: React.MouseEvent) => {
+      const state = dragState[id];
+      const isClick = !state || state.moveDistance < CLICK_THRESHOLD;
+
+      if (isClick) {
+        // It's a click - toggle collapse
+        toggleWidgetCollapse(id);
+      }
+    };
+
+    // Backward-compatible onDragEnd for widgets (x, y signature)
+    const onDragEndCompat = (x: number, y: number) => {
+      const state = dragState[id];
+      const isClick = state && state.moveDistance < CLICK_THRESHOLD;
+
+      if (!isClick) {
+        updateWidgetPosition(id, x, y);
+      }
+
+      // Clear drag state
+      setDragState(prev => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
+    };
+
+    return {
+      onDismiss: () => dismissWidget(id),
+      onDragStart: handleDragStart,
+      onDrag: handleDrag,
+      onDragEnd: handleDragEnd,
+      onDragEndCompat, // For widgets that use (x, y) signature
+      onClick: handleClick,
+      onToggleCollapse: () => toggleWidgetCollapse(id),
+    };
+  }, [dismissWidget, updateWidgetPosition, toggleWidgetCollapse, dragState, CLICK_THRESHOLD]);
 
   // Island UI handlers - support multiple open widgets (max 6)
   const MAX_EXPANDED_WIDGETS = 6;
@@ -826,8 +1124,9 @@ export default function HomePage() {
       )}
 
       {/* Generated Widgets - Island UI or Traditional Layout */}
-      <AnimatePresence mode="popLayout">
-        {widgets.map((widget, index) => {
+      <LayoutGroup>
+        <AnimatePresence mode="popLayout">
+          {widgets.map((widget, index) => {
           const handlers = createWidgetHandlers(widget.descriptor_id);
 
           // Island UI mode - Use ToolIsland + DirectWidgetRenderer (no wrapper)
@@ -875,7 +1174,9 @@ export default function HomePage() {
                       descriptor={widget}
                       onDismiss={handlers.onDismiss}
                       dragPosition={dragPos}
-                      onDragEnd={handlers.onDragEnd}
+                      onDragEnd={handlers.onDragEndCompat}
+                      collapsed={widget.collapsed}
+                      onToggleCollapse={handlers.onToggleCollapse}
                     />
                   </div>
                 )}
@@ -889,12 +1190,13 @@ export default function HomePage() {
               key={widget.descriptor_id}
               descriptor={widget}
               onDismiss={handlers.onDismiss}
-              onDragEnd={handlers.onDragEnd}
+              onDragEnd={handlers.onDragEndCompat}
               onToggleCollapse={handlers.onToggleCollapse}
             />
           );
-        })}
-      </AnimatePresence>
+          })}
+        </AnimatePresence>
+      </LayoutGroup>
 
       {widgets.length === 0 && (
         <Card className="border-dashed">
@@ -1111,6 +1413,7 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
       </main>
 
       {/* Central Island - always visible at bottom center */}
+      <QAProgressDisplay checkpoints={qaProgress} />
       <CentralIsland
         onSendMessage={handleSendMessage}
         onVoiceToggle={handleVoiceToggle}
@@ -1130,7 +1433,9 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
                     descriptor={widget}
                     onDismiss={handlers.onDismiss}
                     dragPosition={dragPos}
-                    onDragEnd={handlers.onDragEnd}
+                    onDragEnd={handlers.onDragEndCompat}
+                    collapsed={widget.collapsed}
+                    onToggleCollapse={handlers.onToggleCollapse}
                   />
                   <Button
                     variant="outline"
