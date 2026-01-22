@@ -73,6 +73,7 @@ def main() -> None:
         host=settings.host,
         port=settings.port,
         reload=settings.debug,
+        reload_excludes=["tests/*", "tests/*.*", ".pytest_cache/*", "*.pyc"],
     )
 
 

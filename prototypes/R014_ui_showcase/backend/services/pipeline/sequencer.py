@@ -49,7 +49,7 @@ class SequencerAgent(dspy.Module):
         )
 
         # Plan narrative flow
-        flow_result_raw = self.flow_planner(widgets=widgets, query=user_query)
+        flow_result_raw = self.flow_planner(widgets=widgets, user_query=user_query)
         flow_result = flow_result_raw if hasattr(flow_result_raw, "get") else {}
 
         sequence = (

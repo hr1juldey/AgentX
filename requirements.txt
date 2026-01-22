@@ -1,7 +1,7 @@
-dspy>=3.1.0
+dspy>=3.1.2
 mem0ai>=1.0.2
-fastembed>=0.7.4 
-qdrant-client>=1.16.2    
+fastembed>=0.7.4
+qdrant-client>=1.16.2
 
 # -----------------------------------------------------------------------------
 # WEB FRAMEWORK & API
@@ -90,7 +90,7 @@ pytest>=8.3.0
 pytest-asyncio>=0.24.0
 pytest-cov>=6.0.0
 pytest-mock>=3.14.0
-
+pytest-timeout>=2.4.0
 # -----------------------------------------------------------------------------
 # CODE QUALITY & LINTING
 # -----------------------------------------------------------------------------
@@ -126,7 +126,7 @@ watchfiles>=1.0.0
 # Supports voice cloning with 5-10 second audio samples
 pocket-tts>=1.0.1
 # PyTorch for TTS model (CPU-only, no GPU needed)
-# torch>=2.5.0 Don't touch pytorch as that is sensitive 
+# torch>=2.5.0 Don't touch pytorch as that is sensitive
 # Audio processing utilities
 scipy>=1.14.0
 soundfile>=0.12.0

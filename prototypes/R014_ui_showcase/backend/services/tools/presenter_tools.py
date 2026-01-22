@@ -147,9 +147,9 @@ class QAFinalizerModule(dspy.Module):
     def _is_passed(self, result) -> bool:
         """Check if a result passed."""
         score_attr = (
-            getattr(result, "quality_score")
-            or getattr(result, "accessibility_score")
-            or getattr(result, "format_score")
+            getattr(result, "quality_score", None)
+            or getattr(result, "accessibility_score", None)
+            or getattr(result, "format_score", None)
         )
         if score_attr:
             try:
