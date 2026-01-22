@@ -90,13 +90,15 @@ class SearXNGSearchModule(dspy.Module):
         for result in results:
             url = result.get("url", "")
             if url and url.startswith("http"):
-                url_list.append({
-                    "url": url,
-                    "title": result.get("title", ""),
-                    "snippet": result.get("content", "")[:200],
-                    "source": result.get("source", ""),
-                    "engine": result.get("engine", ""),
-                })
+                url_list.append(
+                    {
+                        "url": url,
+                        "title": result.get("title", ""),
+                        "snippet": result.get("content", "")[:200],
+                        "source": result.get("source", ""),
+                        "engine": result.get("engine", ""),
+                    }
+                )
 
         return {
             "raw_data": results,

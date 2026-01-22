@@ -107,12 +107,18 @@ async def test_real_server_websocket_generate_widget():
 
     try:
         # Disable keepalive pings (ping_interval=None) since server takes longer than 20s to process
-        async with websockets.connect(uri, close_timeout=10.0, ping_interval=None) as websocket:
+        async with websockets.connect(
+            uri, close_timeout=10.0, ping_interval=None
+        ) as websocket:
             # Send the request (websockets 16.0 uses send() with JSON dump)
-            await websocket.send(json.dumps({
-                "query": "Global Inflation Trends (2015–Present)",
-                "device_context": "desktop",
-            }))
+            await websocket.send(
+                json.dumps(
+                    {
+                        "query": "Global Inflation Trends (2015–Present)",
+                        "device_context": "desktop",
+                    }
+                )
+            )
 
             # Collect messages
             start_time = time.time()
@@ -133,10 +139,12 @@ async def test_real_server_websocket_generate_widget():
                 elif event_type == "widget":
                     widget = message.get("data", {})
                     widgets.append(widget)
-                    logger.info(f"  📦 Widget: {widget.get('type')} - {widget.get('title')}")
+                    logger.info(
+                        f"  📦 Widget: {widget.get('type')} - {widget.get('title')}"
+                    )
 
                 elif event_type == "complete":
-                    logger.info(f"  ✅ Complete")
+                    logger.info("  ✅ Complete")
                     break
 
                 elif event_type == "error":
@@ -153,11 +161,14 @@ async def test_real_server_websocket_generate_widget():
         raise
 
     # Validate results
-    logger.info(f"📊 Results: {len(qa_checkpoints)} QA checkpoints, {len(widgets)} widgets")
+    logger.info(
+        f"📊 Results: {len(qa_checkpoints)} QA checkpoints, {len(widgets)} widgets"
+    )
 
     # At minimum, we should have received something
-    assert len(qa_checkpoints) > 0 or len(widgets) > 0, \
+    assert len(qa_checkpoints) > 0 or len(widgets) > 0, (
         "Expected at least QA checkpoints or widgets"
+    )
 
     # If we got widgets, validate their structure
     for widget in widgets:
@@ -165,7 +176,7 @@ async def test_real_server_websocket_generate_widget():
         assert "type" in widget, "Widget missing type"
         assert "title" in widget, "Widget missing title"
 
-    logger.info(f"✅ Real server WebSocket test passed")
+    logger.info("✅ Real server WebSocket test passed")
 
 
 @pytest.mark.requires_real_server
@@ -178,11 +189,17 @@ async def test_real_server_websocket_search():
 
     try:
         # Disable keepalive pings (ping_interval=None) since server takes longer than 20s to process
-        async with websockets.connect(uri, close_timeout=10.0, ping_interval=None) as websocket:
+        async with websockets.connect(
+            uri, close_timeout=10.0, ping_interval=None
+        ) as websocket:
             # Send the request (websockets 16.0 uses send() with JSON dump)
-            await websocket.send(json.dumps({
-                "query": "What is the current stock market trend?",
-            }))
+            await websocket.send(
+                json.dumps(
+                    {
+                        "query": "What is the current stock market trend?",
+                    }
+                )
+            )
 
             # Collect messages
             hops = []
@@ -205,11 +222,11 @@ async def test_real_server_websocket_search():
 
                 elif event_type == "final_answer":
                     final_answer = message.get("data", {}).get("answer", "")
-                    logger.info(f"  📝 Final answer received")
+                    logger.info("  📝 Final answer received")
                     break
 
                 elif event_type == "complete":
-                    logger.info(f"  ✅ Complete")
+                    logger.info("  ✅ Complete")
                     break
 
                 elif event_type == "error":
@@ -226,4 +243,4 @@ async def test_real_server_websocket_search():
         raise
 
     logger.info(f"📊 Results: {len(hops)} hops, final_answer: {bool(final_answer)}")
-    logger.info(f"✅ Real server WebSocket search test passed")
+    logger.info("✅ Real server WebSocket search test passed")

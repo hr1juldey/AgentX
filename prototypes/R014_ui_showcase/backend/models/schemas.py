@@ -1,20 +1,15 @@
 # =============================================================================
-# AGENTX Prototype - Pydantic Models
+# AGENTX Prototype - Pydantic Models (DEPRECATED)
 # =============================================================================
-# Request/response schemas for API endpoints
+# ⚠️  DEPRECATED: Import from application/dtos/ instead
 # =============================================================================
+
+# Deprecated aliases - import from application layer
 
 from pydantic import BaseModel, Field
 
 
-class HealthResponse(BaseModel):
-    """Health check response."""
-
-    status: str = Field(description="Service status")
-    app: str = Field(description="Application name")
-    version: str = Field(description="Application version")
-
-
+# Keep legacy Item schemas (used by services/service.py)
 class ItemCreate(BaseModel):
     """Schema for creating an item (example)."""
 

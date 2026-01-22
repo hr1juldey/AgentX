@@ -41,8 +41,13 @@ class WidgetSelectorAgent(dspy.Module):
         """
         # URL-related keywords (search, find, look up)
         url_keywords = [
-            "search", "find", "look up", "information about",
-            "what is", "tell me about", "show me",
+            "search",
+            "find",
+            "look up",
+            "information about",
+            "what is",
+            "tell me about",
+            "show me",
         ]
 
         # Check if query is likely to return URLs

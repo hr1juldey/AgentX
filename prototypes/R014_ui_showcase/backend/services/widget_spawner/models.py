@@ -1,23 +1,18 @@
 # =============================================================================
-# AGENTX Widget Spawner Models
+# AGENTX Widget Spawner Models (DEPRECATED)
 # =============================================================================
-# Pydantic models for widget descriptors
+# ⚠️  DEPRECATED: Import from domain/entities/ and application/dtos/
 # =============================================================================
 
 from typing import Any
 
 from pydantic import BaseModel
 
+# Import domain entity for use in services
+from domain.entities.ui_descriptor import UIDescriptor
 
-class WidgetDescriptor(BaseModel):
-    """Widget descriptor for frontend rendering."""
-
-    id: str
-    type: str
-    title: str | None = None
-    content: str | None = None
-    metadata: dict[str, Any] | None = None
-    dismissible: bool = True
+# Deprecated aliases for backward compatibility
+WidgetDescriptor = UIDescriptor
 
 
 class WidgetGenerationRequest(BaseModel):
@@ -27,25 +22,21 @@ class WidgetGenerationRequest(BaseModel):
     widget_type: str | None = None
 
 
-class WidgetGenerationResponse(BaseModel):
-    """Response from single widget generation (legacy)."""
-
-    widget: WidgetDescriptor
-    preview_data: dict[str, Any] | None = None
-
-
 class MultiWidgetGenerationResponse(BaseModel):
     """Response from multi-widget generation using ReAct agent."""
 
-    widgets: list[WidgetDescriptor]
+    widgets: list[UIDescriptor]
     tools_used: list[str] | None = None
     reasoning: str | None = None
     preview_data: dict[str, Any] | None = None
 
 
 # =============================================================================
-# Legacy alias for backward compatibility
+# Legacy aliases for backward compatibility
 # =============================================================================
 
 # For API backward compatibility, keep the old response name
+WidgetGenerationResponse = MultiWidgetGenerationResponse
+
+# Legacy alias
 WidgetResponse = MultiWidgetGenerationResponse

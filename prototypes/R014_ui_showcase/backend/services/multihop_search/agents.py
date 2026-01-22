@@ -1,7 +1,7 @@
 # =============================================================================
 # AGENTX Multi-Hop Search - DSPy Agents
 # =============================================================================
-# SRP-compliant modules: Assessor, Planner, MultiHopSearchAgent
+# Multi-hop search agent orchestrating reflection modules
 # =============================================================================
 
 from __future__ import annotations
@@ -12,83 +12,16 @@ from typing import Any, Callable
 
 import dspy
 
+from services.multihop_search.reflection import CompletenessAssessor, HopPlanner
 from services.multihop_search.schemas import HopEvent
 from services.multihop_search.search_client import get_search_client, SearchResultItem
 from services.multihop_search.signatures import (
     AnswerWithSources,
-    CheckCompleteness,
-    GenerateNextQuery,
     SynthesizeFinalAnswer,
 )
 from services.multihop_search.time_estimator import get_time_estimator
 
 logger = logging.getLogger(__name__)
-
-
-class CompletenessAssessor(dspy.Module):
-    """SRP: Only assesses whether current information is sufficient.
-
-    Does NOT plan next hops - that's HopPlanner's job.
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.check = dspy.ChainOfThought(CheckCompleteness)
-
-    def forward(
-        self,
-        question: str,
-        current_answer: str,
-        documents_summary: str,
-    ) -> dspy.Prediction:
-        """Check if we have enough information.
-
-        Args:
-            question: Original question
-            current_answer: Current best answer from all hops
-            documents_summary: Brief summary of documents found
-
-        Returns:
-            Prediction with is_sufficient, confidence, gap_description
-        """
-        return self.check(  # type: ignore[bad-return]
-            question=question,
-            current_answer=current_answer,
-            documents_summary=documents_summary,
-        )
-
-
-class HopPlanner(dspy.Module):
-    """SRP: Only plans the next search hop.
-
-    Takes gap_description and outputs next_query + strategy.
-    """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.plan = dspy.ChainOfThought(GenerateNextQuery)
-
-    def forward(
-        self,
-        question: str,
-        gap_description: str,
-        previous_queries: list[str],
-    ) -> dspy.Prediction:
-        """Generate next search query and strategy.
-
-        Args:
-            question: Original question
-            gap_description: What information is still missing
-            previous_queries: Search queries already tried
-
-        Returns:
-            Prediction with next_query and strategy
-        """
-        return self.plan(  # type: ignore[bad-return]
-            question=question,
-            gap_description=gap_description,
-            previous_queries=previous_queries,
-        )
 
 
 class MultiHopSearchAgent(dspy.Module):

@@ -49,7 +49,9 @@ class GalleryHydrator(dspy.Module):
                         {
                             "url": item["url"],
                             "title": item["title"],
-                            "caption": item["snippet"][:150] if len(item["snippet"]) > 150 else item["snippet"],
+                            "caption": item["snippet"][:150]
+                            if len(item["snippet"]) > 150
+                            else item["snippet"],
                         }
                         for item in url_list[:8]
                     ],

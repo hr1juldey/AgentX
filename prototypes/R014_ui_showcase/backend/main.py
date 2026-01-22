@@ -15,10 +15,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router
 from config.settings import settings
 
-# Configure DEBUG logging
+# Configure INFO logging (cleaner than DEBUG, shows agent steps)
 logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+    format="%(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -27,12 +27,19 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     # Startup
-    logger.debug(f"🚀 {settings.app_name} v{settings.app_version} starting...")
-    logger.debug(f"Debug mode: {settings.debug}")
-    logger.debug(f"LLM Provider: {settings.llm_provider}, Model: {settings.llm_model}")
+    logger.info(
+        f"{settings.app_name} v{settings.app_version} starting on {settings.host}:{settings.port}"
+    )
+    logger.info(f"LLM: {settings.llm_provider}/{settings.llm_model}")
+
+    # Configure DSPy with LLM
+    from config.dspy import configure_dspy
+
+    configure_dspy()
+
     yield
     # Shutdown
-    logger.debug(f"👋 {settings.app_name} shutting down...")
+    logger.info("Shutting down...")
 
 
 # Create FastAPI app
