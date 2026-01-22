@@ -8,10 +8,11 @@ from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from application.use_cases.search import get_search_use_case
-from config.settings import settings
-from services.multihop_search.agents import MultiHopSearchAgent
-from services.multihop_search.schemas import HopEvent, SearchRequest
+from application.dtos.requests import SearchRequest
+from application.use_cases.search import (
+    get_search_use_case,
+    get_websocket_search_use_case,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -25,10 +26,8 @@ async def search_endpoint(request: dict[str, Any]) -> dict[str, Any]:
     logger.info(f"🔍 /search called: query='{query[:50]}...'")
 
     try:
-        from application.dtos.requests import SearchRequest as AppSearchRequest
-
         use_case = get_search_use_case()
-        dto_request = AppSearchRequest(query=query)
+        dto_request = SearchRequest(query=query)
         answer = await use_case.search(dto_request)
 
         return {
@@ -70,45 +69,23 @@ async def search_websocket(websocket: WebSocket) -> None:
             f"max_hops={request.max_hops}"
         )
 
-        async def send_progress(event: HopEvent) -> None:
+        async def send_progress(event_dict: dict[str, Any]) -> None:
             await websocket.send_json(
                 {
                     "type": "hop_event",
-                    "data": event.model_dump(),
+                    "data": event_dict,
                 }
             )
 
-        agent = MultiHopSearchAgent(
-            max_hops=request.max_hops or settings.max_hops,
-            progress_callback=send_progress,
-            stop_threshold=settings.stop_threshold,
+        use_case = get_websocket_search_use_case()
+        result = await use_case.search_with_streaming(
+            request=request, progress_callback=send_progress
         )
-
-        result = await agent(question=request.query)
-
-        citations = []
-        if result.citations:
-            for cit in result.citations:
-                if isinstance(cit, dict):
-                    citations.append(cit)
 
         await websocket.send_json(
             {
                 "type": "final_result",
-                "data": {
-                    "answer": result.answer,
-                    "summary": getattr(result, "summary", ""),
-                    "confidence": getattr(result, "confidence", "medium"),
-                    "citations": citations,
-                    "hops": result.hops or [],
-                    "metadata": result.metadata or {},
-                    "queries_used": result.metadata.get("queries_used", [])
-                    if result.metadata
-                    else [],
-                    "final_reflection_reasoning": getattr(
-                        result, "final_reflection_reasoning", None
-                    ),
-                },
+                "data": result.model_dump(),
             }
         )
 

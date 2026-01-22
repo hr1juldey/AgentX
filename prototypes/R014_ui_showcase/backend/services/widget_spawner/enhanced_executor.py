@@ -11,7 +11,7 @@ from typing import Dict, Any
 
 import dspy
 
-from services.widget_spawner.reward_functions import accessibility_compliance_score
+from services.widget_spawner.rewards import accessibility_compliance_score
 
 logger = logging.getLogger(__name__)
 

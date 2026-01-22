@@ -8,7 +8,7 @@ from typing import Any
 
 import dspy
 
-from services.tools.hydration_tools import MarkdownHydratorModule
+from services.tools.hydrators import MarkdownHydratorModule
 
 
 class MarkdownHydrator(dspy.Module):

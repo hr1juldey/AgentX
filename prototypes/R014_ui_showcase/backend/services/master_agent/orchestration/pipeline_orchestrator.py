@@ -7,14 +7,10 @@
 import logging
 from typing import TYPE_CHECKING, Any, Callable
 
+from services.master_agent.orchestration.early_phases import EarlyPhases
+from services.master_agent.orchestration.late_phases import LatePhases
+from services.master_agent.orchestration.phase_executor import PhaseExecutor
 from services.master_agent.qa_checkpoints import QACheckpointModule
-from services.master_agent.orchestration.logging import (
-    log_analysis_result,
-    log_design_result,
-    log_judgment_result,
-    log_research_result,
-    log_widget_selection,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +41,9 @@ class PipelineOrchestrator:
             qa: QA checkpoint module
             qa_callback: Optional callback for QA progress
         """
-        self.qa = qa
-        self.qa_callback = qa_callback
+        executor = PhaseExecutor(qa, qa_callback)
+        self.early = EarlyPhases(executor)
+        self.late = LatePhases(executor)
 
     def execute_pipeline(
         self,
@@ -77,100 +74,71 @@ class PipelineOrchestrator:
             Dict with sequence plan, design result, widget selection, etc.
         """
         # Phase 1: ANALYST - Understand query and context
-        logger.info("  [ANALYST] Understanding query context...")
-        analysis_result = self._run_phase(
-            "analysis_qa",
-            lambda: analyst(user_query=user_query, device_context=device_context),  # type: ignore[arg-type]
+        analysis_result = self.early.run_analyst_phase(
+            analyst,
+            user_query,
+            device_context,
         )
-        log_analysis_result(analysis_result)
 
         # Phase 2: RESEARCHER - Fetch live data
-        search_query = analysis_result.get("search_query", user_query)
-        logger.info(f"  [RESEARCHER] Searching: '{search_query[:80]}...'")
-        research_result = self._run_phase(
-            "research_qa",
-            lambda: researcher(analysis=analysis_result),  # type: ignore[arg-type]
+        research_result = self.early.run_researcher_phase(
+            researcher,
+            analysis_result,
         )
-        log_research_result(research_result)
 
         # Phase 3: DATA CONTEXTUALIZER - Rerank, filter, contextualize
-        logger.info(
-            f"  [CONTEXTUALIZER] Processing {len(research_result.get('documents', []))} documents..."
-        )
-        contextualized_result = self._run_phase(
-            "contextualization_qa",
-            lambda: data_contextualizer(research_data=research_result),  # type: ignore[arg-type]
+        contextualized_result = self.early.run_contextualizer_phase(
+            data_contextualizer,
+            research_result,
         )
 
         # Phase 4: ANALYST (Pass 2) - Judge data quality
-        logger.info("  [ANALYST] Judging data quality...")
-        judgment_result = self._run_phase(
-            "judgment_qa",
-            lambda: analyst(  # type: ignore[arg-type]
-                user_query=user_query,
-                device_context=device_context,
-                contextualized_data=contextualized_result,
-                pass_number=2,
-            ),
+        judgment_result = self.early.run_analyst_judgment_phase(
+            analyst,
+            user_query,
+            device_context,
+            contextualized_result,
         )
-        log_judgment_result(judgment_result)
 
         # Check if more research is needed
         if judgment_result.get("needs_more_research", False):
             logger.info("  [RESEARCHER] Additional research needed...")
-            research_result = self._run_phase(
-                "research_qa",
-                lambda: researcher(  # type: ignore[arg-type]
-                    analysis=judgment_result,
-                    previous_data=research_result,
-                ),
+            research_result = self.early.run_researcher_phase(
+                researcher,
+                judgment_result,
             )
-            contextualized_result = self._run_phase(
-                "contextualization_qa",
-                lambda: data_contextualizer(research_data=research_result),  # type: ignore[arg-type]
+            contextualized_result = self.early.run_contextualizer_phase(
+                data_contextualizer,
+                research_result,
             )
 
         # Phase 5: DESIGNER - Add POVs, color schemes
-        logger.info("  [DESIGNER] Adding design context...")
-        design_result = self._run_phase(
-            "design_qa",
-            lambda: designer(  # type: ignore[arg-type]
-                researched_data=contextualized_result,
-                analysis=analysis_result,
-            ),
+        design_result = self.late.run_designer_phase(
+            designer,
+            contextualized_result,
+            analysis_result,
         )
-        log_design_result(design_result)
 
         # Phase 6: WIDGET SELECTOR - Choose widgets
-        logger.info("  [WIDGET SELECTOR] Choosing widgets...")
-        widget_selection = self._run_phase(
-            "widget_selection_qa",
-            lambda: widget_selector(  # type: ignore[arg-type]
-                designed_data=design_result,
-                device_context=device_context,
-            ),
+        widget_selection = self.late.run_widget_selector_phase(
+            widget_selector,
+            design_result,
+            device_context,
         )
-        log_widget_selection(widget_selection)
 
         # Phase 7: SEQUENCER - Plan delivery order
-        logger.info("  [SEQUENCER] Planning delivery order...")
-        sequence_plan = self._run_phase(
-            "sequence_qa",
-            lambda: sequencer(  # type: ignore[arg-type]
-                widgets=widget_selection.get("widgets", []),
-                user_query=user_query,
-            ),
+        sequence_plan = self.late.run_sequencer_phase(
+            sequencer,
+            widget_selection,
+            user_query,
         )
 
         # Phase 8: PRESENTER - Final polish and QA
-        logger.info("  [PRESENTER] Final polish...")
-        presentation_ready = self._run_phase(
-            "presentation_qa",
-            lambda: presenter(  # type: ignore[arg-type]
-                widgets=widget_selection.get("widgets", []),
-                sequence=sequence_plan.get("sequence", []),
-                design=design_result,
-            ),
+        presentation_ready = self.late.run_presenter_phase(
+            presenter,
+            widget_selection,
+            sequence_plan,
+            design_result,
         )
 
         return {
@@ -179,41 +147,3 @@ class PipelineOrchestrator:
             "widget_selection": widget_selection,
             "presentation_ready": presentation_ready,
         }
-
-    def _run_phase(self, checkpoint_name: str, phase_func: Callable) -> dict:
-        """Run a single pipeline phase with QA checkpoint.
-
-        Args:
-            checkpoint_name: Name of the QA checkpoint
-            phase_func: Function to execute for this phase
-
-        Returns:
-            Phase result data
-        """
-        try:
-            result = phase_func()
-            self.qa.validate_checkpoint(checkpoint_name, result)
-            self._emit_qa_progress(checkpoint_name, "passed", result)
-            return result
-        except Exception as e:
-            self.qa.mark_failed(checkpoint_name, str(e))
-            self._emit_qa_progress(checkpoint_name, "failed", {"error": str(e)})
-            raise
-
-    def _emit_qa_progress(self, checkpoint: str, status: str, data: dict) -> None:
-        """Emit QA progress to frontend via callback.
-
-        Args:
-            checkpoint: Checkpoint name
-            status: Status (passed, failed, running)
-            data: Additional data to send
-        """
-        if self.qa_callback:
-            try:
-                import asyncio
-
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    asyncio.create_task(self.qa_callback(checkpoint, status, data))
-            except Exception:
-                pass  # Silently fail if callback fails

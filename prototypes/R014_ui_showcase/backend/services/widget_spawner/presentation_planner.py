@@ -12,7 +12,7 @@ from typing import Dict, Any
 import dspy
 
 from services.widget_spawner.layout_utils import generate_positions
-from services.widget_spawner.reward_functions import presentation_quality_score
+from services.widget_spawner.rewards import presentation_quality_score
 
 logger = logging.getLogger(__name__)
 

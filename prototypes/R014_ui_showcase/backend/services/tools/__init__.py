@@ -4,24 +4,24 @@
 # DSPy module tools for specialist agents
 # =============================================================================
 
-from services.tools.analyst_tools import (
+from services.tools.analyst import (
     ContextAnalyzerModule,
     DataQualityCheckerModule,
     GoalDetectorModule,
     InsightExtractorModule,
 )
-from services.tools.contextualizer_tools import (
+from services.tools.contextualizer import (
     ContextualizerModule,
     FilterModule,
     RerankerModule,
 )
-from services.tools.designer_tools import (
+from services.tools.designer import (
     AccessibilityModule,
     ColorPickerModule,
     HierarchyPlannerModule,
     POVGeneratorModule,
 )
-from services.tools.hydration_tools import (
+from services.tools.hydrators import (
     CardHydratorModule,
     ChartHydratorModule,
     FormHydratorModule,
@@ -29,12 +29,12 @@ from services.tools.hydration_tools import (
     ImageHydratorModule,
     MarkdownHydratorModule,
 )
-from services.tools.presenter_tools import (
+from services.tools.presenter import (
     FlowCheckerModule,
     PolisherModule,
     QAFinalizerModule,
 )
-from services.tools.research_tools import (
+from services.tools.researcher import (
     BeautifierModule,
     CitationBuilderModule,
     DataStructurerModule,

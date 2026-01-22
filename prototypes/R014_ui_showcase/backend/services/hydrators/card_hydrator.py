@@ -8,7 +8,7 @@ from typing import Any
 
 import dspy
 
-from services.tools.hydration_tools import CardHydratorModule
+from services.tools.hydrators import CardHydratorModule
 
 
 class CardHydrator(dspy.Module):

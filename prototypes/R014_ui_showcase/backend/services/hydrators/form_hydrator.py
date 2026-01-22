@@ -8,7 +8,7 @@ from typing import Any
 
 import dspy
 
-from services.tools.hydration_tools import FormHydratorModule
+from services.tools.hydrators import FormHydratorModule
 
 
 class FormHydrator(dspy.Module):

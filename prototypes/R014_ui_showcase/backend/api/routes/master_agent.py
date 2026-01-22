@@ -4,25 +4,11 @@
 
 import logging
 import uuid
+from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
 from application.use_cases.master_agent import get_master_agent_use_case
-from config.settings import settings
-from services.master_agent import DeliveryPlan
-from services.pipeline.analyst import AnalystAgent
-from services.pipeline.data_contextualizer import DataContextualizerAgent
-from services.pipeline.designer import DesignerAgent
-from services.pipeline.presenter import PresenterAgent
-from services.pipeline.researcher import ResearcherAgent
-from services.pipeline.sequencer import SequencerAgent
-from services.pipeline.widget_selector import WidgetSelectorAgent
-from services.hydrators.card_hydrator import CardHydrator
-from services.hydrators.chart_hydrator import ChartHydrator
-from services.hydrators.form_hydrator import FormHydrator
-from services.hydrators.gallery_hydrator import GalleryHydrator
-from services.hydrators.image_hydrator import ImageHydrator
-from services.hydrators.markdown_hydrator import MarkdownHydrator
 
 router = __import__("fastapi").APIRouter()
 logger = logging.getLogger(__name__)
@@ -76,43 +62,14 @@ async def generate_widget_master_agent(websocket: WebSocket) -> None:
             )
             logger.info(f"  ✓ [{checkpoint}] {status}")
 
-        # Use application layer use case to create master agent
+        # Use application layer use case to create and configure master agent
         use_case = get_master_agent_use_case()
-        master_agent = use_case.create_master_agent(
+        master_agent, delivery_plan_type = use_case.setup_master_agent_with_pipeline(
             widget_callback=send_widget,
             qa_callback=send_qa_progress,
         )
 
-        # Initialize pipeline agents
-        analyst = AnalystAgent()
-        researcher = ResearcherAgent(searxng_url=settings.searxng_url)
-        data_contextualizer = DataContextualizerAgent()
-        designer = DesignerAgent()
-        widget_selector = WidgetSelectorAgent()
-        sequencer = SequencerAgent()
-        presenter = PresenterAgent()
-
-        hydrators = [
-            ChartHydrator(),
-            MarkdownHydrator(),
-            CardHydrator(),
-            FormHydrator(),
-            ImageHydrator(),
-            GalleryHydrator(),
-        ]
-
-        master_agent.set_pipeline_agents(
-            analyst=analyst,
-            researcher=researcher,
-            data_contextualizer=data_contextualizer,
-            designer=designer,
-            widget_selector=widget_selector,
-            sequencer=sequencer,
-            presenter=presenter,
-            hydrators=hydrators,
-        )
-
-        delivery_plan: DeliveryPlan = await master_agent.execute_with_streaming(
+        delivery_plan: Any = await master_agent.execute_with_streaming(
             user_query=user_query,
             device_context=device_context,
         )

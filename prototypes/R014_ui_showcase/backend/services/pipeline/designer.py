@@ -8,7 +8,7 @@ from typing import Optional
 
 import dspy
 
-from services.tools.designer_tools import (
+from services.tools.designer import (
     AccessibilityModule,
     ColorPickerModule,
     HierarchyPlannerModule,

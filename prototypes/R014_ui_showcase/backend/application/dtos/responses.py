@@ -4,6 +4,7 @@
 # Data Transfer Objects for API responses (Clean Architecture)
 # =============================================================================
 
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -17,6 +18,19 @@ class HealthResponse(BaseModel):
     status: str
     service: str
     llm: dict[str, str]
+
+
+class SearchResultResponse(BaseModel):
+    """Final search result response."""
+
+    answer: str
+    summary: str = ""
+    confidence: str = "medium"
+    citations: list[dict[str, Any]] = []
+    hops: list[dict[str, Any]] = []
+    metadata: dict[str, Any] = {}
+    queries_used: list[str] = []
+    final_reflection_reasoning: str | None = None
 
 
 # Response DTOs can use domain entities directly

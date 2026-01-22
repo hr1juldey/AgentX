@@ -8,7 +8,7 @@ from typing import Any
 
 import dspy
 
-from services.tools.hydration_tools import GalleryHydratorModule
+from services.tools.hydrators import GalleryHydratorModule
 
 
 class GalleryHydrator(dspy.Module):

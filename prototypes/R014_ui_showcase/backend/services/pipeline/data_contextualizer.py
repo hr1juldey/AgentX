@@ -6,7 +6,7 @@
 
 import dspy
 
-from services.tools.contextualizer_tools import (
+from services.tools.contextualizer import (
     ContextualizerModule,
     FilterModule,
     RerankerModule,

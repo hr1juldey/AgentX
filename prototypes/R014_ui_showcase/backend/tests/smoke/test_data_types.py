@@ -3,15 +3,15 @@
 # =============================================================================
 
 import pytest
-from services.tools.analyst_tools import (
+from services.tools.analyst import (
     DataQualityCheckerModule,
     _to_float,
     _to_bool,
 )
-from services.tools.contextualizer_tools import (
+from services.tools.contextualizer import (
     RerankerModule,
 )
-from services.tools.designer_tools import (
+from services.tools.designer import (
     ColorPickerModule,
 )
 

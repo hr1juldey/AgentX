@@ -8,7 +8,7 @@ from typing import Optional
 
 import dspy
 
-from services.tools.research_tools import (
+from services.tools.researcher import (
     BeautifierModule,
     CitationBuilderModule,
     DataStructurerModule,
