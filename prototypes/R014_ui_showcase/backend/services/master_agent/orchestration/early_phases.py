@@ -71,8 +71,15 @@ class EarlyPhases:
         Returns:
             Research result dict
         """
-        search_query = analysis_result.get("search_query", "")
-        logger.info(f"  [RESEARCHER] Searching: '{search_query[:80]}...'")
+        # Check for search_terms from analyst
+        search_terms = analysis_result.get("search_terms", [])
+        if search_terms:
+            logger.info(f"  [RESEARCHER] Search terms: {search_terms[:5]}")
+        else:
+            search_query = analysis_result.get("goal", analysis_result.get("query", ""))
+            logger.info(
+                f"  [RESEARCHER] No search terms, using: '{search_query[:80]}...'"
+            )
         result = self.executor.execute_phase(
             "research_qa",
             lambda: researcher(analysis=analysis_result),  # type: ignore[arg-type]

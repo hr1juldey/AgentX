@@ -35,6 +35,7 @@ dependencies = [
     { name = "alembic" },
     { name = "argon2-cffi" },
     { name = "argon2-cffi-bindings" },
+    { name = "beautifulsoup4" },
     { name = "celery", extra = ["auth", "redis", "sqs"] },
     { name = "cryptography" },
     { name = "diffusers" },
@@ -44,6 +45,7 @@ dependencies = [
     { name = "fastapi-users" },
     { name = "fastapi-users-db-sqlalchemy" },
     { name = "fastembed" },
+    { name = "html2text" },
     { name = "httpx" },
     { name = "ipdb" },
     { name = "ipython" },
@@ -80,6 +82,7 @@ dependencies = [
     { name = "qdrant-client" },
     { name = "ragatouille" },
     { name = "redis" },
+    { name = "requests" },
     { name = "rich" },
     { name = "ruff" },
     { name = "scipy" },
@@ -110,6 +113,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13.0" },
     { name = "argon2-cffi", specifier = ">=25.1.0" },
     { name = "argon2-cffi-bindings", specifier = ">=25.1.0" },
+    { name = "beautifulsoup4", specifier = ">=4.12.2" },
     { name = "celery", extras = ["auth", "redis", "sqs"], specifier = ">=5.4.0" },
     { name = "cryptography", specifier = ">=43.0.0" },
     { name = "diffusers", specifier = ">=0.30.0" },
@@ -119,6 +123,7 @@ requires-dist = [
     { name = "fastapi-users", specifier = ">=15.0.3" },
     { name = "fastapi-users-db-sqlalchemy", specifier = ">=6.0.1" },
     { name = "fastembed", specifier = ">=0.7.4" },
+    { name = "html2text", specifier = ">=2020.1.16" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "ipdb", specifier = ">=0.13.0" },
     { name = "ipython", specifier = ">=8.20.0" },
@@ -140,7 +145,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.5.0" },
     { name = "pyjwt", specifier = ">=2.10.1" },
     { name = "pyrefly", specifier = ">=0.47.0" },
-    { name = "pytesseract", specifier = ">=0.3.13" },
+    { name = "pytesseract", specifier = ">=0.3.10" },
     { name = "pytest", specifier = ">=8.3.0" },
     { name = "pytest-asyncio", specifier = ">=0.24.0" },
     { name = "pytest-cov", specifier = ">=6.0.0" },
@@ -155,6 +160,7 @@ requires-dist = [
     { name = "qdrant-client", specifier = ">=1.16.2" },
     { name = "ragatouille", specifier = ">=0.0.9.post2" },
     { name = "redis", specifier = ">=5.2.0" },
+    { name = "requests", specifier = ">=2.31.0" },
     { name = "rich", specifier = ">=13.9.0" },
     { name = "ruff", specifier = ">=0.8.0" },
     { name = "scipy", specifier = ">=1.14.0" },
@@ -1752,6 +1758,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/2c/48/71de9ed269fdae9c8057e5a4c0aa7402e8bb16f2c6e90b3aa53327b113f8/hpack-4.1.0.tar.gz", hash = "sha256:ec5eca154f7056aa06f196a557655c5b009b382873ac8d1e66e79e87535f1dca", size = 51276, upload-time = "2025-01-22T21:44:58.347Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/07/c6/80c95b1b2b94682a72cbdbfb85b81ae2daffa4291fbfa1b1464502ede10d/hpack-4.1.0-py3-none-any.whl", hash = "sha256:157ac792668d995c657d93111f46b4535ed114f0c9c8d672271bbec7eae1b496", size = 34357, upload-time = "2025-01-22T21:44:56.92Z" },
+]
+
+[[package]]
+name = "html2text"
+version = "2025.4.15"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f8/27/e158d86ba1e82967cc2f790b0cb02030d4a8bef58e0c79a8590e9678107f/html2text-2025.4.15.tar.gz", hash = "sha256:948a645f8f0bc3abe7fd587019a2197a12436cd73d0d4908af95bfc8da337588", size = 64316, upload-time = "2025-04-15T04:02:30.045Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1d/84/1a0f9555fd5f2b1c924ff932d99b40a0f8a6b12f6dd625e2a47f415b00ea/html2text-2025.4.15-py3-none-any.whl", hash = "sha256:00569167ffdab3d7767a4cdf589b7f57e777a5ed28d12907d8c58769ec734acc", size = 34656, upload-time = "2025-04-15T04:02:28.44Z" },
 ]
 
 [[package]]

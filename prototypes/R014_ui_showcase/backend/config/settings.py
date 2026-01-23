@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     docs_per_hop: int = 5
     stop_threshold: float = 0.85
 
+    # =============================================================================
+    # Async Configuration
+    # =============================================================================
+    # Override auto-detection (useful for testing or forced modes)
+    force_async: bool = False
+    force_sync: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:

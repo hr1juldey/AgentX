@@ -8,15 +8,14 @@ from typing import Optional
 
 import dspy
 
-from services.pipeline.analyst import (
-    DataJudgmentHandler,
-    InitialAnalysisHandler,
-)
+from services.pipeline.analyst_modules.data_judgment import DataJudgmentHandler
+from services.pipeline.analyst_modules.initial_analysis import InitialAnalysisHandler
 from services.tools.analyst import (
     ContextAnalyzerModule,
     DataQualityCheckerModule,
     GoalDetectorModule,
     InsightExtractorModule,
+    SearchTermExtractorModule,
 )
 
 
@@ -34,6 +33,7 @@ class AnalystAgent(dspy.Module):
         self.context_analyzer = ContextAnalyzerModule()
         self.insight_extractor = InsightExtractorModule()
         self.goal_detector = GoalDetectorModule()
+        self.search_term_extractor = SearchTermExtractorModule()
 
         # Tools for Pass 2 (Data Judgment)
         self.data_quality_checker = DataQualityCheckerModule()
@@ -43,6 +43,7 @@ class AnalystAgent(dspy.Module):
             self.context_analyzer,
             self.insight_extractor,
             self.goal_detector,
+            self.search_term_extractor,
         )
         self._data_judgment_handler = DataJudgmentHandler(
             self.data_quality_checker,

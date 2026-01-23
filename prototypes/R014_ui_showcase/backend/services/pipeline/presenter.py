@@ -8,7 +8,7 @@ from typing import Optional
 
 import dspy
 
-from services.pipeline.presenter import (
+from services.pipeline.presenter_modules import (
     PresenterProgressTracker,
     PresenterResultBuilder,
 )

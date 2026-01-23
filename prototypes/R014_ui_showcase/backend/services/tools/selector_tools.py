@@ -7,92 +7,110 @@
 import dspy
 
 
-class WidgetMatcherModule(dspy.Module):
-    """Matches widgets to query intent and data type.
+class SelectWidgetSignature(dspy.Signature):
+    """Select appropriate widgets based on query intent and data characteristics.
 
-    Has 3 signatures:
-    - MatchByIntent: Match widgets based on user intent
-    - MatchByData: Match widgets based on data characteristics
-    - MatchByContext: Match widgets based on context
+    SEMANTIC PATTERNS (learn from these examples):
+
+    Example 1:
+    Query: "Show real-time stock prices"
+    Data: numerical_time_series
+    Selected: chart
+    Reasoning: Stock prices are time-series data that change continuously.
+               Charts visualize trends over time better than static widgets.
+
+    Example 2:
+    Query: "Display photo gallery"
+    Data: visual_image
+    Selected: gallery
+    Reasoning: Multiple images need a grid layout. Gallery widget handles
+               image collections with captions and metadata.
+
+    Example 3:
+    Query: "Compare pricing plans"
+    Data: comparative
+    Selected: card
+    Reasoning: Comparison needs side-by-side layout. Cards present discrete
+               options with clear visual boundaries for easy comparison.
+
+    Example 4:
+    Query: "Create form wizard"
+    Data: general
+    Selected: form
+    Reasoning: Multi-step input requires form widget with validation and
+               progression states.
+
+    Example 5:
+    Query: "Show clock"
+    Data: temporal
+    Selected: clock
+    Reasoning: Direct time display request. Clock widget is the semantic match.
+
+    NOTE: These are EXAMPLES to learn from, not hard-coded rules.
+    You are free to reason about new queries based on these patterns.
     """
+
+    query: str = dspy.InputField(desc="User's natural language request")
+    data_type: str = dspy.InputField(
+        desc="Type of data: numerical_time_series, visual_image, comparative, general, temporal"
+    )
+    device_context: str = dspy.InputField(desc="Device type: mobile, desktop, tablet")
+    widgets: str = dspy.OutputField(
+        desc="1-3 widgets from VALID_WIDGETS, comma-separated. "
+        "Choose based on semantic patterns above. "
+        "Example: 'chart' or 'gallery, markdown'"
+    )
+    rationale: str = dspy.OutputField(
+        desc="Brief explanation following the pattern: "
+        "'[Data characteristic] requires [visualization need]. "
+        "[Widget] provides [capability].'"
+    )
+
+
+class WidgetMatcherModule(dspy.Module):
+    """Match widgets using semantic understanding, not hard-coded rules."""
+
+    VALID_WIDGETS = {
+        "chart",
+        "markdown",
+        "gallery",
+        "card",
+        "form",
+        "image",
+        "map",
+        "clock",
+        "calendar",
+        "calculator",
+        "media controls",
+        "opengraph-card",
+        "opengraph-gallery",
+    }
 
     def __init__(self):
         super().__init__()
-        self.match_intent = dspy.Predict("query, insights -> matching_widgets")
-        self.match_data = dspy.Predict("data_type -> matching_widgets")
-        self.match_context = dspy.Predict("device_context -> suitable_widgets")
+        self.matcher = dspy.ChainOfThought(SelectWidgetSignature)
 
     def forward(
         self,
         designed_data: dict,
         device_context: str = "desktop",
     ) -> dict:
-        """Match widgets based on designed data."""
-        query = designed_data.get("query", "")
-        insights = designed_data.get("insights", [])
-        data_type = designed_data.get("data_type", "general")
+        """Let LLM reason about the best widget based on semantic patterns."""
+        result = self.matcher(
+            query=designed_data.get("query", ""),
+            data_type=designed_data.get("data_type", "general"),
+            device_context=device_context,
+        )
 
-        intent_result = self.match_intent(query=query, insights=str(insights))
-        data_result = self.match_data(data_type=data_type)
-        context_result = self.match_context(device_context=device_context)
-
-        # Combine results
-        widgets_set = set()
-
-        if hasattr(intent_result, "matching_widgets"):
-            widgets_set.update(intent_result.matching_widgets.split(","))
-        if hasattr(data_result, "matching_widgets"):
-            widgets_set.update(data_result.matching_widgets.split(","))
-        if hasattr(context_result, "suitable_widgets"):
-            widgets_set.update(context_result.suitable_widgets.split(","))
-
-        # Convert to list and clean
-        widgets = [w.strip().lower() for w in widgets_set if w.strip()]
+        # Validate LLM output
+        suggested_widgets = [
+            w.strip()
+            for w in result.widgets.split(",")
+            if w.strip() in self.VALID_WIDGETS
+        ]
 
         return {
-            "widgets": widgets,
-            "rationale": f"Selected based on query intent: {query}, data type: {data_type}, device: {device_context}",
+            "widgets": suggested_widgets or ["markdown"],
+            "rationale": result.rationale,
         }
 
-
-class SuitabilityCheckerModule(dspy.Module):
-    """Checks widget suitability for device and content.
-
-    Has 2 signatures:
-    - CheckDeviceFit: Check if widget fits device constraints
-    - CheckContentFit: Check if widget fits content type
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.check_device = dspy.Predict("widget, device -> is_suitable, reason")
-        self.check_content = dspy.Predict("widget, content_type -> is_suitable, reason")
-
-    def forward(
-        self,
-        widgets: list,
-        device_context: str = "desktop",
-    ) -> dict:
-        """Check widget suitability."""
-        suitable_widgets = []
-
-        for widget in widgets:
-            device_result = self.check_device(widget=widget, device=device_context)
-
-            if (
-                hasattr(device_result, "is_suitable")
-                and device_result.is_suitable == "true"
-            ):
-                suitable_widgets.append(
-                    {
-                        "widget": widget,
-                        "reason": device_result.reason
-                        if hasattr(device_result, "reason")
-                        else "",
-                    }
-                )
-
-        return {
-            "suitable_widgets": suitable_widgets,
-            "device_context": device_context,
-        }

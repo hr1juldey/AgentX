@@ -5,16 +5,11 @@
 # =============================================================================
 
 import dspy
+from typing import List
 
 
 class ContextAnalyzerModule(dspy.Module):
-    """Analyzes the context and domain of the user query.
-
-    Has 3 signatures:
-    - DetectType: Detect query type (factual, analytical, creative)
-    - ExtractDomain: Extract domain (finance, tech, health, etc.)
-    - IdentifyUrgency: Identify urgency level
-    """
+    """Analyzes the context and domain of the user query."""
 
     def __init__(self):
         super().__init__()
@@ -36,24 +31,69 @@ class ContextAnalyzerModule(dspy.Module):
 
 
 class InsightExtractorModule(dspy.Module):
-    """Extracts key insights from the user query.
+    """Extracts insights using chunking + iterative refinement.
 
-    Has 2 signatures:
-    - ExtractInsights: Extract what the user really wants
-    - IdentifyKeyQuestions: Identify underlying questions
+    Uses decision tree:
+    1. If text < 500 chars → direct extraction
+    2. If text > 500 chars → chunk + iterate 3 times
+    3. Deduplicate results
     """
+
+    MAX_CHUNK_SIZE = 500
+    OVERLAP = 100
+    ITERATIONS = 3
 
     def __init__(self):
         super().__init__()
-        self.extract_insights = dspy.Predict("query -> insights")
-        self.identify_questions = dspy.Predict("query -> key_questions")
+        from services.tools.analyst.signatures import (
+            ExtractInitialInsights,
+            RefineInsights,
+        )
+
+        self.initial_extractor = dspy.Predict(ExtractInitialInsights)
+        self.refiner = dspy.Predict(RefineInsights)
 
     def forward(self, query: str) -> dict:
-        """Extract insights from query."""
-        insights_result = self.extract_insights(query=query)
-        questions_result = self.identify_questions(query=query)
+        # Decision tree: small query?
+        if len(query) <= self.MAX_CHUNK_SIZE:
+            return self._extract_single(query)
 
-        return {
-            "insights": insights_result.insights,  # type: ignore[attr-defined]
-            "key_questions": questions_result.key_questions,  # type: ignore[attr-defined]
-        }
+        # Large query: chunk + iterate
+        return self._extract_iterative(query)
+
+    def _extract_single(self, query: str) -> dict:
+        """Fast path for small queries."""
+        result = self.initial_extractor(text_chunk=query)
+        insights = self._parse_insights(result.insights)
+        return {"insights": insights, "key_questions": []}
+
+    def _extract_iterative(self, query: str) -> dict:
+        """Chunk + iterate for large text."""
+        from services.core.chunking import chunk_text, deduplicate_items
+
+        chunks = chunk_text(query, self.MAX_CHUNK_SIZE, self.OVERLAP)
+        all_insights = []
+        existing = ""
+
+        for i, chunk in enumerate(chunks[: self.ITERATIONS]):
+            if i == 0:
+                result = self.initial_extractor(text_chunk=chunk)
+                all_insights.extend(self._parse_insights(result.insights))
+            else:
+                result = self.refiner(text_chunk=chunk, existing_insights=existing)
+                all_insights.extend(self._parse_insights(result.new_insights))
+
+            existing = ", ".join([ins[:30] for ins in all_insights])
+
+        unique_insights = deduplicate_items(all_insights)
+        return {"insights": unique_insights, "key_questions": []}
+
+    def _parse_insights(self, insights_str: str) -> List[str]:
+        """Parse insight string into list."""
+        if not insights_str:
+            return []
+        return [
+            line.strip().lstrip("-").strip()
+            for line in insights_str.split("\n")
+            if line.strip() and line.strip().startswith("-")
+        ]

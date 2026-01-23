@@ -6,10 +6,7 @@
 
 import dspy
 
-from services.tools.selector_tools import (
-    SuitabilityCheckerModule,
-    WidgetMatcherModule,
-)
+from services.tools.selector_tools import WidgetMatcherModule
 
 
 class WidgetSelectorAgent(dspy.Module):
@@ -21,9 +18,7 @@ class WidgetSelectorAgent(dspy.Module):
 
     def __init__(self):
         super().__init__()
-        # Tools for widget selection
         self.widget_matcher = WidgetMatcherModule()
-        self.suitability_checker = SuitabilityCheckerModule()
 
     def forward(
         self,
@@ -62,18 +57,14 @@ class WidgetSelectorAgent(dspy.Module):
                 "widgets": ["gallery", "markdown"],
                 "rationale": "Gallery for multiple URLs, markdown for summary",
                 "device_context": device_context,
-                "suitability_checks": [],
-                "widget_details": [],
             }
 
         # Single URL → OpenGraph card (via image hydrator)
-        elif is_url_query and url_count == 1:
+        if is_url_query and url_count == 1:
             return {
                 "widgets": ["image", "markdown"],
                 "rationale": "Image card for single URL, markdown for context",
                 "device_context": device_context,
-                "suitability_checks": [],
-                "widget_details": [],
             }
 
         # Match widgets based on designed data
@@ -85,34 +76,12 @@ class WidgetSelectorAgent(dspy.Module):
 
         matched_widgets = match_result.get("widgets", ["markdown"])  # type: ignore[missing-attribute]
 
-        # Check suitability for device
-        suitability_result_raw = self.suitability_checker(
-            widgets=matched_widgets,
-            device_context=device_context,
-        )
-        suitability_result = (
-            suitability_result_raw if hasattr(suitability_result_raw, "get") else {}
-        )
-
-        suitable_list = suitability_result.get("suitable_widgets", [])  # type: ignore[missing-attribute]
-        final_widgets = (
-            [w["widget"] for w in suitable_list] if suitable_list else matched_widgets
-        )
-
         return {
-            "widgets": final_widgets,
+            "widgets": matched_widgets,
             "rationale": match_result.get(  # type: ignore[missing-attribute]
                 "rationale", "Selected based on data type and context"
             ),
             "device_context": device_context,
-            "suitability_checks": suitability_result.get("suitable_widgets", []),  # type: ignore[missing-attribute]
-            "widget_details": [
-                {
-                    "widget": w,
-                    "suitable": any(sw.get("widget") == w for sw in suitable_list),
-                }
-                for w in matched_widgets
-            ],
         }
 
     def suggest_fallback_widget(self, error_type: str = "") -> str:

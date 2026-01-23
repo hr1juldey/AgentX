@@ -7,6 +7,31 @@
 import dspy
 
 
+class ExtractInitialInsights(dspy.Signature):
+    """Extract initial insights from text chunk."""
+
+    text_chunk: str = dspy.InputField(desc="Text to analyze (500 chars)")
+    insights: str = dspy.OutputField(
+        desc="2-3 key insights from text, "
+        "one per line starting with '- '. "
+        "Example: '- AI processes data\\n- ML learns patterns'"
+    )
+
+
+class RefineInsights(dspy.Signature):
+    """Refine insights using context from previous passes."""
+
+    text_chunk: str = dspy.InputField(desc="Text to analyze")
+    existing_insights: str = dspy.InputField(
+        desc="Previously found insights (comma-separated)"
+    )
+    new_insights: str = dspy.OutputField(
+        desc="2-3 additional insights NOT in existing list, "
+        "one per line starting with '- '. "
+        "Focus on different angles or deeper analysis."
+    )
+
+
 class AssessCompletenessSignature(dspy.Signature):
     """Assess if data is complete for answering the query."""
 

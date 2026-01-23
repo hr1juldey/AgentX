@@ -24,7 +24,6 @@ class SearXNGSearchModule(dspy.Module):
         super().__init__()
         self.searxng_url = searxng_url
         self.search_general = dspy.Predict("query -> search_results")
-        self.client = httpx.AsyncClient(timeout=30.0)
 
     async def _search_searxng(
         self,
@@ -32,7 +31,7 @@ class SearXNGSearchModule(dspy.Module):
         categories: Optional[list[str]] = None,
         engines: Optional[list[str]] = None,
     ) -> list[dict]:
-        """Execute SearXNG search."""
+        """Execute SearXNG search with fresh async client per request."""
         params = {
             "q": query,
             "format": "json",
@@ -44,13 +43,14 @@ class SearXNGSearchModule(dspy.Module):
             params["engines"] = ",".join(engines)
 
         try:
-            response = await self.client.get(
-                f"{self.searxng_url}/search",
-                params=params,
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data.get("results", [])
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    f"{self.searxng_url}/search",
+                    params=params,
+                )
+                response.raise_for_status()
+                data = response.json()
+                return data.get("results", [])
         except Exception as e:
             print(f"SearXNG search error: {e}")
             return []

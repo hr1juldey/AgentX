@@ -36,7 +36,7 @@ class HydrationCoordinator:
         hydrated_widgets = []
         for hydrator in self.hydrators:
             try:
-                result = hydrator.forward(
+                result = hydrator(
                     presentation_ready=presentation_ready,
                     researched_data=presentation_ready.get("researched_data", {}),
                     design=presentation_ready.get("design_context", {}),

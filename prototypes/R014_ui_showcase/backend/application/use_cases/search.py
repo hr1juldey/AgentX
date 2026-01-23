@@ -30,7 +30,7 @@ class SearchUseCase:
         from services.multihop_search.agents import MultiHopSearchAgent
 
         agent = MultiHopSearchAgent()
-        result = await agent(query=request.query)
+        result = await agent(question=request.query)
         return result.answer
 
 

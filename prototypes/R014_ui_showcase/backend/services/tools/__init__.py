@@ -41,7 +41,6 @@ from services.tools.researcher import (
     SearXNGSearchModule,
 )
 from services.tools.selector_tools import (
-    SuitabilityCheckerModule,
     WidgetMatcherModule,
 )
 from services.tools.sequencing_tools import (
@@ -71,7 +70,6 @@ __all__ = [
     "AccessibilityModule",
     # Selector Tools
     "WidgetMatcherModule",
-    "SuitabilityCheckerModule",
     # Sequencer Tools
     "FlowPlannerModule",
     "PacingCalculatorModule",

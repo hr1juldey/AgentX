@@ -10,6 +10,7 @@ from services.tools.analyst import (
     ContextAnalyzerModule,
     GoalDetectorModule,
     InsightExtractorModule,
+    SearchTermExtractorModule,
 )
 
 
@@ -21,6 +22,7 @@ class InitialAnalysisHandler:
         context_analyzer: ContextAnalyzerModule,
         insight_extractor: InsightExtractorModule,
         goal_detector: GoalDetectorModule,
+        search_term_extractor: SearchTermExtractorModule,
     ):
         """Initialize initial analysis handler.
 
@@ -28,10 +30,12 @@ class InitialAnalysisHandler:
             context_analyzer: Context analyzer module
             insight_extractor: Insight extractor module
             goal_detector: Goal detector module
+            search_term_extractor: Search term extractor module
         """
         self.context_analyzer = context_analyzer
         self.insight_extractor = insight_extractor
         self.goal_detector = goal_detector
+        self.search_term_extractor = search_term_extractor
 
     def analyze(self, user_query: str, device_context: str) -> Dict[str, Any]:
         """Perform initial query analysis.
@@ -58,6 +62,26 @@ class InitialAnalysisHandler:
         )
         goals = goals_result if hasattr(goals_result, "get") else {}
 
+        # Extract search terms for SearXNG
+        domain = (
+            context.get("domain", "general") if hasattr(context, "get") else "general"
+        )
+        search_terms_result = self.search_term_extractor(
+            query=user_query,
+            insights=insights.get("insights", []) if hasattr(insights, "get") else [],
+            domain=domain,
+        )
+        search_terms = (
+            search_terms_result.get("search_terms", [])
+            if hasattr(search_terms_result, "get")
+            else []
+        )
+        # Debug: Log search terms extraction
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.info(f"  [ANALYST] Extracted search_terms: {search_terms}")
+
         # Ensure context and goals are dicts
         context_dict = context if isinstance(context, dict) else {}
         goals_dict = goals if isinstance(goals, dict) else {}
@@ -66,9 +90,7 @@ class InitialAnalysisHandler:
             "query_type": context.get("query_type", "general")
             if hasattr(context, "get")
             else "general",
-            "domain": context.get("domain", "general")
-            if hasattr(context, "get")
-            else "general",
+            "domain": domain,
             "urgency": context.get("urgency", "normal")
             if hasattr(context, "get")
             else "normal",
@@ -85,6 +107,7 @@ class InitialAnalysisHandler:
             "depth": goals.get("depth", "medium")
             if hasattr(goals, "get")
             else "medium",
+            "search_terms": search_terms,
             "suggested_widgets": self._suggest_widgets(context_dict, goals_dict),
             "_context": context_dict,
             "_goals": goals_dict,

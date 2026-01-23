@@ -50,4 +50,6 @@ class DataJudgmentHandler:
             if hasattr(judgment, "get")
             else False,
             "judgment": judgment.get("reason", "") if hasattr(judgment, "get") else "",
+            # Preserve original query for follow-up searches
+            "query": user_query,
         }

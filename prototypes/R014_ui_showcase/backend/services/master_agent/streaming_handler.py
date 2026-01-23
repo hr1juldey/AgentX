@@ -42,7 +42,7 @@ class StreamingHandler:
         self._validator.validate_streaming_ready()
 
         # Run the pipeline
-        result = self.master_agent.forward(user_query, device_context)
+        result = self.master_agent(user_query, device_context)
 
         # Stream widgets according to delivery plan
         return await self.master_agent.streaming_execution.execute_with_streaming(

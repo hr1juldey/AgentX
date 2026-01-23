@@ -1,10 +1,10 @@
 # =============================================================================
-# AGENTX PRESENTER Package
+# AGENTX PRESENTER Modules Package
 # =============================================================================
-# Phase 8: Final Polish + QA
+# Helper modules for the PRESENTER agent
 # =============================================================================
 
-from services.pipeline.presenter.progress import PresenterProgressTracker
-from services.pipeline.presenter.result_builder import PresenterResultBuilder
+from services.pipeline.presenter_modules.progress import PresenterProgressTracker
+from services.pipeline.presenter_modules.result_builder import PresenterResultBuilder
 
 __all__ = ["PresenterProgressTracker", "PresenterResultBuilder"]

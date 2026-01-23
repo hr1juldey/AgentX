@@ -1,10 +1,10 @@
 # =============================================================================
-# AGENTX ANALYST Package
+# AGENTX ANALYST Modules Package
 # =============================================================================
-# Phase 1 & 4: Reasoning + Judgment (CoT modules)
+# Helper modules for the ANALYST agent
 # =============================================================================
 
-from services.pipeline.analyst.data_judgment import DataJudgmentHandler
-from services.pipeline.analyst.initial_analysis import InitialAnalysisHandler
+from services.pipeline.analyst_modules.data_judgment import DataJudgmentHandler
+from services.pipeline.analyst_modules.initial_analysis import InitialAnalysisHandler
 
 __all__ = ["InitialAnalysisHandler", "DataJudgmentHandler"]

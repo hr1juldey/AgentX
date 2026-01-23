@@ -46,12 +46,21 @@ def log_design_result(result: dict) -> None:
 
 
 def log_widget_selection(result: dict) -> None:
-    """Log widget selection results."""
+    """Log widget selection results.
+
+    Handles both string widget names (from WidgetSelectorAgent) and
+    dict widget descriptors (from hydrators).
+    """
     widgets = result.get("widgets", [])
     logger.info(f"    → Selected {len(widgets)} widgets:")
     for w in widgets[:5]:
-        w_type = w.get("type", "unknown")
-        w_title = w.get("title", "")[:40]
+        # Handle both string widget names and dict widget descriptors
+        if isinstance(w, str):
+            w_type = w
+            w_title = ""
+        else:
+            w_type = w.get("type", "unknown")
+            w_title = w.get("title", "")[:40]
         logger.info(f"      - {w_type}: {w_title}...")
     if len(widgets) > 5:
         logger.info(f"      ... and {len(widgets) - 5} more")
