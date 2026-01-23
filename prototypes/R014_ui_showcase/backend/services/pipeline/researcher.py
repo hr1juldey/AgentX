@@ -4,13 +4,20 @@
 # Phase 2: Beautiful Data + SearXNG
 # =============================================================================
 
+import logging
 from typing import Optional
 
 import dspy
 
-from services.pipeline.researcher_helpers import (
-    determine_data_type,
-    generate_summary_report,
+from services.pipeline.researcher_filter import (
+    filter_and_log_results,
+    sort_and_deduplicate,
+)
+from services.pipeline.researcher_process import process_research_data
+from services.pipeline.researcher_result import build_researcher_result
+from services.pipeline.researcher_search import (
+    execute_multi_term_search,
+    execute_single_search,
 )
 from services.tools.researcher import (
     BeautifierModule,
@@ -18,6 +25,8 @@ from services.tools.researcher import (
     DataStructurerModule,
     SearXNGSearchModule,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ResearcherAgent(dspy.Module):
@@ -48,89 +57,40 @@ class ResearcherAgent(dspy.Module):
         Returns:
             Researched and processed data
         """
-        domain = analysis.get("domain", "general")
-        query_for_log = analysis.get("query", "")
-
         # Use search_terms if available, otherwise fall back to goal/query
         search_terms = analysis.get("search_terms", [])
         if search_terms:
             # Multiple search terms - search with each and combine results
-            all_results = []
-            for term in search_terms:
-                search_results_raw = self.searcher(query=term, search_type="general")
-                search_results = (
-                    search_results_raw if hasattr(search_results_raw, "get") else {}
-                )
-                all_results.extend(search_results.get("raw_data", []))
-
-            # Deduplicate by URL
-            seen_urls = set()
-            unique_results = []
-            for result in all_results:
-                url = result.get("url", "")
-                if url and url not in seen_urls:
-                    seen_urls.add(url)
-                    unique_results.append(result)
-
-            raw_data_for_beautify = unique_results
-            query_for_display = (
-                f"{len(search_terms)} terms: {', '.join(search_terms[:3])}"
+            all_results, query_for_display = execute_multi_term_search(
+                self.searcher, search_terms
+            )
+            sorted_results = sort_and_deduplicate(all_results)
+            raw_data_for_beautify = filter_and_log_results(
+                sorted_results,
+                source_description=f"results from {len(search_terms)} terms",
             )
         else:
             # Fall back to single query
             query = analysis.get("query", analysis.get("goal", ""))
-            search_results_raw = self.searcher(query=query, search_type="general")
-            search_results = (
-                search_results_raw if hasattr(search_results_raw, "get") else {}
+            raw_results, query_for_display = execute_single_search(self.searcher, query)
+            sorted_results = sort_and_deduplicate(raw_results)
+            raw_data_for_beautify = filter_and_log_results(
+                sorted_results, source_description="results from single query"
             )
-            raw_data_for_beautify = (
-                search_results.get("raw_data", [])
-                if hasattr(search_results, "get")
-                else []
-            )
-            query_for_display = query
 
-        # Beautify raw data
-        beautiful_data_raw = self.beautifier(
+        # Process data through beautifier, structurer, citation builder
+        beautiful_data, structured_data, citations = process_research_data(
+            beautifier=self.beautifier,
+            structurer=self.structurer,
+            citer=self.citer,
             raw_data=raw_data_for_beautify,
-            query=query_for_display,
-        )
-        beautiful_data = (
-            beautiful_data_raw if hasattr(beautiful_data_raw, "get") else {}
+            query_display=query_for_display,
         )
 
-        # Structure the beautiful data
-        structured_data_raw = self.structurer(beautiful_data=beautiful_data)
-        structured_data = (
-            structured_data_raw if hasattr(structured_data_raw, "get") else {}
+        return build_researcher_result(
+            raw_data=raw_data_for_beautify,
+            beautiful_data=beautiful_data,
+            structured_data=structured_data,
+            citations=citations,
+            analysis=analysis,
         )
-
-        # Build citations
-        citations_raw = self.citer(raw_data=raw_data_for_beautify)
-        citations = citations_raw if hasattr(citations_raw, "get") else []
-
-        return {
-            "raw_data": raw_data_for_beautify,
-            "beautiful_data": {
-                "key_facts": beautiful_data.get("key_facts", [])
-                if hasattr(beautiful_data, "get")
-                else [],
-                "trends": beautiful_data.get("trends", [])
-                if hasattr(beautiful_data, "get")
-                else [],
-                "comparisons": beautiful_data.get("comparisons", [])
-                if hasattr(beautiful_data, "get")
-                else [],
-            },
-            "structured_data": structured_data,
-            "citations": citations,
-            "structured_report": generate_summary_report(
-                beautiful_data if isinstance(beautiful_data, dict) else {},
-                citations if isinstance(citations, list) else [],
-                domain,
-            ),
-            "data_type": determine_data_type(
-                analysis, beautiful_data if isinstance(beautiful_data, dict) else {}
-            ),
-            "query": query_for_log,
-        }

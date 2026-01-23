@@ -23,7 +23,6 @@ dspy.configure(lm=lm)
 
 from services.pipeline.analyst import AnalystAgent
 from services.pipeline.data_contextualizer import DataContextualizerAgent
-from services.pipeline.designer import DesignerAgent
 from services.pipeline.researcher import ResearcherAgent
 from services.pipeline.widget_selector import WidgetSelectorAgent
 
@@ -142,7 +141,7 @@ def test_widget_selection_workflow():
 
     # For stock prices over time, chart is a good choice
     if "chart" in widgets:
-        print(f"    ✓ Correctly selected 'chart' for time-series stock data")
+        print("    ✓ Correctly selected 'chart' for time-series stock data")
 
     print("\n  ✓ Widget selection workflow completed!")
 
@@ -270,7 +269,7 @@ def test_multi_domain_queries():
 
         # Check if domain is close to expected
         if expected_domain.lower() in detected_domain.lower():
-            print(f"    ✓ Domain match!")
+            print("    ✓ Domain match!")
 
 
 def test_error_recovery_workflow():
@@ -296,7 +295,7 @@ def test_error_recovery_workflow():
             )
 
             print(f"    Query type: {result.get('query_type', 'N/A')}")
-            print(f"    Handled gracefully: ✓")
+            print("    Handled gracefully: ✓")
 
         except Exception as e:
             print(f"    Error: {e}")
@@ -314,7 +313,7 @@ def test_end_to_end_real_world():
     query = "What are the pros and cons of remote work in 2025?"
 
     print(f"  User Query: '{query}'")
-    print(f"  Device: desktop")
+    print("  Device: desktop")
 
     # Full pipeline
     print("\n" + "=" * 50)
@@ -354,7 +353,7 @@ def test_end_to_end_real_world():
         research_success = True
     except Exception as e:
         print(f"    ⚠ Research offline: {e}")
-        print(f"    Using mock data for widget selection...")
+        print("    Using mock data for widget selection...")
         research_result = {"data_type": "general", "raw_data": []}
         research_success = False
 

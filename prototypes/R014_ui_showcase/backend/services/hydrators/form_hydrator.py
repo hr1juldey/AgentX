@@ -4,6 +4,9 @@
 # Fills form widgets with action items based on insights
 # =============================================================================
 
+import uuid
+from datetime import datetime
+
 from typing import Any
 
 import dspy
@@ -57,7 +60,9 @@ class FormHydrator(dspy.Module):
         content = form_fields.get("content", []) if hasattr(form_fields, "get") else []
 
         return {
-            "descriptor_type": "form",
+            "id": str(uuid.uuid4())[:8],
+            "type": "form",
+            "timestamp": datetime.utcnow().isoformat(),
             "content": content,
             "metadata": {
                 "field_count": len(content),

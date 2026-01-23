@@ -5,10 +5,13 @@
 # =============================================================================
 
 import asyncio
+import logging
 from typing import Optional
 
 import dspy
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class SearXNGSearchModule(dspy.Module):
@@ -43,6 +46,7 @@ class SearXNGSearchModule(dspy.Module):
             params["engines"] = ",".join(engines)
 
         try:
+            logger.info(f"[SearXNG] Searching: {query[:60]}...")
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
                     f"{self.searxng_url}/search",
@@ -50,9 +54,11 @@ class SearXNGSearchModule(dspy.Module):
                 )
                 response.raise_for_status()
                 data = response.json()
-                return data.get("results", [])
+                results = data.get("results", [])
+                logger.info(f"[SearXNG] Got {len(results)} results")
+                return results
         except Exception as e:
-            print(f"SearXNG search error: {e}")
+            logger.error(f"[SearXNG] Search error for '{query[:40]}...': {e}")
             return []
 
     def forward(self, query: str, search_type: str = "general") -> dict:

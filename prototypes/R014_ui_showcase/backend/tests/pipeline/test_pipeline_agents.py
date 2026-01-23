@@ -171,7 +171,7 @@ def test_researcher_without_search_terms():
     }
 
     print(f"  Query: {analysis['query']}")
-    print(f"  Search terms: None (testing fallback)")
+    print("  Search terms: None (testing fallback)")
 
     try:
         result = agent(analysis=analysis)
@@ -219,7 +219,7 @@ def test_researcher_data_type_detection():
 
             # Check if expected hint is in detected type
             if case["expected_hint"] in data_type.lower():
-                print(f"    ✓ Correctly detected!")
+                print("    ✓ Correctly detected!")
 
         except Exception as e:
             print(f"    ⚠ Skipped: {e}")
@@ -304,8 +304,8 @@ def test_pipeline_real_world_queries():
         try:
             research_result = researcher(analysis=analysis)
             print(f"    Research: {len(research_result.get('raw_data', []))} results")
-        except Exception as e:
-            print(f"    Research: Skipped (offline/error)")
+        except Exception:
+            print("    Research: Skipped (offline/error)")
 
 
 def run_all_pipeline_tests():

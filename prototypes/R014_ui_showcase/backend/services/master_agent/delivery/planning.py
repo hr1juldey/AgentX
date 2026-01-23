@@ -47,7 +47,16 @@ class DeliveryPlanning:
         for seq_item in sequence:
             widget_type = seq_item.get("widget", "")
             for w in widgets:
-                if hasattr(w, "descriptor_type") and w.descriptor_type == widget_type:
+                # Handle both dict and object widgets
+                w_type = None
+                if isinstance(w, dict):
+                    w_type = w.get("descriptor_type") or w.get("type")
+                elif hasattr(w, "descriptor_type"):
+                    w_type = w.descriptor_type
+                elif hasattr(w, "type"):
+                    w_type = w.type
+
+                if w_type == widget_type:
                     if w not in ordered:
                         ordered.append(w)
                         break
@@ -75,7 +84,16 @@ class DeliveryPlanning:
         accumulated_delay = 0.0
 
         for i, widget in enumerate(widgets):
-            widget_type = getattr(widget, "descriptor_type", "")
+            # Handle both dict and object widgets
+            widget_type = None
+            if isinstance(widget, dict):
+                widget_type = widget.get("descriptor_type") or widget.get("type")
+            elif hasattr(widget, "descriptor_type"):
+                widget_type = widget.descriptor_type
+            elif hasattr(widget, "type"):
+                widget_type = widget.type
+
+            widget_type = widget_type or ""
 
             # First widget or priority widgets: immediate or quick
             if i == 0:

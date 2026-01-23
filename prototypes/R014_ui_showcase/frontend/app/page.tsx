@@ -620,12 +620,15 @@ export default function HomePage() {
   // Reset QA progress
   const resetQAProgress = useCallback(() => {
     setQaProgress({});
+    // Also clear expanded panels for new generation
+    setExpandedPanelIds(new Set());
   }, []);
 
   // Handle incoming widget message
   const handleWidgetMessage = useCallback((data: { id: string; type: string; title?: string; content?: string; metadata?: Record<string, unknown> }) => {
+    const widgetId = data.id || `widget-${Date.now()}`;
     const widget: UIDescriptor = {
-      descriptor_id: data.id || `widget-${Date.now()}`,
+      descriptor_id: widgetId,
       descriptor_type: data.type as any,
       title: data.title,
       content: data.content,
@@ -635,6 +638,20 @@ export default function HomePage() {
 
     setWidgets(prev => [...prev, widget]);
     console.log(`📦 Widget delivered: ${widget.descriptor_type}`);
+
+    // Auto-expand new widgets in island mode for better UX
+    // Limit to first 3 widgets to avoid clutter
+    const islandsEnabled = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
+    if (islandsEnabled) {
+      setExpandedPanelIds(prev => {
+        if (prev.size < 3) {
+          const newSet = new Set(prev);
+          newSet.add(widgetId);
+          return newSet;
+        }
+        return prev;
+      });
+    }
   }, []);
 
   // Complete message handler

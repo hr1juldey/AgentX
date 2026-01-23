@@ -4,6 +4,9 @@
 # Fills image widgets with image URLs from research
 # =============================================================================
 
+import uuid
+from datetime import datetime
+
 from typing import Any
 
 import dspy
@@ -44,7 +47,9 @@ class ImageHydrator(dspy.Module):
             # First URL becomes an OpenGraph card
             first_url = url_list[0]
             return {
-                "descriptor_type": "opengraph-card",
+                "id": str(uuid.uuid4())[:8],
+                "type": "opengraph-card",
+                "timestamp": datetime.utcnow().isoformat(),
                 "metadata": {
                     "url": first_url["url"],
                     "title": first_url["title"],
@@ -55,7 +60,9 @@ class ImageHydrator(dspy.Module):
 
         # Fallback: generic placeholder
         return {
-            "descriptor_type": "markdown",
+            "id": str(uuid.uuid4())[:8],
+            "type": "markdown",
+            "timestamp": datetime.utcnow().isoformat(),
             "content": "No URLs found for display.",
         }
 

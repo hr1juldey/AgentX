@@ -4,6 +4,9 @@
 # Fills card widgets with stat data + color scheme
 # =============================================================================
 
+import uuid
+from datetime import datetime
+
 from typing import Any
 
 import dspy
@@ -62,7 +65,9 @@ class CardHydrator(dspy.Module):
         content = stat_cards.get("content", []) if hasattr(stat_cards, "get") else []
 
         return {
-            "descriptor_type": "card",
+            "id": str(uuid.uuid4())[:8],
+            "type": "card",
+            "timestamp": datetime.utcnow().isoformat(),
             "content": content,
             "metadata": {
                 "color_scheme": color_scheme,

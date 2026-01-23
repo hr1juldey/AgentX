@@ -4,6 +4,9 @@
 # Fills markdown widgets with content + citations + POVs
 # =============================================================================
 
+import uuid
+from datetime import datetime
+
 from typing import Any
 
 import dspy
@@ -68,7 +71,9 @@ class MarkdownHydrator(dspy.Module):
         )
 
         return {
-            "descriptor_type": "markdown",
+            "id": str(uuid.uuid4())[:8],
+            "type": "markdown",
+            "timestamp": datetime.utcnow().isoformat(),
             "content": content,
             "metadata": {
                 "citation_count": len(citations),

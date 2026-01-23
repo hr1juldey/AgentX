@@ -66,7 +66,7 @@ def test_context_analyzer_complex():
 
     result = module(query=complex_query)
 
-    print(f"\n  Complex Query Analysis:")
+    print("\n  Complex Query Analysis:")
     print(f"    Type: {result.get('query_type', 'N/A')}")
     print(f"    Domain: {result.get('domain', 'N/A')}")
     print(f"    Urgency: {result.get('urgency', 'N/A')}")
@@ -87,7 +87,7 @@ def test_insight_extractor_small():
 
     print(f"\n  Query: '{small_query}'")
     print(f"    Insights count: {len(result.get('insights', []))}")
-    print(f"    Insights:")
+    print("    Insights:")
     for i, insight in enumerate(result.get('insights', []), 1):
         print(f"      {i}. {insight}")
 
@@ -128,7 +128,7 @@ def test_insight_extractor_large():
     result = module(query=large_query)
 
     print(f"\n  Insights count: {len(result.get('insights', []))}")
-    print(f"  Insights:")
+    print("  Insights:")
     for i, insight in enumerate(result.get('insights', [])[:10], 1):
         print(f"    {i}. {insight[:80]}...")
 

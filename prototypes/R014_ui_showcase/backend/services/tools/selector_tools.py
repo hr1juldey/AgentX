@@ -113,4 +113,3 @@ class WidgetMatcherModule(dspy.Module):
             "widgets": suggested_widgets or ["markdown"],
             "rationale": result.rationale,
         }
-

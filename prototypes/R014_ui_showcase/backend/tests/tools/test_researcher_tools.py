@@ -124,7 +124,7 @@ def test_searxng_search():
 
         except Exception as e:
             print(f"    ⚠ Search failed (may be offline): {e}")
-            print(f"    Skipping verification...")
+            print("    Skipping verification...")
 
 
 def test_citation_builder_basic():
@@ -207,7 +207,7 @@ def test_citation_builder_with_writing():
     result = module(raw_data=raw_data, writing=writing)
     citations = result if isinstance(result, list) else []
 
-    print(f"\n  Citations with relevance scores:")
+    print("\n  Citations with relevance scores:")
 
     for i, citation in enumerate(citations, 1):
         relevance = citation.get("relevance", 0.0)
@@ -278,7 +278,7 @@ def test_data_structurer_small():
 
     print(f"  Input: {len(beautiful_data.get('key_facts', []))} facts, "
           f"{len(beautiful_data.get('trends', []))} trends")
-    print(f"\n  Structured output:")
+    print("\n  Structured output:")
     print(f"    Key facts: {len(structured.get('key_facts', []))}")
     for fact in structured.get("key_facts", []):
         print(f"      - {fact}")
@@ -314,7 +314,7 @@ def test_data_structurer_large():
     result = module(beautiful_data=beautiful_data)
     structured = result.get("structured_data", {})
 
-    print(f"\n  Structured output:")
+    print("\n  Structured output:")
     print(f"    Key facts: {len(structured.get('key_facts', []))}")
     print(f"    Trends: {len(structured.get('trends', []))}")
     print(f"    Comparisons: {len(structured.get('comparisons', []))}")
@@ -351,7 +351,7 @@ def test_data_structurer_real_world():
     result = module(beautiful_data=climate_data)
     structured = result.get("structured_data", {})
 
-    print(f"\n  Structured Analysis:")
+    print("\n  Structured Analysis:")
     print(f"    Key Facts Extracted: {len(structured.get('key_facts', []))}")
     for fact in structured.get('key_facts', []):
         print(f"      {fact}")

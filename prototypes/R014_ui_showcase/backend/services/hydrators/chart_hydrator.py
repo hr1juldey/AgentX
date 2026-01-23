@@ -4,6 +4,9 @@
 # Fills chart widgets with data + POV overlay
 # =============================================================================
 
+import uuid
+from datetime import datetime
+
 from typing import Any
 
 import dspy
@@ -66,7 +69,9 @@ class ChartHydrator(dspy.Module):
         )
 
         return {
-            "descriptor_type": "chart",
+            "id": str(uuid.uuid4())[:8],
+            "type": "chart",
+            "timestamp": datetime.utcnow().isoformat(),
             "content": content,
             "metadata": {
                 "color_scheme": color_scheme,

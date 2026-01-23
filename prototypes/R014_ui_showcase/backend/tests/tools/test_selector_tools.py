@@ -256,11 +256,11 @@ def test_widget_selector_agent_url_scenarios():
 
     result = agent(designed_data=multi_url_data, device_context="desktop")
 
-    print(f"\n  Multiple URLs scenario:")
+    print("\n  Multiple URLs scenario:")
     print(f"    Query: {multi_url_data['query']}")
     print(f"    URL count: {multi_url_data['metadata']['url_count']}")
     print(f"    Selected: {result.get('widgets', [])}")
-    print(f"    Expected: ['gallery', 'markdown'] or similar")
+    print("    Expected: ['gallery', 'markdown'] or similar")
 
     # Scenario 2: URL-related query with single result
     single_url_data = {
@@ -271,11 +271,11 @@ def test_widget_selector_agent_url_scenarios():
 
     result = agent(designed_data=single_url_data, device_context="desktop")
 
-    print(f"\n  Single URL scenario:")
+    print("\n  Single URL scenario:")
     print(f"    Query: {single_url_data['query']}")
     print(f"    URL count: {single_url_data['metadata']['url_count']}")
     print(f"    Selected: {result.get('widgets', [])}")
-    print(f"    Expected: ['image', 'markdown'] or similar")
+    print("    Expected: ['image', 'markdown'] or similar")
 
     # Scenario 3: Non-URL query
     non_url_data = {
@@ -286,7 +286,7 @@ def test_widget_selector_agent_url_scenarios():
 
     result = agent(designed_data=non_url_data, device_context="desktop")
 
-    print(f"\n  Non-URL scenario:")
+    print("\n  Non-URL scenario:")
     print(f"    Query: {non_url_data['query']}")
     print(f"    URL count: {non_url_data['metadata']['url_count']}")
     print(f"    Selected: {result.get('widgets', [])}")

@@ -4,6 +4,9 @@
 # Fills gallery widgets with multiple images
 # =============================================================================
 
+import uuid
+from datetime import datetime
+
 from typing import Any
 
 import dspy
@@ -43,7 +46,9 @@ class GalleryHydrator(dspy.Module):
         if len(url_list) > 1:
             # Multiple URLs → gallery of OpenGraph cards
             return {
-                "descriptor_type": "opengraph-gallery",
+                "id": str(uuid.uuid4())[:8],
+                "type": "opengraph-gallery",
+                "timestamp": datetime.utcnow().isoformat(),
                 "metadata": {
                     "images": [
                         {
@@ -62,7 +67,9 @@ class GalleryHydrator(dspy.Module):
         # Single URL → single OpenGraph card
         elif url_list:
             return {
-                "descriptor_type": "opengraph-card",
+                "id": str(uuid.uuid4())[:8],
+                "type": "opengraph-card",
+                "timestamp": datetime.utcnow().isoformat(),
                 "metadata": {
                     "url": url_list[0]["url"],
                     "title": url_list[0]["title"],
@@ -73,7 +80,9 @@ class GalleryHydrator(dspy.Module):
 
         # Fallback
         return {
-            "descriptor_type": "markdown",
+            "id": str(uuid.uuid4())[:8],
+            "type": "markdown",
+            "timestamp": datetime.utcnow().isoformat(),
             "content": "No URLs found for display.",
         }
 

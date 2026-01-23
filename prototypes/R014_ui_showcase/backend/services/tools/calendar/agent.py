@@ -25,8 +25,10 @@ def _wrap_tool(tool_func, name: str):
 
     ReAct requires tools with proper docstrings for function calling.
     """
+
     def wrapped(*args, **kwargs):
         return tool_func(*args, **kwargs)
+
     wrapped.__name__ = name
     wrapped.__doc__ = tool_func.__doc__
     return wrapped
@@ -83,10 +85,12 @@ class CalendarAgent(dspy.Module):
         if hasattr(result, "trajectory") and result.trajectory:
             for step in result.trajectory:
                 if hasattr(step, "tool"):
-                    trajectory.append({
-                        "tool": getattr(step, "tool", "unknown"),
-                        "observation": str(getattr(step, "observation", ""))[:100],
-                    })
+                    trajectory.append(
+                        {
+                            "tool": getattr(step, "tool", "unknown"),
+                            "observation": str(getattr(step, "observation", ""))[:100],
+                        }
+                    )
 
         return {
             "answer": answer,
