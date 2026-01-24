@@ -14,6 +14,7 @@ from services.tools.designer import (
     HierarchyPlannerModule,
     POVGeneratorModule,
 )
+from services.tools.designer.widget_insights import WidgetInsightsModule
 
 
 class DesignerAgent(dspy.Module):
@@ -30,6 +31,7 @@ class DesignerAgent(dspy.Module):
         self.color_picker = ColorPickerModule()
         self.hierarchy_planner = HierarchyPlannerModule()
         self.accessibility = AccessibilityModule()
+        self.insights_generator = WidgetInsightsModule()
 
     def forward(
         self,
@@ -82,6 +84,19 @@ class DesignerAgent(dspy.Module):
         accessibility_result = (
             accessibility_result_raw if hasattr(accessibility_result_raw, "get") else {}
         )
+
+        # Generate widget-specific insights
+        widget_insights = {}
+        for widget_type in set(widget_list):  # Unique types only
+            insights_result_raw = self.insights_generator(
+                query=query,
+                data=researched_data,
+                widget_type=widget_type,
+            )
+            insights_result = (
+                insights_result_raw if hasattr(insights_result_raw, "get") else {}
+            )
+            widget_insights[widget_type] = insights_result.get("insights", [])
 
         return {
             "points_of_view": povs_result.get("points_of_view", [])
@@ -137,5 +152,6 @@ class DesignerAgent(dspy.Module):
             },
             "query": query,
             "domain": domain,
-            "insights": insights,
+            "insights": insights,  # Original analysis insights
+            "widget_insights": widget_insights,  # Widget-specific insights
         }

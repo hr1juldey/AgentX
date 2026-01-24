@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, memo } from "react";
+import { useState, useEffect, useCallback, useMemo, memo, useRef } from "react";
 import { motion, AnimatePresence, PanInfo, LayoutGroup } from "framer-motion";
-import { Plus, MessageSquare, X, Sparkles, Images, History, Database, ChevronDown } from "lucide-react";
+import { Plus, MessageSquare, X, Sparkles, Images, History, Database, ChevronDown, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,21 +87,234 @@ const appName = process.env.NEXT_PUBLIC_APP_NAME || "R014 UI Showcase";
 
 type View = "main" | "gallery" | "sessions" | "connectors";
 
+// Widget 3-State Renderer - handles Island -> Card -> Full cycle
+// All states are clickable (cycles), draggable, text selectable
+const Widget3StateRenderer = memo(function Widget3StateRenderer({
+  widget,
+  state,
+  position,
+  dragPos,
+  zIndex,
+  onCycleState,
+  onDragEnd,
+  onDismiss,
+}: {
+  widget: UIDescriptor;
+  state: "island" | "card" | "full";
+  position: { x: number; y: number };
+  dragPos: { x: number; y: number };
+  zIndex: number;
+  onCycleState: () => void;
+  onDragEnd: (x: number, y: number) => void;
+  onDismiss: () => void;
+}) {
+  // Get widget icon based on type
+  const getWidgetIcon = () => {
+    switch (widget.descriptor_type) {
+      case "markdown": return "📝";
+      case "card": return "📇";
+      case "form": return "📋";
+      case "progress": return "📊";
+      case "action": return "⚡";
+      case "confirmation": return "❓";
+      case "image": return "🖼️";
+      case "gallery": return "🖼️";
+      case "chart": return "📈";
+      case "search-result": return "🔍";
+      case "hop-progress": return "🔄";
+      case "citation-card": return "📚";
+      default: return "📦";
+    }
+  };
+
+  // Get color for widget type
+  const getWidgetColor = () => {
+    const colors: Record<string, string> = {
+      markdown: "hsl(var(--island-markdown))",
+      card: "hsl(var(--island-card))",
+      form: "hsl(var(--island-form))",
+      progress: "hsl(var(--island-progress))",
+      action: "hsl(var(--island-action))",
+      confirmation: "hsl(var(--island-confirmation))",
+      image: "hsl(var(--island-image))",
+      gallery: "hsl(var(--island-gallery))",
+      chart: "hsl(var(--island-chart))",
+      "search-result": "hsl(var(--island-search-result))",
+      "hop-progress": "hsl(var(--island-hop-progress))",
+      "citation-card": "hsl(var(--island-citation-card))",
+    };
+    return colors[widget.descriptor_type] || "hsl(var(--island-white))";
+  };
+
+  const widgetColor = getWidgetColor();
+
+  // Capture state for indicators to avoid type narrowing issues
+  const currentState = state;
+
+  return (
+    <AnimatePresence mode="wait">
+      {state === "island" && (
+        <ToolIsland
+          key="island"
+          widget={widget}
+          position={position}
+          isActive={false}
+          onClick={onCycleState}
+          onDragEnd={onDragEnd}
+          onDismiss={onDismiss}
+        />
+      )}
+
+      {state === "card" && (
+        <motion.div
+          key="card"
+          drag
+          dragElastic={0}
+          dragMomentum={false}
+          whileDrag={{ cursor: "grabbing", scale: 1.02 }}
+          onDragEnd={(_, info) => onDragEnd(info.offset.x, info.offset.y)}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.22 }}
+          className="fixed pointer-events-auto"
+          style={{ x: position.x + dragPos.x, y: position.y + dragPos.y, position: "fixed", zIndex }}
+        >
+          <motion.div
+            className="relative group cursor-pointer select-text"
+            onClick={onCycleState}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {/* Card container */}
+            <motion.div
+              className="rounded-2xl shadow-2xl backdrop-blur-md bg-card/95 border border-border/50 overflow-hidden"
+              style={{ width: 320 }}
+              whileHover={{ boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.4)" }}
+            >
+              {/* Header with icon, title, and cycle indicator */}
+              <div className="flex items-center gap-3 p-4 border-b border-border/50" style={{ background: widgetColor }}>
+                <span className="text-2xl">{getWidgetIcon()}</span>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm text-white truncate select-text">
+                    {widget.title || widget.descriptor_type}
+                  </h3>
+                </div>
+                {/* Cycle indicator */}
+                <div className="flex gap-1">
+                  <div className={`w-1.5 h-1.5 rounded-full ${currentState === "island" ? "bg-white" : "bg-white/30"}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full ${currentState === "card" ? "bg-white" : "bg-white/30"}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full ${currentState === "full" ? "bg-white" : "bg-white/30"}`} />
+                </div>
+              </div>
+
+              {/* Content summary */}
+              <div className="p-4">
+                <p className="text-sm text-foreground/80 line-clamp-3 select-text">
+                  {widget.content || "Click to expand"}
+                </p>
+              </div>
+
+              {/* Footer with hint */}
+              <div className="px-4 py-2 bg-muted/50 border-t border-border/50">
+                <p className="text-xs text-muted-foreground text-center">
+                  Click to expand • Drag to move
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Dismiss button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+              className="absolute -top-2 -right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity shadow-lg"
+              aria-label="Dismiss widget"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {state === "full" && (
+        <motion.div
+          key="full"
+          drag
+          dragElastic={0}
+          dragMomentum={false}
+          whileDrag={{ cursor: "grabbing" }}
+          onDragEnd={(_, info) => onDragEnd(info.offset.x, info.offset.y)}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.22 }}
+          className="fixed pointer-events-auto"
+          style={{ x: position.x + dragPos.x, y: position.y + dragPos.y, position: "fixed", zIndex }}
+        >
+          <div className="relative group">
+            {/* Integrated header with cycle button */}
+            <motion.div
+              className="flex items-center gap-3 px-4 py-3 rounded-t-2xl border-b border-border/50 select-text"
+              style={{ background: widgetColor }}
+              onClick={onCycleState}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.99 }}
+            >
+              <span className="text-2xl">{getWidgetIcon()}</span>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base text-white truncate select-text">
+                  {widget.title || widget.descriptor_type}
+                </h3>
+              </div>
+              {/* Cycle indicator */}
+              <div className="flex gap-1 mr-2">
+                <div className={`w-1.5 h-1.5 rounded-full ${currentState === "island" ? "bg-white" : "bg-white/30"}`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${currentState === "card" ? "bg-white" : "bg-white/30"}`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${currentState === "full" ? "bg-white" : "bg-white/30"}`} />
+              </div>
+              {/* Integrated cycle button (Minimize2 icon) */}
+              <Minimize2 className="w-4 h-4 text-white/70" />
+            </motion.div>
+
+            {/* Content - pass no-op dismiss to prevent accidental deletion */}
+            <div
+              className="rounded-b-2xl shadow-2xl backdrop-blur-md bg-card/95 border border-t-0 border-border/50 overflow-hidden select-text"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DirectWidgetRenderer
+                descriptor={widget}
+                onDismiss={() => {}}  // No-op - dismiss only via top-right button
+                dragPosition={{ x: 0, y: 0 }}
+                onDragEnd={() => {}}
+              />
+            </div>
+
+            {/* Dismiss button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+              className="absolute top-16 right-2 p-2 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity shadow-lg"
+              aria-label="Dismiss widget"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+});
+
 // Widget content renderer without wrapper (for Island mode)
+// Island mode uses expandedPanelIds for collapse, so widgets are always fully shown
 const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
   descriptor,
   onDismiss,
   dragPosition,
   onDragEnd,
-  collapsed,
-  onToggleCollapse,
 }: {
   descriptor: UIDescriptor;
   onDismiss: () => void;
   dragPosition?: { x: number; y: number };
   onDragEnd: (x: number, y: number) => void;
-  collapsed?: boolean;
-  onToggleCollapse?: () => void;
 }) {
   switch (descriptor.descriptor_type) {
     case "markdown":
@@ -109,8 +322,6 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         <MarkdownWidget
           content={descriptor.content}
           title={descriptor.title}
-          collapsed={collapsed}
-          onToggleCollapse={onToggleCollapse}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -122,8 +333,6 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           title={descriptor.title || ""}
           content={descriptor.content || ""}
           actions={[]}
-          collapsed={collapsed}
-          onToggleCollapse={onToggleCollapse}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -136,8 +345,6 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           fields={descriptor.fields || []}
           submitLabel={descriptor.submit_button_text}
           onSubmit={() => {}}
-          collapsed={collapsed}
-          onToggleCollapse={onToggleCollapse}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -186,8 +393,6 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           title={descriptor.title}
           content={descriptor.content}
           caption={descriptor.content}
-          collapsed={collapsed}
-          onToggleCollapse={onToggleCollapse}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -200,8 +405,6 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           title={descriptor.title}
           content={descriptor.content}
           images={descriptor.metadata?.images as Array<{ url: string; caption?: string; title?: string }> | undefined}
-          collapsed={collapsed}
-          onToggleCollapse={onToggleCollapse}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -216,8 +419,6 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           chartType={(descriptor.metadata?.chart_type as "bar" | "line" | "pie" | "area") || "bar"}
           data={descriptor.metadata?.data as Array<Record<string, string | number>>}
           dataKeys={descriptor.metadata?.data_keys as string[]}
-          collapsed={collapsed}
-          onToggleCollapse={onToggleCollapse}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -257,33 +458,22 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
   }
 });
 
-// Collapsible wrapper for widgets - shows mini island when collapsed (Traditional mode only)
+// Collapsible wrapper for widgets - uses controlled component pattern (FIXED)
 const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
   descriptor,
   onDismiss,
   onDragEnd,
   onToggleCollapse,
+  isExpanded, // NEW: Controlled by parent
   children,
 }: {
   descriptor: UIDescriptor;
   onDismiss: () => void;
   onDragEnd: (x: number, y: number) => void;
   onToggleCollapse: () => void;
+  isExpanded: boolean; // NEW: Controlled prop
   children: React.ReactNode;
 }) {
-  const [isCollapsed, setIsCollapsed] = useState(descriptor.collapsed || false);
-
-  // Sync with descriptor state
-  useEffect(() => {
-    setIsCollapsed(descriptor.collapsed || false);
-  }, [descriptor.collapsed]);
-
-  const handleToggle = useCallback(() => {
-    const newState = !isCollapsed;
-    setIsCollapsed(newState);
-    onToggleCollapse();
-  }, [isCollapsed, onToggleCollapse]);
-
   // Widget type icons
   const getWidgetIcon = useCallback(() => {
     switch (descriptor.descriptor_type) {
@@ -313,7 +503,7 @@ const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
     >
       {/* Collapsed mini island */}
       <AnimatePresence mode="wait">
-        {isCollapsed ? (
+        {!isExpanded ? (
           <motion.div
             key="collapsed"
             initial={{ opacity: 0, scale: 0.8 }}
@@ -321,7 +511,7 @@ const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
             exit={{ opacity: 0, scale: 0.8 }}
             className="relative"
           >
-            <motion.div
+            <motion.button
               drag
               dragElastic={0.2}
               dragMomentum={false}
@@ -331,34 +521,25 @@ const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
                 (descriptor.x || 0) + info.offset.x,
                 (descriptor.y || 0) + info.offset.y
               )}
+              onClick={onToggleCollapse}
               style={{ x: descriptor.x || 0, y: descriptor.y || 0 }}
-              className="relative bg-card border border-border rounded-full cursor-grab shadow-lg hover:shadow-xl px-4 py-2 flex items-center gap-2"
+              className="relative bg-card border border-border rounded-full cursor-grab shadow-lg hover:shadow-xl px-4 py-2 flex items-center gap-2 hover:bg-muted/50 transition-colors"
             >
               <span className="text-lg">{getWidgetIcon()}</span>
               <span className="text-sm font-medium truncate max-w-[120px]">
                 {descriptor.title || descriptor.descriptor_type}
               </span>
-              {/* Expand button */}
-              <button
-                onClick={handleToggle}
-                className="ml-1 p-1 rounded-full hover:bg-muted transition-colors"
-                aria-label="Expand"
-              >
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
               {/* Dismiss button */}
               {onDismiss && (
                 <button
-                  onClick={onDismiss}
+                  onClick={(e) => { e.stopPropagation(); onDismiss(); }}
                   className="p-1 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
                   aria-label="Dismiss"
                 >
                   <X className="w-3 h-3" />
                 </button>
               )}
-            </motion.div>
+            </motion.button>
           </motion.div>
         ) : (
           <motion.div
@@ -381,11 +562,13 @@ const WidgetRenderer = memo(function WidgetRenderer({
   onDismiss,
   onDragEnd,
   onToggleCollapse,
+  isExpanded, // NEW: Controlled prop
 }: {
   descriptor: UIDescriptor;
   onDismiss: () => void;
   onDragEnd: (x: number, y: number) => void;
   onToggleCollapse: () => void;
+  isExpanded: boolean; // NEW: Controlled prop
 }) {
   const dragPosition = useMemo(
     () =>
@@ -403,6 +586,7 @@ const WidgetRenderer = memo(function WidgetRenderer({
           onDismiss={onDismiss}
           onDragEnd={onDragEnd}
           onToggleCollapse={onToggleCollapse}
+          isExpanded={isExpanded}
         >
           <MarkdownWidget
             content={descriptor.content}
@@ -419,6 +603,7 @@ const WidgetRenderer = memo(function WidgetRenderer({
           onDismiss={onDismiss}
           onDragEnd={onDragEnd}
           onToggleCollapse={onToggleCollapse}
+          isExpanded={isExpanded}
         >
           <CardWidget
             title={descriptor.title || ""}
@@ -437,6 +622,7 @@ const WidgetRenderer = memo(function WidgetRenderer({
           onDismiss={onDismiss}
           onDragEnd={onDragEnd}
           onToggleCollapse={onToggleCollapse}
+          isExpanded={isExpanded}
         >
           <FormWidget
             title={descriptor.title}
@@ -456,6 +642,7 @@ const WidgetRenderer = memo(function WidgetRenderer({
           onDismiss={onDismiss}
           onDragEnd={onDragEnd}
           onToggleCollapse={onToggleCollapse}
+          isExpanded={isExpanded}
         >
           <ProgressWidget
             title={descriptor.title || "Processing"}
@@ -474,6 +661,7 @@ const WidgetRenderer = memo(function WidgetRenderer({
           onDismiss={onDismiss}
           onDragEnd={onDragEnd}
           onToggleCollapse={onToggleCollapse}
+          isExpanded={isExpanded}
         >
           <ActionWidget
             title={descriptor.title}
@@ -493,6 +681,7 @@ const WidgetRenderer = memo(function WidgetRenderer({
           onDismiss={onDismiss}
           onDragEnd={onDragEnd}
           onToggleCollapse={onToggleCollapse}
+          isExpanded={isExpanded}
         >
           <ConfirmationWidget
             title={descriptor.title || "Confirm"}
@@ -514,6 +703,7 @@ const WidgetRenderer = memo(function WidgetRenderer({
           onDismiss={onDismiss}
           onDragEnd={onDragEnd}
           onToggleCollapse={onToggleCollapse}
+          isExpanded={isExpanded}
         >
           <ImageWidget
             title={descriptor.title}
@@ -532,6 +722,7 @@ const WidgetRenderer = memo(function WidgetRenderer({
           onDismiss={onDismiss}
           onDragEnd={onDragEnd}
           onToggleCollapse={onToggleCollapse}
+          isExpanded={isExpanded}
         >
           <GalleryWidget
             title={descriptor.title}
@@ -549,6 +740,7 @@ const WidgetRenderer = memo(function WidgetRenderer({
           onDismiss={onDismiss}
           onDragEnd={onDragEnd}
           onToggleCollapse={onToggleCollapse}
+          isExpanded={isExpanded}
         >
           <ChartWidget
             title={descriptor.title}
@@ -580,16 +772,35 @@ export default function HomePage() {
   });
   const [health, setHealth] = useState<string>("unknown");
 
-  // Island UI state
+  // Island UI state - 3-state cycle system
+  type WidgetState = "island" | "card" | "full";
   const [islandPositions, setIslandPositions] = useState<Record<string, { x: number; y: number }>>({});
-  // Support multiple expanded widgets at once - use Set<string>
-  const [expandedPanelIds, setExpandedPanelIds] = useState<Set<string>>(new Set());
+  const [widgetStates, setWidgetStates] = useState<Record<string, WidgetState>>({});
 
-  // Click vs drag detection state
-  const [dragState, setDragState] = useState<Record<string, {
+  // NEW: Track if widgets have started arriving (for auto-hiding progress)
+  const [hasWidgetsArrived, setHasWidgetsArrived] = useState(false);
+
+  // Use ref for drag state to prevent handler recreation (FIXED)
+  const dragStateRef = useRef<Record<string, {
     startPos: { x: number; y: number };
     hasMoved: boolean;
     moveDistance: number;
+  }>>({});
+
+  // Store widget positions separately to prevent re-renders (FIXED)
+  // Positions are stored in a ref instead of widget objects to avoid
+  // triggering re-renders of all widgets when one widget is moved
+  const widgetPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+
+  // Cache for widget handlers to prevent re-renders (FIXED)
+  const handlersCacheRef = useRef<Record<string, {
+    onDismiss: () => void;
+    onDragStart: (_: any, info: PanInfo) => void;
+    onDrag: (_: any, info: PanInfo) => void;
+    onDragEnd: (_: any, info: PanInfo) => void;
+    onDragEndCompat: (x: number, y: number) => void;
+    onClick: (e: React.MouseEvent) => void;
+    onToggleCollapse: () => void;
   }>>({});
 
   // Threshold for click vs drag (in pixels)
@@ -620,8 +831,8 @@ export default function HomePage() {
   // Reset QA progress
   const resetQAProgress = useCallback(() => {
     setQaProgress({});
-    // Also clear expanded panels for new generation
-    setExpandedPanelIds(new Set());
+    setWidgetStates({});
+    setHasWidgetsArrived(false); // Reset widget arrival flag
   }, []);
 
   // Handle incoming widget message
@@ -636,22 +847,15 @@ export default function HomePage() {
       dismissible: true,
     };
 
-    setWidgets(prev => [...prev, widget]);
+    setWidgets(prev => {
+      // Append new widgets at the end to prevent re-rendering existing ones
+      return [...prev, widget];
+    });
+    setHasWidgetsArrived(true); // Mark that widgets have arrived
     console.log(`📦 Widget delivered: ${widget.descriptor_type}`);
 
-    // Auto-expand new widgets in island mode for better UX
-    // Limit to first 3 widgets to avoid clutter
-    const islandsEnabled = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
-    if (islandsEnabled) {
-      setExpandedPanelIds(prev => {
-        if (prev.size < 3) {
-          const newSet = new Set(prev);
-          newSet.add(widgetId);
-          return newSet;
-        }
-        return prev;
-      });
-    }
+    // 3-state cycle: new widgets start in "island" state (default)
+    // Users click to cycle: island -> card -> full -> island
   }, []);
 
   // Complete message handler
@@ -696,7 +900,7 @@ export default function HomePage() {
         console.error("Failed to parse WebSocket message:", e);
       }
     };
-  }, [updateQACheckpoint, handleWidgetMessage, handleCompleteMessage, setLoading]);
+  }, [updateQACheckpoint, handleWidgetMessage, handleCompleteMessage]);
 
   // Feature flag for island UI
   const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
@@ -759,6 +963,9 @@ export default function HomePage() {
     });
 
     setIslandPositions((prev) => ({ ...prev, ...newPositions }));
+
+    // Also update the ref to prevent re-renders (FIXED)
+    Object.assign(widgetPositionsRef.current, newPositions);
   }, [widgets, enableIslands]);
 
   // Fetch health status
@@ -789,7 +996,7 @@ export default function HomePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          widget_type: widgetType,  // Optional - DSPy ReAct selects if not provided
+          widget_type: widgetType,
         }),
       });
 
@@ -809,9 +1016,7 @@ export default function HomePage() {
           title: w.title,
           content: w.content,
           dismissible: w.dismissible ?? true,
-          // Preserve the full metadata object for chart widgets
           ...(w.metadata && { metadata: w.metadata }),
-          // Extract individual metadata fields for other widgets
           ...(w.metadata?.fields && { fields: w.metadata.fields }),
           ...(w.metadata?.submit_label && { submit_button_text: w.metadata.submit_label }),
           ...(w.metadata?.status_text && { status_text: w.metadata.status_text }),
@@ -832,7 +1037,6 @@ export default function HomePage() {
         return updated;
       });
 
-      // Log reasoning if available (for debugging)
       if (data.reasoning) {
         console.log("🟢 ReAct reasoning:", data.reasoning);
       }
@@ -845,7 +1049,6 @@ export default function HomePage() {
     setLoading(false);
   };
 
-  // Handle send message from CentralIsland
   // Connect to WebSocket
   const connectWebSocket = useCallback(() => {
     const ws = new WebSocket(`${apiUrl.replace("http", "ws")}/api/v1/ws/generate-widget`);
@@ -900,30 +1103,33 @@ export default function HomePage() {
   // Dismiss widget - memoized to prevent re-renders
   const dismissWidget = useCallback((id: string) => {
     setWidgets((prev) => prev.filter((w) => w.descriptor_id !== id));
-    // Also remove from island positions
     setIslandPositions((prev) => {
       const updated = { ...prev };
       delete updated[id];
       return updated;
     });
-    // Also close expanded panel if this was the one
-    setExpandedPanelIds((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
+    setWidgetStates((prev) => {
+      const updated = { ...prev };
+      delete updated[id];
+      return updated;
     });
+    // Clean up position from ref
+    if (widgetPositionsRef.current[id]) {
+      delete widgetPositionsRef.current[id];
+    }
+    // Clean up cached handlers
+    if (handlersCacheRef.current[id]) {
+      delete handlersCacheRef.current[id];
+    }
   }, []);
 
-  // Update widget position after drag - memoized to prevent re-renders
+  // Update widget position - using ref to prevent re-renders (FIXED)
   const updateWidgetPosition = useCallback((id: string, x: number, y: number) => {
-    // Update widget descriptor x/y (for expanded widgets)
-    setWidgets((prev) =>
-      prev.map((w) =>
-        w.descriptor_id === id ? { ...w, x, y } : w
-      )
-    );
+    // Only update the ref, NOT the widgets state
+    // This prevents all widgets from re-rendering when one is moved
+    widgetPositionsRef.current[id] = { x, y };
 
-    // Also update island positions state (for island buttons)
+    // Also update island positions state for island mode positioning
     setIslandPositions((prev) => ({
       ...prev,
       [id]: { x, y },
@@ -939,115 +1145,94 @@ export default function HomePage() {
     );
   }, []);
 
-  // Create stable handlers for each widget - memoized to prevent re-renders
-  // Includes click vs drag detection
-  const createWidgetHandlers = useCallback((id: string) => {
-    // Internal handlers with full drag tracking
+  // Create stable handlers for each widget - FIXED: Use cache to prevent re-renders
+  const getWidgetHandlers = useCallback((id: string) => {
+    // Return cached handlers if available
+    if (handlersCacheRef.current[id]) {
+      return handlersCacheRef.current[id];
+    }
+
+    // Create new handlers and cache them
     const handleDragStart = (_: any, info: PanInfo) => {
-      setDragState(prev => ({
-        ...prev,
-        [id]: {
-          startPos: { x: info.point.x, y: info.point.y },
-          hasMoved: false,
-          moveDistance: 0,
-        },
-      }));
+      dragStateRef.current[id] = {
+        startPos: { x: info.point.x, y: info.point.y },
+        hasMoved: false,
+        moveDistance: 0,
+      };
     };
 
     const handleDrag = (_: any, info: PanInfo) => {
-      setDragState(prev => {
-        const state = prev[id];
-        if (!state) return prev;
-        const distance = Math.hypot(
-          info.point.x - state.startPos.x,
-          info.point.y - state.startPos.y
-        );
-        return {
-          ...prev,
-          [id]: { ...state, hasMoved: distance > CLICK_THRESHOLD, moveDistance: distance },
-        };
-      });
+      const state = dragStateRef.current[id];
+      if (!state) return;
+      const distance = Math.hypot(
+        info.point.x - state.startPos.x,
+        info.point.y - state.startPos.y
+      );
+      dragStateRef.current[id] = { ...state, hasMoved: distance > CLICK_THRESHOLD, moveDistance: distance };
     };
 
     const handleDragEnd = (_: any, info: PanInfo) => {
-      const state = dragState[id];
+      const state = dragStateRef.current[id];
       const isClick = state && state.moveDistance < CLICK_THRESHOLD;
 
-      // Only update position if it's a drag (not a click)
       if (!isClick) {
         updateWidgetPosition(id, info.offset.x, info.offset.y);
       }
 
-      // Clear drag state
-      setDragState(prev => {
-        const updated = { ...prev };
-        delete updated[id];
-        return updated;
-      });
+      delete dragStateRef.current[id];
     };
 
-    const handleClick = (e: React.MouseEvent) => {
-      const state = dragState[id];
-      const isClick = !state || state.moveDistance < CLICK_THRESHOLD;
-
-      if (isClick) {
-        // It's a click - toggle collapse
-        toggleWidgetCollapse(id);
-      }
-    };
-
-    // Backward-compatible onDragEnd for widgets (x, y signature)
     const onDragEndCompat = (x: number, y: number) => {
-      const state = dragState[id];
+      const state = dragStateRef.current[id];
       const isClick = state && state.moveDistance < CLICK_THRESHOLD;
 
       if (!isClick) {
         updateWidgetPosition(id, x, y);
       }
 
-      // Clear drag state
-      setDragState(prev => {
-        const updated = { ...prev };
-        delete updated[id];
-        return updated;
-      });
+      delete dragStateRef.current[id];
     };
 
-    return {
+    const handlers = {
       onDismiss: () => dismissWidget(id),
       onDragStart: handleDragStart,
       onDrag: handleDrag,
       onDragEnd: handleDragEnd,
-      onDragEndCompat, // For widgets that use (x, y) signature
-      onClick: handleClick,
+      onDragEndCompat,
+      onClick: (e: React.MouseEvent) => {
+        const state = dragStateRef.current[id];
+        const isClick = !state || state.moveDistance < CLICK_THRESHOLD;
+        if (isClick) {
+          toggleWidgetCollapse(id);
+        }
+      },
       onToggleCollapse: () => toggleWidgetCollapse(id),
     };
-  }, [dismissWidget, updateWidgetPosition, toggleWidgetCollapse, dragState, CLICK_THRESHOLD]);
 
-  // Island UI handlers - support multiple open widgets (max 6)
-  const MAX_EXPANDED_WIDGETS = 6;
-  const handleIslandClick = useCallback((id: string) => {
-    setExpandedPanelIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id); // Collapse (toggle off)
-      } else if (newSet.size < MAX_EXPANDED_WIDGETS) {
-        newSet.add(id); // Expand (allows multiple, max 6)
-      } else {
-        console.warn(`Maximum ${MAX_EXPANDED_WIDGETS} widgets can be expanded at once`);
-      }
-      return newSet;
+    // Cache the handlers
+    handlersCacheRef.current[id] = handlers;
+    return handlers;
+  }, [dismissWidget, updateWidgetPosition, toggleWidgetCollapse, CLICK_THRESHOLD]);
+
+  // 3-State Cycle: island -> card -> full -> island
+  const cycleWidgetState = useCallback((id: string) => {
+    setWidgetStates(prev => {
+      const currentState = prev[id] || "island";
+      const nextState: Record<WidgetState, WidgetState> = {
+        island: "card",
+        card: "full",
+        full: "island"
+      };
+      console.log(`🔄 ${id}: ${currentState} -> ${nextState[currentState]}`);
+      return { ...prev, [id]: nextState[currentState] };
     });
   }, []);
 
   const handleIslandDragEnd = useCallback((id: string, x: number, y: number) => {
-    // Update island positions state (for island buttons)
     setIslandPositions((prev) => ({
       ...prev,
       [id]: { x, y },
     }));
-
-    // Also update widget descriptor x/y (for expanded widgets)
     setWidgets((prev) =>
       prev.map((w) =>
         w.descriptor_id === id ? { ...w, x, y } : w
@@ -1056,19 +1241,11 @@ export default function HomePage() {
   }, []);
 
   const handlePanelClose = useCallback((id: string) => {
-    setExpandedPanelIds((prev) => {
-      const newSet = new Set(prev);
-      newSet.delete(id);
-      return newSet;
-    });
+    setWidgetStates(prev => ({ ...prev, [id]: "island" }));
   }, []);
 
   const handleMobileBubbleExpand = useCallback((id: string) => {
-    setExpandedPanelIds((prev) => {
-      const newSet = new Set(prev);
-      newSet.add(id);
-      return newSet;
-    });
+    setWidgetStates(prev => ({ ...prev, [id]: "full" }));
   }, []);
 
   // Sidebar
@@ -1134,74 +1311,47 @@ export default function HomePage() {
       {enableIslands && (
         <MobileBubbleLayer
           widgets={widgets}
-          expandedIds={expandedPanelIds}
+          expandedIds={new Set(Object.keys(widgetStates).filter(id => widgetStates[id] === "full"))}
           onExpand={handleMobileBubbleExpand}
           onDismiss={dismissWidget}
         />
       )}
 
-      {/* Generated Widgets - Island UI or Traditional Layout */}
+      {/* Generated Widgets - 3-State Cycle System (Island -> Card -> Full) */}
       <LayoutGroup>
         <AnimatePresence mode="popLayout">
           {widgets.map((widget, index) => {
-          const handlers = createWidgetHandlers(widget.descriptor_id);
+          const handlers = getWidgetHandlers(widget.descriptor_id);
 
-          // Island UI mode - Use ToolIsland + DirectWidgetRenderer (no wrapper)
+          // Island UI mode - 3-state cycle system
           if (enableIslands) {
             const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
             const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
             const centerX = viewportWidth / 2;
             const centerY = viewportHeight / 2;
 
-            // Use saved position from useEffect, fallback to center
+            // Get current state (defaults to island)
+            const currentState = widgetStates[widget.descriptor_id] || "island";
             const position = islandPositions[widget.descriptor_id] || { x: centerX, y: centerY };
-            const isExpanded = expandedPanelIds.has(widget.descriptor_id);
-
-            const dragPos = { x: widget.x || position.x, y: widget.y || position.y };
+            const dragPos = widgetPositionsRef.current[widget.descriptor_id] || { x: 0, y: 0 };
             const baseZIndex = 1000 + index;
 
             return (
-              <div key={widget.descriptor_id} style={{ position: "fixed", zIndex: baseZIndex }}>
-                {/* Only show island button when NOT expanded */}
-                {!isExpanded && (
-                  <ToolIsland
-                    widget={widget}
-                    position={position}
-                    isActive={isExpanded}
-                    onClick={() => handleIslandClick(widget.descriptor_id)}
-                    onDragEnd={(x, y) => handleIslandDragEnd(widget.descriptor_id, x, y)}
-                    onDismiss={handlers.onDismiss}
-                  />
-                )}
-
-                {/* Expanded state - render widget WITH collapse button */}
-                {isExpanded && (
-                  <div className="relative">
-                    {/* Collapse button in top-left corner */}
-                    <button
-                      onClick={() => handleIslandClick(widget.descriptor_id)}
-                      className="absolute top-0 left-0 z-50 p-2 m-2 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all hover:scale-110"
-                      style={{ pointerEvents: "auto" }}
-                      aria-label="Collapse widget"
-                      title="Collapse to island"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                    </button>
-                    <DirectWidgetRenderer
-                      descriptor={widget}
-                      onDismiss={handlers.onDismiss}
-                      dragPosition={dragPos}
-                      onDragEnd={handlers.onDragEndCompat}
-                      collapsed={widget.collapsed}
-                      onToggleCollapse={handlers.onToggleCollapse}
-                    />
-                  </div>
-                )}
-              </div>
+              <Widget3StateRenderer
+                key={widget.descriptor_id}
+                widget={widget}
+                state={currentState}
+                position={position}
+                dragPos={dragPos}
+                zIndex={baseZIndex}
+                onCycleState={() => cycleWidgetState(widget.descriptor_id)}
+                onDragEnd={(x, y) => handleIslandDragEnd(widget.descriptor_id, x, y)}
+                onDismiss={handlers.onDismiss}
+              />
             );
           }
 
-          // Traditional mode (CollapsibleWidgetWrapper)
+          // Traditional mode (CollapsibleWidgetWrapper) - use controlled isExpanded
           return (
             <WidgetRenderer
               key={widget.descriptor_id}
@@ -1209,6 +1359,7 @@ export default function HomePage() {
               onDismiss={handlers.onDismiss}
               onDragEnd={handlers.onDragEndCompat}
               onToggleCollapse={handlers.onToggleCollapse}
+              isExpanded={!widget.collapsed}
             />
           );
           })}
@@ -1395,7 +1546,7 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
       <Sidebar />
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 border-b border-border bg-card z-30 flex items-center px-4 lg:px-6">
+      <header className="fixed top-0 left-0 right-0 h-16 border-b border-border bg-card/80 backdrop-blur-sm z-30 flex items-center px-4 lg:px-6">
         <Button
           variant="ghost"
           size="icon"
@@ -1430,19 +1581,20 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
       </main>
 
       {/* Central Island - always visible at bottom center */}
-      <QAProgressDisplay checkpoints={qaProgress} />
+      {/* FIXED: Auto-hide QA progress when widgets arrive */}
+      {!hasWidgetsArrived && <QAProgressDisplay checkpoints={qaProgress} />}
       <CentralIsland
         onSendMessage={handleSendMessage}
         onVoiceToggle={handleVoiceToggle}
       />
 
       {/* Mobile expanded panel */}
-      {enableIslands && expandedPanelIds.size > 0 && (
-        <div className="md:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      {enableIslands && Object.values(widgetStates).filter(s => s === "full").length > 0 && (
+        <div className="md:hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           {widgets
-            .filter((w) => expandedPanelIds.has(w.descriptor_id))
+            .filter((w) => widgetStates[w.descriptor_id] === "full")
             .map((widget) => {
-              const handlers = createWidgetHandlers(widget.descriptor_id);
+              const handlers = getWidgetHandlers(widget.descriptor_id);
               const dragPos = { x: widget.x || 0, y: widget.y || 0 };
               return (
                 <div key={widget.descriptor_id} className="w-full max-w-md max-h-[80vh] overflow-auto">
@@ -1451,8 +1603,6 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
                     onDismiss={handlers.onDismiss}
                     dragPosition={dragPos}
                     onDragEnd={handlers.onDragEndCompat}
-                    collapsed={widget.collapsed}
-                    onToggleCollapse={handlers.onToggleCollapse}
                   />
                   <Button
                     variant="outline"

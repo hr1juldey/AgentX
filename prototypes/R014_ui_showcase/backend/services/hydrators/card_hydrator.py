@@ -72,7 +72,12 @@ class CardHydrator(dspy.Module):
         stat_cards = self.hydrator(presentation_ready=hydration_input)
 
         # Extract content from result (DSPy Predict returns special object)
-        content = stat_cards.get("content", []) if hasattr(stat_cards, "get") else []
+        content = stat_cards.get("content", {}) if hasattr(stat_cards, "get") else {}
+
+        # Extract metadata from tool module
+        tool_metadata = (
+            stat_cards.get("metadata", {}) if hasattr(stat_cards, "get") else {}
+        )
 
         return {
             "id": str(uuid.uuid4())[:8],
@@ -81,7 +86,7 @@ class CardHydrator(dspy.Module):
             "content": content,
             "metadata": {
                 "color_scheme": color_scheme,
-                "card_count": len(content),
+                **tool_metadata,
             },
         }
 

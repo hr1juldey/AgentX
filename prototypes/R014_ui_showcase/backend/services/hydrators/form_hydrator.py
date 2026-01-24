@@ -64,7 +64,12 @@ class FormHydrator(dspy.Module):
         form_fields = self.hydrator(presentation_ready=hydration_input)
 
         # Extract content from result (DSPy Predict returns special object)
-        content = form_fields.get("content", []) if hasattr(form_fields, "get") else []
+        content = form_fields.get("content", {}) if hasattr(form_fields, "get") else {}
+
+        # Extract metadata from tool module
+        tool_metadata = (
+            form_fields.get("metadata", {}) if hasattr(form_fields, "get") else {}
+        )
 
         return {
             "id": str(uuid.uuid4())[:8],
@@ -72,8 +77,8 @@ class FormHydrator(dspy.Module):
             "timestamp": datetime.utcnow().isoformat(),
             "content": content,
             "metadata": {
-                "field_count": len(content),
                 "insight_count": len(insights),
+                **tool_metadata,
             },
         }
 

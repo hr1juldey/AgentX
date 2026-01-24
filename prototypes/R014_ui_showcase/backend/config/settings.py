@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     app_name: str = "R014 UI Showcase"
     app_version: str = "0.1.0"
     debug: bool = True
+    mock_mode: bool = False
 
     # Server
     host: str = "0.0.0.0"

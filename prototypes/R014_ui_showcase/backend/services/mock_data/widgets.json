@@ -1,0 +1,59 @@
+{
+  "widgets": {
+    "chart": {
+      "id": "mock-chart-001",
+      "type": "chart",
+      "timestamp": "auto",
+      "title": "U.S. Recessions Timeline",
+      "content": "Timeline of major U.S. recessions showing duration and key economic indicators.",
+      "metadata": {
+        "chart_type": "bar",
+        "data": [
+          {"label": "Great Depression (1929-1939)", "value": 10},
+          {"label": "1980-1982 Recession", "value": 1.3},
+          {"label": "2001 Dot-Com", "value": 0.7},
+          {"label": "Great Recession (2007-2009)", "value": 1.5}
+        ],
+        "data_keys": ["value"]
+      }
+    },
+    "card": {
+      "id": "mock-card-001",
+      "type": "card",
+      "timestamp": "auto",
+      "title": "Economic Recession Statistics",
+      "content": "## Key Recession Metrics\n\n### Longest Recession\n**Great Depression: 10 years** (1929-1939)\n\nThe longest economic downturn in U.S. history.\n\n### Highest Unemployment\n**25% during Great Depression**\n\nPeak unemployment rate reached in 1933.\n\n### Most Severe GDP Drop\n**-30% (1929-1933)**\n\nLargest GDP contraction in U.S. history.",
+      "metadata": {
+        "card_count": 3,
+        "color_scheme": {"primary": "blue_500"}
+      }
+    },
+    "form": {
+      "id": "mock-form-001",
+      "type": "form",
+      "timestamp": "auto",
+      "title": "Economic Event Data Collection",
+      "content": "Please provide details about the economic event you would like to record.",
+      "fields": [
+        {"label": "Event Name", "type": "text", "description": "Name of the economic event", "required": true},
+        {"label": "Start Year", "type": "number", "description": "Year the event began", "required": true},
+        {"label": "Duration", "type": "text", "description": "How long it lasted (e.g., 18 months)", "required": true},
+        {"label": "GDP Impact", "type": "text", "description": "Percentage GDP change", "required": false},
+        {"label": "Unemployment Rate", "type": "text", "description": "Peak unemployment %", "required": false},
+        {"label": "Primary Cause", "type": "textarea", "description": "Main factor that caused the event", "required": true}
+      ],
+      "submit_button_text": "Submit Event Data"
+    },
+    "markdown": {
+      "id": "mock-markdown-001",
+      "type": "markdown",
+      "timestamp": "auto",
+      "title": "U.S. Recessions: Historical Overview",
+      "content": "# U.S. Recessions: Historical Overview\n\n## Key Findings\n\n1. **Great Depression (1929-1939)**: Longest and most severe economic downturn\n   - Duration: 10 years\n   - GDP decline: 30%\n   - Peak unemployment: 25%\n\n2. **Great Recession (2007-2009)**: Longest since World War II\n   - Duration: 18 months\n   - GDP decline: 4.3%\n   - Peak unemployment: 10%\n\n## Trends\n\n- Recessions have become shorter over time (post-WWII trend)\n- Financial crises cause deeper contractions than non-financial recessions\n- Policy interventions have helped reduce severity in recent decades\n"
+    }
+  },
+  "delivery_defaults": {
+    "delays": [0.0, 0.5, 1.0, 1.5],
+    "total_duration": 2.0
+  }
+}

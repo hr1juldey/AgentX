@@ -78,6 +78,11 @@ class ChartHydrator(dspy.Module):
             chart_config.get("content", {}) if hasattr(chart_config, "get") else {}
         )
 
+        # Extract metadata from tool module
+        tool_metadata = (
+            chart_config.get("metadata", {}) if hasattr(chart_config, "get") else {}
+        )
+
         return {
             "id": str(uuid.uuid4())[:8],
             "type": "chart",
@@ -86,6 +91,7 @@ class ChartHydrator(dspy.Module):
             "metadata": {
                 "pov_count": len(points_of_view),
                 "data_source": "researched",
+                **tool_metadata,
             },
         }
 

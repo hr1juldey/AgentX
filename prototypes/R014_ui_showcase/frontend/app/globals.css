@@ -105,13 +105,16 @@
   /* Island sizes */
   --island-diameter: 56px;
   --agent-diameter: 88px;
+
+  /* Island icon color - white for contrast on colored backgrounds */
+  --island-icon-color: 0 0% 100%;
 }
 
 .dark {
   /* Widget-type colors - dark mode with higher saturation */
   --island-chart: 220 70% 50%;
   --island-form: 160 60% 45%;
-  --island-markdown: 210 40% 98%;
+  --island-markdown: 220 30% 35%;
   --island-image: 280 65% 60%;
   --island-progress: 30 80% 55%;
   --island-card: 200 70% 50%;

@@ -9,6 +9,8 @@ from typing import Any
 from fastapi import WebSocket, WebSocketDisconnect
 
 from application.use_cases.master_agent import get_master_agent_use_case
+from api.mock_handler import handle_mock_mode
+from config.settings import settings
 
 router = __import__("fastapi").APIRouter()
 logger = logging.getLogger(__name__)
@@ -40,6 +42,13 @@ async def generate_widget_master_agent(websocket: WebSocket) -> None:
             device_context = "desktop"
 
         logger.info(f"🎯 [{session_id}] {user_query[:100]}...")
+
+        # =============================================================================
+        # MOCK MODE - Send pre-defined widgets without LLM calls
+        # =============================================================================
+        if settings.mock_mode:
+            await handle_mock_mode(websocket, session_id, user_query)
+            return
 
         def _serialize_delivery_plan(delivery_plan: Any) -> dict:
             """Safely serialize DeliveryPlan to dict with error handling."""
