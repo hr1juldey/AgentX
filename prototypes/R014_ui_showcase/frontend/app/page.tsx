@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, memo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, memo, useRef, startTransition } from "react";
 import { motion, AnimatePresence, PanInfo, LayoutGroup } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Plus, MessageSquare, X, Sparkles, Images, History, Database, ChevronDown, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,6 +87,36 @@ interface Session {
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8014";
 const appName = process.env.NEXT_PUBLIC_APP_NAME || "R014 UI Showcase";
 
+// UI boundaries to prevent widgets from spawning over fixed UI elements
+const UI_BOUNDARIES = {
+  HEADER_HEIGHT: 56,
+  SIDEBAR_WIDTH: 320,
+  CENTRAL_ISLAND_MARGIN: 120, // bottom margin to avoid central island
+  EDGE_PADDING: 20,
+  ISLAND_DIAMETER: 56,
+};
+
+// Calculate safe spawn zones that respect UI boundaries
+const getSafeSpawnZone = (sidebarOpen: boolean) => {
+  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+
+  return {
+    left: {
+      minX: (sidebarOpen ? UI_BOUNDARIES.SIDEBAR_WIDTH : 0) + UI_BOUNDARIES.EDGE_PADDING,
+      maxX: vw * 0.45,
+      minY: UI_BOUNDARIES.HEADER_HEIGHT + UI_BOUNDARIES.EDGE_PADDING,
+      maxY: vh - UI_BOUNDARIES.CENTRAL_ISLAND_MARGIN,
+    },
+    right: {
+      minX: vw * 0.55,
+      maxX: vw - UI_BOUNDARIES.ISLAND_DIAMETER - UI_BOUNDARIES.EDGE_PADDING,
+      minY: UI_BOUNDARIES.HEADER_HEIGHT + UI_BOUNDARIES.EDGE_PADDING,
+      maxY: vh - UI_BOUNDARIES.CENTRAL_ISLAND_MARGIN,
+    },
+  };
+};
+
 type View = "main" | "gallery" | "sessions" | "connectors";
 
 // Widget 3-State Renderer - handles Island -> Card -> Full cycle
@@ -106,6 +138,26 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
   onDragEnd: (x: number, y: number) => void;
   onDismiss: () => void;
 }) {
+  // Track drag distance to distinguish clicks from drags
+  const dragDistanceRef = useRef(0);
+  const CLICK_THRESHOLD = 5;
+
+  const handleDrag = useCallback(() => {
+    dragDistanceRef.current++;
+  }, []);
+
+  const handleClick = useCallback(() => {
+    if (dragDistanceRef.current < CLICK_THRESHOLD) {
+      onCycleState();
+    }
+    dragDistanceRef.current = 0;
+  }, [onCycleState]);
+
+  const handleDragEnd = useCallback((_: unknown, info: PanInfo) => {
+    onDragEnd(info.offset.x, info.offset.y);
+    dragDistanceRef.current = 0;
+  }, [onDragEnd]);
+
   // Get widget icon based on type
   const getWidgetIcon = () => {
     switch (widget.descriptor_type) {
@@ -169,7 +221,8 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
           dragElastic={0}
           dragMomentum={false}
           whileDrag={{ cursor: "grabbing", scale: 1.02 }}
-          onDragEnd={(_, info) => onDragEnd(info.offset.x, info.offset.y)}
+          onDrag={handleDrag}
+          onDragEnd={handleDragEnd}
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.8 }}
@@ -179,7 +232,7 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
         >
           <motion.div
             className="relative group cursor-pointer select-text"
-            onClick={onCycleState}
+            onClick={handleClick}
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -205,11 +258,13 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
                 </div>
               </div>
 
-              {/* Content summary */}
-              <div className="p-4">
-                <p className="text-sm text-foreground/80 line-clamp-3 select-text">
-                  {widget.content || "Click to expand"}
-                </p>
+              {/* Content summary with markdown rendering */}
+              <div className="p-4 overflow-hidden">
+                <div className="text-sm text-foreground/80 line-clamp-3 select-text prose prose-sm max-w-none dark:prose-invert [&>*]:mb-0 [&>*]:mt-0 [&_p]:inline [&_ul]:inline [&_ol]:inline [&_li]:inline">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {widget.content || "Click to expand"}
+                  </ReactMarkdown>
+                </div>
               </div>
 
               {/* Footer with hint */}
@@ -239,7 +294,8 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
           dragElastic={0}
           dragMomentum={false}
           whileDrag={{ cursor: "grabbing" }}
-          onDragEnd={(_, info) => onDragEnd(info.offset.x, info.offset.y)}
+          onDrag={handleDrag}
+          onDragEnd={handleDragEnd}
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
@@ -252,7 +308,7 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
             <motion.div
               className="flex items-center gap-3 px-4 py-3 rounded-t-2xl border-b border-border/50 select-text"
               style={{ background: widgetColor }}
-              onClick={onCycleState}
+              onClick={handleClick}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.99 }}
             >
@@ -897,7 +953,7 @@ export default function HomePage() {
   // Feature flag for island UI
   const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
 
-  // Assign initial positions to new widgets (two-side layout)
+  // Assign initial positions to new widgets (two-side layout, respecting UI boundaries)
   useEffect(() => {
     if (!enableIslands) return;
 
@@ -905,13 +961,9 @@ export default function HomePage() {
     const newWidgets = widgets.filter((w) => !positionedWidgetIds.has(w.descriptor_id));
     if (newWidgets.length === 0) return;
 
-    // Screen zones (left and right)
-    const ZONES = {
-      left: { minX: 50, maxX: "48%" },
-      right: { minX: "52%", maxX: "95%" }
-    };
+    // Get safe spawn zones that respect UI boundaries
+    const safeZones = getSafeSpawnZone(sidebarOpen);
 
-    const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
     const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 800;
     const centerY = viewportHeight / 2;
 
@@ -923,15 +975,17 @@ export default function HomePage() {
     newWidgets.forEach((widget, index) => {
       // Alternate between left and right zones
       const zone = index % 2 === 0 ? "left" : "right";
-      const { minX, maxX } = ZONES[zone];
+      const zoneConfig = safeZones[zone];
 
-      const minXVal = typeof minX === "number" ? minX : (parseFloat(minX) / 100) * viewportWidth;
-      const maxXVal = typeof maxX === "number" ? maxX : (parseFloat(maxX) / 100) * viewportWidth;
+      const minXVal = zoneConfig.minX;
+      const maxXVal = zoneConfig.maxX;
+      const minYVal = zoneConfig.minY;
+      const maxYVal = zoneConfig.maxY;
 
       // Try to find non-overlapping position in chosen zone
       for (let attempt = 0; attempt < 15; attempt++) {
         const randomX = Math.random() * (maxXVal - minXVal) + minXVal;
-        const randomY = Math.random() * (viewportHeight * 0.6) + (viewportHeight * 0.2);
+        const randomY = Math.random() * (maxYVal - minYVal) + minYVal;
 
         const hasCollision = existingPositions.some((pos) => {
           const dx = pos.x - randomX;
@@ -946,16 +1000,16 @@ export default function HomePage() {
         }
       }
 
-      // Fallback
+      // Fallback - place in center of zone
       newPositions[widget.descriptor_id] = {
         x: (minXVal + maxXVal) / 2,
-        y: centerY + (Math.random() - 0.5) * 200,
+        y: Math.min(maxYVal, Math.max(minYVal, centerY + (Math.random() - 0.5) * 200)),
       };
       existingPositions.push(newPositions[widget.descriptor_id]);
     });
 
     setIslandPositions((prev) => ({ ...prev, ...newPositions }));
-  }, [widgets, enableIslands]);
+  }, [widgets, enableIslands, sidebarOpen]);
 
   // Fetch health status
   useEffect(() => {
@@ -1089,28 +1143,28 @@ export default function HomePage() {
     console.log("Voice toggle requested (not implemented)");
   }, []);
 
-  // Dismiss widget - memoized to prevent re-renders
+  // Dismiss widget - memoized to prevent re-renders, uses startTransition for batching
   const dismissWidget = useCallback((id: string) => {
     console.log(`🗑️ [DISMISS] Widget ${id} being dismissed`);
-    console.trace("Dismiss call stack:");
-    setWidgets((prev) => {
-      const filtered = prev.filter((w) => w.descriptor_id !== id);
-      console.log(`🗑️ [DISMISS] Widgets before: ${prev.length}, after: ${filtered.length}`);
-      return filtered;
+    // Use startTransition to batch all state updates as lower-priority
+    startTransition(() => {
+      setWidgets((prev) => {
+        const filtered = prev.filter((w) => w.descriptor_id !== id);
+        console.log(`🗑️ [DISMISS] Widgets before: ${prev.length}, after: ${filtered.length}`);
+        return filtered;
+      });
+      setIslandPositions((prev) => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
+      setWidgetStates((prev) => {
+        const updated = { ...prev };
+        delete updated[id];
+        return updated;
+      });
     });
-    setIslandPositions((prev) => {
-      const updated = { ...prev };
-      delete updated[id];
-      console.log(`🗑️ [DISMISS] Removed island position for ${id}`);
-      return updated;
-    });
-    setWidgetStates((prev) => {
-      const updated = { ...prev };
-      delete updated[id];
-      console.log(`🗑️ [DISMISS] Removed widget state for ${id}, was: ${prev[id]}`);
-      return updated;
-    });
-    // Clean up cached handlers
+    // Clean up cached handlers (sync, not part of transition)
     if (handlersCacheRef.current[id]) {
       delete handlersCacheRef.current[id];
     }
@@ -1262,6 +1316,26 @@ export default function HomePage() {
     setWidgetStates(prev => ({ ...prev, [id]: "full" }));
   }, []);
 
+  // Memoized stable handlers for Widget3StateRenderer to prevent re-renders
+  const stableHandlers = useMemo(() => {
+    const cache: Record<string, {
+      onCycleState: () => void;
+      onDragEnd: (x: number, y: number) => void;
+      onDismiss: () => void;
+    }> = {};
+
+    widgets.forEach(w => {
+      const id = w.descriptor_id;
+      cache[id] = {
+        onCycleState: () => cycleWidgetState(id),
+        onDragEnd: (x: number, y: number) => handleIslandDragEnd(id, x, y),
+        onDismiss: () => dismissWidget(id),
+      };
+    });
+
+    return cache;
+  }, [widgets, cycleWidgetState, handleIslandDragEnd, dismissWidget]);
+
   // Sidebar
   const Sidebar = () => (
     <motion.aside
@@ -1349,6 +1423,8 @@ export default function HomePage() {
             const position = islandPositions[widget.descriptor_id] || { x: centerX, y: centerY };
             const baseZIndex = 1000 + index;
 
+            // Use stable handlers to prevent re-renders
+            const widgetHandlers = stableHandlers[widget.descriptor_id];
             return (
               <Widget3StateRenderer
                 key={widget.descriptor_id}
@@ -1356,9 +1432,9 @@ export default function HomePage() {
                 state={currentState}
                 position={position}
                 zIndex={baseZIndex}
-                onCycleState={() => cycleWidgetState(widget.descriptor_id)}
-                onDragEnd={(x, y) => handleIslandDragEnd(widget.descriptor_id, x, y)}
-                onDismiss={handlers.onDismiss}
+                onCycleState={widgetHandlers?.onCycleState || handlers.onDismiss}
+                onDragEnd={widgetHandlers?.onDragEnd || handlers.onDragEndCompat}
+                onDismiss={widgetHandlers?.onDismiss || handlers.onDismiss}
               />
             );
           }
