@@ -1,5 +1,9 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
+import { enableMapSet } from 'immer'
+
+// Enable Immer MapSet plugin for Map/Set support
+enableMapSet()
 
 // Types
 export type ViewState = 'island' | 'card' | 'full'
@@ -42,15 +46,18 @@ interface WidgetState {
   widgets: Map<string, UIDescriptor>
   viewStates: Map<string, ViewState>
   positions: Map<string, Position>
+}
 
-  // Derived selector (computed when accessed)
-  widgetIds: string[]
+// Options for adding widgets
+interface AddWidgetOptions {
+  position?: Position
+  sidebarOpen?: boolean  // Pass true if sidebar is open to avoid spawning under it
 }
 
 // Actions interface
 interface WidgetActions {
   // CRUD operations
-  addWidget: (descriptor: UIDescriptor, position?: Position) => void
+  addWidget: (descriptor: UIDescriptor, options?: AddWidgetOptions) => void
   removeWidget: (id: string) => void
 
   // State management
@@ -62,7 +69,7 @@ interface WidgetActions {
   updatePositionDelta: (id: string, dx: number, dy: number) => void
 
   // Batch operations
-  addWidgets: (descriptors: UIDescriptor[]) => void
+  addWidgets: (descriptors: UIDescriptor[], options?: AddWidgetOptions) => void
   clearAll: () => void
 }
 
@@ -70,40 +77,79 @@ interface WidgetActions {
 type WidgetStore = WidgetState & WidgetActions
 
 // Position generation helper
-function generateSafePosition(id: string, existingPositions: Map<string, Position>): Position {
+// Generates safe positions avoiding:
+// - Sidebar (320px on the left when open)
+// - Central island/chat bubble (bottom-center ~400px wide, ~200px tall)
+// - Other widgets
+function generateSafePosition(
+  id: string,
+  existingPositions: Map<string, Position>,
+  sidebarOpen = false
+): Position {
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1200
   const vh = typeof window !== 'undefined' ? window.innerHeight : 800
 
   // Use hash of ID for deterministic position
   const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
 
-  // Safe zones
-  const minX = 80
-  const maxX = vw - 80
+  // Widget dimensions
+  const widgetWidth = 300
+  const widgetHeight = 200
+  const padding = 20
+
+  // Safe zones - account for sidebar and ensure widget stays on screen
+  const sidebarOffset = sidebarOpen ? 320 : 0
+  const minX = sidebarOffset + 80
+  const maxX = Math.max(minX + widgetWidth, vw - 80)  // Ensure maxX > minX
+  const availableWidth = maxX - minX - widgetWidth
+
   const minY = 80
-  const maxY = vh - 200
+  const maxY = Math.max(minY + widgetHeight, vh - 280)  // Ensure maxY > minY
+  const availableHeight = maxY - minY - widgetHeight
 
-  let x = (hash % (maxX - minX)) + minX
-  let y = (hash % (maxY - minY)) + minY
+  // Central island "danger zone" - avoid spawning in bottom-center area
+  const centerX = vw / 2
+  const dangerZoneWidth = 450
+  const dangerZoneMinX = centerX - dangerZoneWidth / 2
+  const dangerZoneMaxX = centerX + dangerZoneWidth / 2
 
-  // Avoid collision with existing positions
-  let attempts = 0
-  const OFFSET = 40
+  // Helper function to clamp value to range
+  const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max)
 
-  while (attempts < 10) {
-    const hasCollision = Array.from(existingPositions.values()).some(
-      pos => Math.abs(pos.x - x) < OFFSET && Math.abs(pos.y - y) < OFFSET
+  // Try up to 50 positions to find a safe spot
+  for (let attempt = 0; attempt < 50; attempt++) {
+    // Generate position using hash + attempt for deterministic spread
+    const hashOffset = hash + attempt * 137
+    const x = minX + (hashOffset % Math.max(1, availableWidth))
+    const y = minY + ((hashOffset * 251) % Math.max(1, availableHeight))
+
+    // Clamp to bounds
+    const testX = clamp(x, minX, maxX - widgetWidth)
+    const testY = clamp(y, minY, maxY - widgetHeight)
+
+    // Check if we're in the central island danger zone (bottom-center)
+    const inDangerZone = (
+      testX < dangerZoneMaxX &&
+      testX + widgetWidth > dangerZoneMinX &&
+      testY > vh - 320  // Bottom 320px is the danger zone vertically
     )
 
-    if (!hasCollision) break
+    // Check collision with existing widgets
+    const hasCollision = Array.from(existingPositions.values()).some(
+      pos => Math.abs(pos.x - testX) < (widgetWidth + padding) &&
+             Math.abs(pos.y - testY) < (widgetHeight + padding)
+    )
 
-    // Shift position and retry
-    x = (x + OFFSET) % maxX
-    y = (y + OFFSET) % maxY
-    attempts++
+    if (!inDangerZone && !hasCollision) {
+      return { x: testX, y: testY }
+    }
   }
 
-  return { x, y }
+  // Fallback: guaranteed safe position within bounds (top-left corner of safe area)
+  return {
+    x: clamp(minX + (hash % Math.max(1, availableWidth / 2)), minX, maxX - widgetWidth),
+    y: clamp(minY + ((hash * 251) % Math.max(1, availableHeight / 2)), minY, maxY - widgetHeight)
+  }
 }
 
 // Create store with Immer middleware
@@ -114,15 +160,14 @@ export const useWidgetStore = create<WidgetStore>()(
     viewStates: new Map(),
     positions: new Map(),
 
-    // Computed getter for widget IDs
-    get widgetIds() {
-      return Array.from(get().widgets.keys())
-    },
-
     // Add single widget
-    addWidget: (descriptor, position) =>
+    addWidget: (descriptor, options) =>
       set((state) => {
-        const safePosition = position || generateSafePosition(descriptor.descriptor_id, state.positions)
+        const safePosition = options?.position || generateSafePosition(
+          descriptor.descriptor_id,
+          state.positions,
+          options?.sidebarOpen || false
+        )
         state.widgets.set(descriptor.descriptor_id, descriptor)
         state.viewStates.set(descriptor.descriptor_id, 'island')
         state.positions.set(descriptor.descriptor_id, safePosition)
@@ -170,10 +215,11 @@ export const useWidgetStore = create<WidgetStore>()(
       }),
 
     // Add multiple widgets at once
-    addWidgets: (descriptors) =>
+    addWidgets: (descriptors, options) =>
       set((state) => {
+        const sidebarOpen = options?.sidebarOpen || false
         descriptors.forEach((d) => {
-          const safePosition = generateSafePosition(d.descriptor_id, state.positions)
+          const safePosition = generateSafePosition(d.descriptor_id, state.positions, sidebarOpen)
           state.widgets.set(d.descriptor_id, d)
           state.viewStates.set(d.descriptor_id, 'island')
           state.positions.set(d.descriptor_id, safePosition)

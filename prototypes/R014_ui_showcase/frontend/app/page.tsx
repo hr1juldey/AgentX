@@ -25,7 +25,7 @@ import { HopProgressWidget } from "@/components/widgets/hop-progress-widget";
 import { CitationCardWidget } from "@/components/widgets/citation-card-widget";
 import { IsolatedWidget } from "@/components/widgets/isolated-widget";
 import { ToolIsland, MobileBubbleLayer } from "@/components/islands";
-import { useWidgetStore } from "@/store/widget-store";
+import { useWidgetStore, useUIStore, useNetworkStore } from "@/store";
 
 interface UIDescriptor {
   descriptor_id: string;
@@ -566,17 +566,43 @@ const WidgetRenderer = memo(function WidgetRenderer({
 });
 
 export default function HomePage() {
-  const [view, setView] = useState<View>("main");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  // ============================================================================
+  // PHASE 1 MIGRATION: Using Zustand stores for global state
+  // ============================================================================
+  // UI Store (navigation, sidebar, loading)
+  const currentView = useUIStore((s) => s.currentView);
+  const sidebarOpen = useUIStore((s) => s.sidebarOpen);
+  const globalLoading = useUIStore((s) => s.globalLoading);
+  const setCurrentView = useUIStore((s) => s.setCurrentView);
+  const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
+  const setGlobalLoading = useUIStore((s) => s.setGlobalLoading);
+
+  // Network Store (sessions, connectors, health, WebSocket, QA progress)
+  const sessions = useNetworkStore((s) => s.sessions);
+  const connectors = useNetworkStore((s) => s.connectors);
+  const apiHealth = useNetworkStore((s) => s.apiHealth);
+  const wsConnection = useNetworkStore((s) => s.wsConnection);
+  const qaProgress = useNetworkStore((s) => s.qaProgress);
+  const setSessions = useNetworkStore((s) => s.setSessions);
+  const setConnector = useNetworkStore((s) => s.setConnector);
+  const setApiHealth = useNetworkStore((s) => s.setApiHealth);
+  const setWsConnection = useNetworkStore((s) => s.setWsConnection);
+  const setQaProgress = useNetworkStore((s) => s.setQaProgress);
+  const resetQaProgress = useNetworkStore((s) => s.resetQaProgress);
+
+  // ============================================================================
+  // LOCAL STATE: Keep transient UI state as useState
+  // ============================================================================
+  // Loading state (using local name for compatibility with existing code)
+  const loading = globalLoading;
+  const setLoading = (isLoading: boolean) => setGlobalLoading(isLoading);
+
+  // Health state (using local name for compatibility with existing code)
+  const health = apiHealth;
+  const setHealth = (newHealth: string) => setApiHealth(newHealth as 'unknown' | 'healthy' | 'unhealthy' | 'disconnected');
+
+  // Local widgets array (for non-island mode and MobileBubbleLayer)
   const [widgets, setWidgets] = useState<UIDescriptor[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [connectors, setConnectors] = useState<Record<string, boolean>>({
-    searxng: false,
-    mem0: false,
-    qdrant: false,
-  });
-  const [health, setHealth] = useState<string>("unknown");
 
   // ============================================================================
   // REMOVED: Centralized widget state (widgetStates, islandPositions)
@@ -607,34 +633,23 @@ export default function HomePage() {
   // Threshold for click vs drag (in pixels)
   const CLICK_THRESHOLD = 5;
 
-  // WebSocket connection state
-  const [wsConnection, setWsConnection] = useState<WebSocket | null>(null);
-
-  // QA progress state
+  // ============================================================================
+  // QA PROGRESS: Now using Network Store
+  // ============================================================================
   type QACheckpointStatus = "running" | "passed" | "failed";
-  type QACheckpoint = {
-    status: QACheckpointStatus;
-    checkpoint: string;
-    details: Record<string, unknown>;
-  };
 
-  const [qaProgress, setQaProgress] = useState<Record<string, QACheckpoint>>({});
-
-  // Update QA checkpoint
+  // Update QA checkpoint - now uses store action
   const updateQACheckpoint = useCallback((checkpoint: string, status: QACheckpointStatus, details: Record<string, unknown> = {}) => {
-    setQaProgress(prev => ({
-      ...prev,
-      [checkpoint]: { status, checkpoint, details }
-    }));
+    setQaProgress(checkpoint, status, details);
     console.log(`✓ QA ${checkpoint}: ${status}`);
-  }, []);
+  }, [setQaProgress]);
 
-  // Reset QA progress
-  const resetQAProgress = useCallback(() => {
-    setQaProgress({});
+  // Reset QA progress - now uses store action
+  const handleResetQAProgress = useCallback(() => {
+    resetQaProgress();
     // Note: widgetStates removed - IsolatedWidget handles its own state
     setHasWidgetsArrived(false); // Reset widget arrival flag
-  }, []);
+  }, [resetQaProgress]);
 
   // ============================================================================
   // STATE COLOCATION PATTERN: New simple stable callbacks for IsolatedWidget
@@ -726,7 +741,7 @@ export default function HomePage() {
     };
 
     // Add to Zustand store (handles position generation and state initialization)
-    useWidgetStore.getState().addWidget(widget);
+    useWidgetStore.getState().addWidget(widget, { sidebarOpen });
 
     // Also keep local widgets array in sync (for non-island mode and MobileBubbleLayer)
     setWidgets(prev => [...prev, widget]);
@@ -808,7 +823,10 @@ export default function HomePage() {
   }, [widgets, generateSafePosition]);
 
   // Get widget IDs from Zustand store for island mode rendering
-  const storeWidgetIds = useWidgetStore((s) => s.widgetIds);
+  // NOTE: We use useMemo to compute IDs from the widgets Map to avoid infinite re-renders
+  // (accessing s.widgets directly gives us a stable Map reference)
+  const storeWidgets = useWidgetStore((s) => s.widgets);
+  const storeWidgetIds = useMemo(() => Array.from(storeWidgets.keys()), [storeWidgets]);
 
   // Feature flag for island UI
   const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
@@ -925,7 +943,7 @@ export default function HomePage() {
     if (!prompt.trim()) return;
 
     setLoading(true);
-    resetQAProgress();
+    handleResetQAProgress();
     setGenerationComplete(false);
 
     const ws = connectWebSocket();
@@ -939,7 +957,7 @@ export default function HomePage() {
         device_context: "desktop",
       }));
     };
-  }, [connectWebSocket, resetQAProgress, setupWebSocketHandlers]);
+  }, [connectWebSocket, handleResetQAProgress, setupWebSocketHandlers]);
 
   const handleSendMessage = useCallback((message: string) => {
     generateContentWithWebSocket(message);
@@ -1083,12 +1101,13 @@ export default function HomePage() {
   // ============================================================================
 
   // Sidebar navigation handlers - memoized to prevent re-renders
-  const handleCloseSidebar = useCallback(() => setSidebarOpen(false), []);
-  const handleToggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), []);
-  const handleNavMain = useCallback(() => { setView("main"); setSidebarOpen(false); }, []);
-  const handleNavGallery = useCallback(() => { setView("gallery"); setSidebarOpen(false); }, []);
-  const handleNavSessions = useCallback(() => { setView("sessions"); setSidebarOpen(false); }, []);
-  const handleNavConnectors = useCallback(() => { setView("connectors"); setSidebarOpen(false); }, []);
+  const handleCloseSidebar = useCallback(() => setSidebarOpen(false), [setSidebarOpen]);
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const handleToggleSidebar = useCallback(() => toggleSidebar(), [toggleSidebar]);
+  const handleNavMain = useCallback(() => { setCurrentView("main"); setSidebarOpen(false); }, [setCurrentView, setSidebarOpen]);
+  const handleNavGallery = useCallback(() => { setCurrentView("gallery"); setSidebarOpen(false); }, [setCurrentView, setSidebarOpen]);
+  const handleNavSessions = useCallback(() => { setCurrentView("sessions"); setSidebarOpen(false); }, [setCurrentView, setSidebarOpen]);
+  const handleNavConnectors = useCallback(() => { setCurrentView("connectors"); setSidebarOpen(false); }, [setCurrentView, setSidebarOpen]);
 
   // Sidebar
   const Sidebar = () => (
@@ -1107,7 +1126,7 @@ export default function HomePage() {
 
       <nav className="flex-1 p-4 space-y-2">
         <Button
-          variant={view === "main" ? "secondary" : "ghost"}
+          variant={currentView === "main" ? "secondary" : "ghost"}
           className="w-full justify-start"
           onClick={handleNavMain}
         >
@@ -1115,7 +1134,7 @@ export default function HomePage() {
           Main Workspace
         </Button>
         <Button
-          variant={view === "gallery" ? "secondary" : "ghost"}
+          variant={currentView === "gallery" ? "secondary" : "ghost"}
           className="w-full justify-start"
           onClick={handleNavGallery}
         >
@@ -1123,7 +1142,7 @@ export default function HomePage() {
           Widget Gallery
         </Button>
         <Button
-          variant={view === "sessions" ? "secondary" : "ghost"}
+          variant={currentView === "sessions" ? "secondary" : "ghost"}
           className="w-full justify-start"
           onClick={handleNavSessions}
         >
@@ -1131,7 +1150,7 @@ export default function HomePage() {
           Sessions
         </Button>
         <Button
-          variant={view === "connectors" ? "secondary" : "ghost"}
+          variant={currentView === "connectors" ? "secondary" : "ghost"}
           className="w-full justify-start"
           onClick={handleNavConnectors}
         >
@@ -1348,10 +1367,10 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
   const connectorToggleHandlers = useMemo(() => {
     const handlers: Record<string, () => void> = {};
     Object.keys(connectors).forEach(name => {
-      handlers[name] = () => setConnectors(prev => ({ ...prev, [name]: !prev[name as keyof typeof prev] }));
+      handlers[name] = () => setConnector(name as keyof typeof connectors, !connectors[name as keyof typeof connectors]);
     });
     return handlers;
-  }, [connectors]);
+  }, [connectors, setConnector]);
 
   // Connectors view
   const ConnectorsView = () => (
@@ -1419,10 +1438,10 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
 
       {/* Main Content */}
       <main className="pt-20 px-4 lg:px-6 pb-32">
-        {view === "main" && <MainView />}
-        {view === "gallery" && <GalleryView />}
-        {view === "sessions" && <SessionsView />}
-        {view === "connectors" && <ConnectorsView />}
+        {currentView === "main" && <MainView />}
+        {currentView === "gallery" && <GalleryView />}
+        {currentView === "sessions" && <SessionsView />}
+        {currentView === "connectors" && <ConnectorsView />}
       </main>
 
       {/* Central Island - always visible at bottom center */}
