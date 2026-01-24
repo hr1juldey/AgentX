@@ -19,6 +19,7 @@ interface FormWidgetProps {
   onDismiss?: () => void
   dragPosition?: { x: number; y: number }
   onDragEnd?: (x: number, y: number) => void
+  disableDrag?: boolean // When true, widget is not draggable (for embedded use in IsolatedWidget)
 }
 
 export const FormWidget = memo(function FormWidget({
@@ -31,7 +32,8 @@ export const FormWidget = memo(function FormWidget({
   onToggleCollapse,
   onDismiss,
   dragPosition,
-  onDragEnd
+  onDragEnd,
+  disableDrag = false
 }: FormWidgetProps) {
   const handleDragEnd = useCallback((_: any, info: any) => {
     onDragEnd?.(
@@ -57,14 +59,14 @@ export const FormWidget = memo(function FormWidget({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.25 }}
-      drag
+      drag={disableDrag ? false : undefined}
       dragElastic={0.2}
       dragMomentum={false}
       dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
-      whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
-      onDragEnd={handleDragEnd}
+      whileDrag={disableDrag ? undefined : { scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
+      onDragEnd={disableDrag ? undefined : handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
-      className="relative bg-card border border-border rounded-lg cursor-grab shadow-lg hover:shadow-xl"
+      className={`relative bg-card border border-border rounded-lg shadow-lg hover:shadow-xl ${disableDrag ? '' : 'cursor-grab'}`}
     >
       {/* Widget Header - Click to toggle (Jira-style) */}
       <div

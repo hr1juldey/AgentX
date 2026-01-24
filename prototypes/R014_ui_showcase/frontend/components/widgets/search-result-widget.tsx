@@ -20,6 +20,7 @@ interface SearchResultWidgetProps {
   onDismiss?: () => void
   dragPosition?: { x: number; y: number }
   onDragEnd?: (x: number, y: number) => void
+  disableDrag?: boolean // When true, widget is not draggable (for embedded use in IsolatedWidget)
 }
 
 function stripMarkdownWrapper(content: string): string {
@@ -49,6 +50,7 @@ export const SearchResultWidget = memo(function SearchResultWidget({
   onDismiss,
   dragPosition,
   onDragEnd,
+  disableDrag = false
 }: SearchResultWidgetProps) {
   // Extract confidence with proper type guard
   const confidence = useMemo(() => {
@@ -80,14 +82,14 @@ export const SearchResultWidget = memo(function SearchResultWidget({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
-      drag
+      drag={disableDrag ? false : undefined}
       dragElastic={0.1}
       dragMomentum={false}
       dragConstraints={false}
-      whileDrag={{ scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
-      onDragEnd={handleDragEnd}
+      whileDrag={disableDrag ? undefined : { scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
+      onDragEnd={disableDrag ? undefined : handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
-      className="relative bg-card border border-border rounded-lg p-6 cursor-grab shadow-lg hover:shadow-xl max-w-[600px]"
+      className={`relative bg-card border border-border rounded-lg p-6 shadow-lg hover:shadow-xl max-w-[600px] ${disableDrag ? '' : 'cursor-grab'}`}
     >
       {onDismiss && (
         <button

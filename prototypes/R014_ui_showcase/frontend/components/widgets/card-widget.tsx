@@ -18,6 +18,7 @@ interface CardWidgetProps {
   onDismiss?: () => void
   dragPosition?: { x: number; y: number }
   onDragEnd?: (x: number, y: number) => void
+  disableDrag?: boolean // When true, widget is not draggable (for embedded use in IsolatedWidget)
 }
 
 export const CardWidget = memo(function CardWidget({
@@ -29,7 +30,8 @@ export const CardWidget = memo(function CardWidget({
   onToggleCollapse,
   onDismiss,
   dragPosition,
-  onDragEnd
+  onDragEnd,
+  disableDrag = false
 }: CardWidgetProps) {
   const handleDragEnd = useCallback((_: any, info: any) => {
     onDragEnd?.(
@@ -48,14 +50,14 @@ export const CardWidget = memo(function CardWidget({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      drag
+      drag={disableDrag ? false : undefined}
       dragElastic={0.1}
       dragMomentum={false}
       dragConstraints={false}
-      whileDrag={{ scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
-      onDragEnd={handleDragEnd}
+      whileDrag={disableDrag ? undefined : { scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
+      onDragEnd={disableDrag ? undefined : handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
-      className="relative bg-card border border-border rounded-lg overflow-hidden cursor-grab shadow-lg hover:shadow-xl"
+      className={`relative bg-card border border-border rounded-lg overflow-hidden shadow-lg hover:shadow-xl ${disableDrag ? '' : 'cursor-grab'}`}
     >
       {/* Widget Header - Click to toggle (Jira-style) */}
       <div

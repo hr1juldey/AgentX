@@ -21,6 +21,7 @@ interface HopProgressWidgetProps {
   onDismiss?: () => void
   dragPosition?: { x: number; y: number }
   onDragEnd?: (x: number, y: number) => void
+  disableDrag?: boolean // When true, widget is not draggable (for embedded use in IsolatedWidget)
 }
 
 export const HopProgressWidget = memo(function HopProgressWidget({
@@ -28,6 +29,7 @@ export const HopProgressWidget = memo(function HopProgressWidget({
   onDismiss,
   dragPosition,
   onDragEnd,
+  disableDrag = false
 }: HopProgressWidgetProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const latestEvent = events[events.length - 1]
@@ -59,14 +61,14 @@ export const HopProgressWidget = memo(function HopProgressWidget({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2 }}
-      drag
+      drag={disableDrag ? false : undefined}
       dragElastic={0.1}
       dragMomentum={false}
       dragConstraints={false}
-      whileDrag={{ scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
-      onDragEnd={handleDragEnd}
+      whileDrag={disableDrag ? undefined : { scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
+      onDragEnd={disableDrag ? undefined : handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
-      className="relative bg-card border border-border rounded-lg p-4 cursor-grab shadow-lg hover:shadow-xl max-w-[500px]"
+      className={`relative bg-card border border-border rounded-lg p-4 shadow-lg hover:shadow-xl max-w-[500px] ${disableDrag ? '' : 'cursor-grab'}`}
     >
       {onDismiss && (
         <button

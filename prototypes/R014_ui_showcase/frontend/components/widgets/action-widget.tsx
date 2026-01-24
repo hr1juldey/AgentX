@@ -14,9 +14,20 @@ interface ActionWidgetProps {
   onDismiss?: () => void
   dragPosition?: { x: number; y: number }
   onDragEnd?: (x: number, y: number) => void
+  disableDrag?: boolean // When true, widget is not draggable (for embedded use in IsolatedWidget)
 }
 
-export const ActionWidget = memo(function ActionWidget({ title, content, buttonText = "Click Me", variant = "default", onAction, onDismiss, dragPosition, onDragEnd }: ActionWidgetProps) {
+export const ActionWidget = memo(function ActionWidget({
+  title,
+  content,
+  buttonText = "Click Me",
+  variant = "default",
+  onAction,
+  onDismiss,
+  dragPosition,
+  onDragEnd,
+  disableDrag = false
+}: ActionWidgetProps) {
   const handleDragEnd = useCallback((_: any, info: any) => {
     onDragEnd?.(
       (dragPosition?.x || 0) + info.offset.x,
@@ -36,14 +47,14 @@ export const ActionWidget = memo(function ActionWidget({ title, content, buttonT
       whileHover={{ scale: 1.02 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.15 }}
-      drag
+      drag={disableDrag ? false : undefined}
       dragElastic={0.2}
       dragMomentum={false}
       dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
-      whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
-      onDragEnd={handleDragEnd}
+      whileDrag={disableDrag ? undefined : { scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
+      onDragEnd={disableDrag ? undefined : handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
-      className="relative bg-card cursor-grab shadow-lg hover:shadow-xl border border-border rounded-lg p-6 text-center"
+      className={`relative bg-card shadow-lg hover:shadow-xl border border-border rounded-lg p-6 text-center ${disableDrag ? '' : 'cursor-grab'}`}
     >
       {onDismiss && (
         <button
@@ -56,10 +67,13 @@ export const ActionWidget = memo(function ActionWidget({ title, content, buttonT
       )}
       {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
       {content && <p className="text-sm text-muted-foreground mb-4">{content}</p>}
-
-      <Button onClick={onAction} variant={variant} className="w-full max-w-xs mx-auto">
+      <Button
+        variant={variant}
+        onClick={onAction}
+        className="w-full"
+      >
         {buttonText}
       </Button>
     </motion.div>
-  )
+  );
 });

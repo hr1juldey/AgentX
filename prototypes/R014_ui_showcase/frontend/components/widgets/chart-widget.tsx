@@ -33,6 +33,7 @@ interface ChartWidgetProps {
   onDismiss?: () => void
   dragPosition?: { x: number; y: number }
   onDragEnd?: (x: number, y: number) => void
+  disableDrag?: boolean // When true, widget is not draggable (for embedded use in IsolatedWidget)
 }
 
 const DEFAULT_COLORS = [
@@ -99,7 +100,8 @@ export const ChartWidget = memo(function ChartWidget({
   onToggleCollapse,
   onDismiss,
   dragPosition,
-  onDragEnd
+  onDragEnd,
+  disableDrag = false
 }: ChartWidgetProps) {
   // Simple, direct computation - no memoization
   const isValidData = Array.isArray(data) && data.length > 0
@@ -254,14 +256,14 @@ export const ChartWidget = memo(function ChartWidget({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25 }}
-      drag
+      drag={disableDrag ? false : undefined}
       dragElastic={0.1}
       dragMomentum={false}
       dragConstraints={false}
-      whileDrag={{ scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
+      whileDrag={disableDrag ? undefined : { scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
       onDragEnd={handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
-      className="relative bg-card cursor-grab shadow-lg hover:shadow-xl border border-border rounded-lg min-w-[600px]"
+      className="relative bg-card  shadow-lg hover:shadow-xl border border-border rounded-lg min-w-[600px]"
     >
       {/* Widget Header - Click to toggle (Jira-style) */}
       <div

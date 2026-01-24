@@ -20,6 +20,7 @@ interface GalleryWidgetProps {
   dragPosition?: { x: number; y: number }
   onDragEnd?: (x: number, y: number) => void
   descriptor_id?: string
+  disableDrag?: boolean // When true, widget is not draggable (for embedded use in IsolatedWidget)
 }
 
 export const GalleryWidget = memo(function GalleryWidget({
@@ -31,7 +32,8 @@ export const GalleryWidget = memo(function GalleryWidget({
   onDismiss,
   dragPosition,
   onDragEnd,
-  descriptor_id
+  descriptor_id,
+  disableDrag = false
 }: GalleryWidgetProps) {
   const handleDragEnd = useCallback((_: any, info: any) => {
     onDragEnd?.(
@@ -75,14 +77,14 @@ export const GalleryWidget = memo(function GalleryWidget({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25 }}
-      drag
+      drag={disableDrag ? false : undefined}
       dragElastic={0.2}
       dragMomentum={false}
       dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
-      whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
-      onDragEnd={handleDragEnd}
+      whileDrag={disableDrag ? undefined : { scale: 1.02, cursor: "grabbing", zIndex: 9999 }}
+      onDragEnd={disableDrag ? undefined : handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
-      className="relative bg-card cursor-grab shadow-lg hover:shadow-xl border border-border rounded-lg overflow-hidden"
+      className={`relative bg-card shadow-lg hover:shadow-xl border border-border rounded-lg overflow-hidden ${disableDrag ? '' : 'cursor-grab'}`}
     >
       {/* Widget Header - Click to toggle (Jira-style) */}
       <div
