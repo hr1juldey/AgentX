@@ -93,7 +93,6 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
   widget,
   state,
   position,
-  dragPos,
   zIndex,
   onCycleState,
   onDragEnd,
@@ -102,7 +101,6 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
   widget: UIDescriptor;
   state: "island" | "card" | "full";
   position: { x: number; y: number };
-  dragPos: { x: number; y: number };
   zIndex: number;
   onCycleState: () => void;
   onDragEnd: (x: number, y: number) => void;
@@ -177,7 +175,7 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
           exit={{ opacity: 0, scale: 0.8 }}
           transition={{ duration: 0.22 }}
           className="fixed pointer-events-auto"
-          style={{ x: position.x + dragPos.x, y: position.y + dragPos.y, position: "fixed", zIndex }}
+          style={{ x: position.x, y: position.y, position: "fixed", zIndex }}
         >
           <motion.div
             className="relative group cursor-pointer select-text"
@@ -247,7 +245,7 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.22 }}
           className="fixed pointer-events-auto"
-          style={{ x: position.x + dragPos.x, y: position.y + dragPos.y, position: "fixed", zIndex }}
+          style={{ x: position.x, y: position.y, position: "fixed", zIndex }}
         >
           <div className="relative group">
             {/* Integrated header with cycle button */}
@@ -779,17 +777,12 @@ export default function HomePage() {
   // NEW: Track if widgets have started arriving (for auto-hiding progress)
   const [hasWidgetsArrived, setHasWidgetsArrived] = useState(false);
 
-  // Use ref for drag state to prevent handler recreation (FIXED)
+  // Use ref for drag state to prevent handler recreation (for click vs drag detection)
   const dragStateRef = useRef<Record<string, {
     startPos: { x: number; y: number };
     hasMoved: boolean;
     moveDistance: number;
   }>>({});
-
-  // Store widget positions separately to prevent re-renders (FIXED)
-  // Positions are stored in a ref instead of widget objects to avoid
-  // triggering re-renders of all widgets when one widget is moved
-  const widgetPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
 
   // Cache for widget handlers to prevent re-renders (FIXED)
   const handlersCacheRef = useRef<Record<string, {
@@ -962,9 +955,6 @@ export default function HomePage() {
     });
 
     setIslandPositions((prev) => ({ ...prev, ...newPositions }));
-
-    // Also update the ref to prevent re-renders (FIXED)
-    Object.assign(widgetPositionsRef.current, newPositions);
   }, [widgets, enableIslands]);
 
   // Fetch health status
@@ -1101,38 +1091,29 @@ export default function HomePage() {
 
   // Dismiss widget - memoized to prevent re-renders
   const dismissWidget = useCallback((id: string) => {
-    setWidgets((prev) => prev.filter((w) => w.descriptor_id !== id));
+    console.log(`🗑️ [DISMISS] Widget ${id} being dismissed`);
+    console.trace("Dismiss call stack:");
+    setWidgets((prev) => {
+      const filtered = prev.filter((w) => w.descriptor_id !== id);
+      console.log(`🗑️ [DISMISS] Widgets before: ${prev.length}, after: ${filtered.length}`);
+      return filtered;
+    });
     setIslandPositions((prev) => {
       const updated = { ...prev };
       delete updated[id];
+      console.log(`🗑️ [DISMISS] Removed island position for ${id}`);
       return updated;
     });
     setWidgetStates((prev) => {
       const updated = { ...prev };
       delete updated[id];
+      console.log(`🗑️ [DISMISS] Removed widget state for ${id}, was: ${prev[id]}`);
       return updated;
     });
-    // Clean up position from ref
-    if (widgetPositionsRef.current[id]) {
-      delete widgetPositionsRef.current[id];
-    }
     // Clean up cached handlers
     if (handlersCacheRef.current[id]) {
       delete handlersCacheRef.current[id];
     }
-  }, []);
-
-  // Update widget position - using ref to prevent re-renders (FIXED)
-  const updateWidgetPosition = useCallback((id: string, x: number, y: number) => {
-    // Only update the ref, NOT the widgets state
-    // This prevents all widgets from re-rendering when one is moved
-    widgetPositionsRef.current[id] = { x, y };
-
-    // Also update island positions state for island mode positioning
-    setIslandPositions((prev) => ({
-      ...prev,
-      [id]: { x, y },
-    }));
   }, []);
 
   // Toggle widget collapse - memoized to prevent re-renders
@@ -1142,6 +1123,50 @@ export default function HomePage() {
         w.descriptor_id === id ? { ...w, collapsed: !w.collapsed } : w
       )
     );
+  }, []);
+
+  // Handle drag end - MUST be before getWidgetHandlers (which depends on this)
+  // x, y are OFFSETS from the current position (not absolute positions)
+  const handleIslandDragEnd = useCallback((id: string, x: number, y: number) => {
+    console.log(`🖱️ [DRAG END] ${id} → offset x: ${x.toFixed(1)}, y: ${y.toFixed(1)}`);
+    console.trace("Drag end call stack:");
+
+    setIslandPositions((prev) => {
+      const currentPos = prev[id] || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      const newX = currentPos.x + x;
+      const newY = currentPos.y + y;
+
+      // Boundary checking - keep widget on screen (island diameter: 56px)
+      const islandDiameter = 56;
+      const padding = 20;
+      const boundedX = Math.max(padding, Math.min(window.innerWidth - islandDiameter - padding, newX));
+      const boundedY = Math.max(padding, Math.min(window.innerHeight - islandDiameter - padding, newY));
+
+      const updated = { ...prev, [id]: { x: boundedX, y: boundedY } };
+      console.log(`🖱️ [DRAG END] ${id}: (${currentPos.x.toFixed(1)}, ${currentPos.y.toFixed(1)}) + (${x.toFixed(1)}, ${y.toFixed(1)}) → (${boundedX.toFixed(1)}, ${boundedY.toFixed(1)})`);
+      console.log(`🖱️ [DRAG END] Updated island positions, total: ${Object.keys(updated).length}`);
+      return updated;
+    });
+
+    setWidgets((prev) => {
+      const currentWidget = prev.find((w) => w.descriptor_id === id);
+      const currentX = currentWidget?.x ?? window.innerWidth / 2;
+      const currentY = currentWidget?.y ?? window.innerHeight / 2;
+      const newX = currentX + x;
+      const newY = currentY + y;
+
+      // Boundary checking - keep widget on screen
+      const islandDiameter = 56;
+      const padding = 20;
+      const boundedX = Math.max(padding, Math.min(window.innerWidth - islandDiameter - padding, newX));
+      const boundedY = Math.max(padding, Math.min(window.innerHeight - islandDiameter - padding, newY));
+
+      const updated = prev.map((w) =>
+        w.descriptor_id === id ? { ...w, x: boundedX, y: boundedY } : w
+      );
+      console.log(`🖱️ [DRAG END] Updated widget ${id} x/y in widgets array`);
+      return updated;
+    });
   }, []);
 
   // Create stable handlers for each widget - FIXED: Use cache to prevent re-renders
@@ -1175,7 +1200,7 @@ export default function HomePage() {
       const isClick = state && state.moveDistance < CLICK_THRESHOLD;
 
       if (!isClick) {
-        updateWidgetPosition(id, info.offset.x, info.offset.y);
+        handleIslandDragEnd(id, info.offset.x, info.offset.y);
       }
 
       delete dragStateRef.current[id];
@@ -1186,7 +1211,7 @@ export default function HomePage() {
       const isClick = state && state.moveDistance < CLICK_THRESHOLD;
 
       if (!isClick) {
-        updateWidgetPosition(id, x, y);
+        handleIslandDragEnd(id, x, y);
       }
 
       delete dragStateRef.current[id];
@@ -1211,10 +1236,12 @@ export default function HomePage() {
     // Cache the handlers
     handlersCacheRef.current[id] = handlers;
     return handlers;
-  }, [dismissWidget, updateWidgetPosition, toggleWidgetCollapse, CLICK_THRESHOLD]);
+  }, [dismissWidget, handleIslandDragEnd, toggleWidgetCollapse, CLICK_THRESHOLD]);
 
   // 3-State Cycle: island -> card -> full -> island
   const cycleWidgetState = useCallback((id: string) => {
+    console.log(`🔄 [CYCLE] Widget ${id} state change requested`);
+    console.trace("Cycle call stack:");
     setWidgetStates(prev => {
       const currentState = prev[id] || "island";
       const nextState: Record<WidgetState, WidgetState> = {
@@ -1222,21 +1249,9 @@ export default function HomePage() {
         card: "full",
         full: "island"
       };
-      console.log(`🔄 ${id}: ${currentState} -> ${nextState[currentState]}`);
+      console.log(`🔄 [CYCLE] ${id}: ${currentState} -> ${nextState[currentState]}`);
       return { ...prev, [id]: nextState[currentState] };
     });
-  }, []);
-
-  const handleIslandDragEnd = useCallback((id: string, x: number, y: number) => {
-    setIslandPositions((prev) => ({
-      ...prev,
-      [id]: { x, y },
-    }));
-    setWidgets((prev) =>
-      prev.map((w) =>
-        w.descriptor_id === id ? { ...w, x, y } : w
-      )
-    );
   }, []);
 
   const handlePanelClose = useCallback((id: string) => {
@@ -1332,7 +1347,6 @@ export default function HomePage() {
             // Get current state (defaults to island)
             const currentState = widgetStates[widget.descriptor_id] || "island";
             const position = islandPositions[widget.descriptor_id] || { x: centerX, y: centerY };
-            const dragPos = widgetPositionsRef.current[widget.descriptor_id] || { x: 0, y: 0 };
             const baseZIndex = 1000 + index;
 
             return (
@@ -1341,7 +1355,6 @@ export default function HomePage() {
                 widget={widget}
                 state={currentState}
                 position={position}
-                dragPos={dragPos}
                 zIndex={baseZIndex}
                 onCycleState={() => cycleWidgetState(widget.descriptor_id)}
                 onDragEnd={(x, y) => handleIslandDragEnd(widget.descriptor_id, x, y)}

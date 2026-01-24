@@ -87,24 +87,34 @@ export const ToolIsland = memo(function ToolIsland({
 
   const handleDrag = useCallback(() => {
     dragDistanceRef.current++;
+    if (dragDistanceRef.current === 1) {
+      console.log(`🖱️ [ISLAND DRAG START] ${widget.descriptor_id}`);
+    }
   }, []);
 
   const handleDragEnd = useCallback(
     (_: unknown, info: { offset: { x: number; y: number } }) => {
-      onDragEnd(position.x + info.offset.x, position.y + info.offset.y);
+      const distance = Math.sqrt(info.offset.x ** 2 + info.offset.y ** 2);
+      console.log(`🖱️ [ISLAND DRAG END] ${widget.descriptor_id} distance: ${distance.toFixed(1)}px, offset: {x: ${info.offset.x.toFixed(1)}, y: ${info.offset.y.toFixed(1)}}`);
+      // Pass only the offset (consistent with card/full states)
+      onDragEnd(info.offset.x, info.offset.y);
     },
-    [onDragEnd, position]
+    [onDragEnd, widget.descriptor_id]
   );
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
+      console.log(`👆 [ISLAND CLICK] ${widget.descriptor_id}, dragDistance: ${dragDistanceRef.current}`);
       // Only trigger onClick if there was no significant drag
       if (dragDistanceRef.current < 5) {
+        console.log(`👆 [ISLAND CLICK] Triggering onClick for ${widget.descriptor_id}`);
         onClick();
+      } else {
+        console.log(`👆 [ISLAND CLICK] Ignored (was a drag) for ${widget.descriptor_id}`);
       }
       dragDistanceRef.current = 0;
     },
-    [onClick]
+    [onClick, widget.descriptor_id]
   );
 
   return (
