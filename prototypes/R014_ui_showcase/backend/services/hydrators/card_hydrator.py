@@ -4,14 +4,16 @@
 # Fills card widgets with stat data + color scheme
 # =============================================================================
 
+import logging
 import uuid
 from datetime import datetime
 
 from typing import Any
 
 import dspy
-
 from services.tools.hydrators import CardHydratorModule
+
+logger = logging.getLogger(__name__)
 
 
 class CardHydrator(dspy.Module):
@@ -44,6 +46,14 @@ class CardHydrator(dspy.Module):
         beautiful_data = researched_data.get("beautiful_data", {})
         color_scheme = design.get("color_scheme", {})
         insights = design.get("insights", [])
+
+        # Log what we received for debugging
+        logger.info("  📊 [CARD HYDRATOR] Received data:")
+        logger.info(f"      - beautiful_data keys: {list(beautiful_data.keys())}")
+        logger.info(f"      - insights: {len(insights)} items")
+        logger.info(
+            f"      - color_scheme: {list(color_scheme.keys()) if color_scheme else 'none'}"
+        )
 
         # Prepare data for hydration
         hydration_input = {

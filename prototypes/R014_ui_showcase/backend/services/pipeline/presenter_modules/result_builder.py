@@ -18,6 +18,7 @@ class PresenterResultBuilder:
         flow_result: dict,
         polish_result: dict,
         qa_result: dict,
+        researched_data: dict,
     ) -> Dict[str, Any]:
         """Build presentation_ready dict from all pipeline results.
 
@@ -58,6 +59,7 @@ class PresenterResultBuilder:
                 "color_scheme": design_data.get("color_scheme", {}),
                 "visual_hierarchy": design_data.get("visual_hierarchy", []),
             },
+            "researched_data": researched_data,
         }
 
         # Add warnings if issues detected

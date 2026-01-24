@@ -4,10 +4,16 @@
 # Phase 8: Final Polish + QA
 # =============================================================================
 
+import logging
+import time
 from typing import Optional
 
 import dspy
-
+from services.pipeline.presenter_logging import (
+    log_flow_check_result,
+    log_polish_result,
+    log_qa_result,
+)
 from services.pipeline.presenter_modules import (
     PresenterProgressTracker,
     PresenterResultBuilder,
@@ -17,6 +23,8 @@ from services.tools.presenter import (
     PolisherModule,
     QAFinalizerModule,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PresenterAgent(dspy.Module):
@@ -42,6 +50,7 @@ class PresenterAgent(dspy.Module):
         widgets: list,
         sequence: list,
         design: Optional[dict] = None,
+        researched_data: Optional[dict] = None,
     ) -> dict:
         """Execute PRESENTER agent pipeline.
 
@@ -59,16 +68,34 @@ class PresenterAgent(dspy.Module):
         )
 
         # Check narrative flow and pacing
+        step_start = time.time()
+        logger.info("  [PRESENTER] Checking narrative flow...")
         flow_result_raw = self.flow_checker(sequence=sequence_list, widgets=widgets)
-        flow_result = flow_result_raw if hasattr(flow_result_raw, "get") else {}
+        flow_result: dict = (
+            flow_result_raw if hasattr(flow_result_raw, "get") else {}  # type: ignore[bad-assignment]
+        )
+        step_time = time.time() - step_start
+        log_flow_check_result(flow_result, step_time)
 
         # Polish widget content
+        step_start = time.time()
+        logger.info("  [PRESENTER] Polishing content...")
         polish_result_raw = self.polisher(widgets=widgets, sequence=sequence_list)
-        polish_result = polish_result_raw if hasattr(polish_result_raw, "get") else {}
+        polish_result: dict = (
+            polish_result_raw if hasattr(polish_result_raw, "get") else {}  # type: ignore[bad-assignment]
+        )
+        step_time = time.time() - step_start
+        log_polish_result(polish_result, widgets, step_time)
 
         # Final QA checks
+        step_start = time.time()
+        logger.info("  [PRESENTER] Running QA checks...")
         qa_result_raw = self.qa_finalizer(widgets=widgets, sequence=sequence_list)
-        qa_result = qa_result_raw if hasattr(qa_result_raw, "get") else {}
+        qa_result: dict = (
+            qa_result_raw if hasattr(qa_result_raw, "get") else {}  # type: ignore[bad-assignment]
+        )
+        step_time = time.time() - step_start
+        log_qa_result(qa_result, step_time)
 
         # Build presentation_ready dict
         return self._result_builder.build_presentation_ready(
@@ -78,6 +105,7 @@ class PresenterAgent(dspy.Module):
             flow_result=flow_result,
             polish_result=polish_result,
             qa_result=qa_result,
+            researched_data=researched_data or {},
         )
 
     def get_progress_status(self, phase: str = "polishing") -> dict:

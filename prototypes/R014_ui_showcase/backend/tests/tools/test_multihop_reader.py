@@ -33,10 +33,12 @@ def test_truncate_content():
     test_cases = [
         # Short content (no truncation needed)
         ("Short text.", 20, True),  # Should not truncate
-
         # Long content (truncation needed)
-        ("This is a long sentence. Another sentence here. " * 10, 100, False),  # Should truncate
-
+        (
+            "This is a long sentence. Another sentence here. " * 10,
+            100,
+            False,
+        ),  # Should truncate
         # Content with newlines - use larger max to avoid edge cases
         ("Line 1\nLine 2\nLine 3\n" * 10, 30, False),  # Should truncate
     ]
@@ -54,11 +56,12 @@ def test_truncate_content():
                 print("       ⚠ Note: Short content modified (may be ok)")
         else:
             # Long content should be shorter than original
-            assert len(result) < len(content), f"Should truncate: got {len(result)}, original {len(content)}"
+            assert len(result) < len(content), (
+                f"Should truncate: got {len(result)}, original {len(content)}"
+            )
 
     print("  ✓ All truncate tests passed")
     return True
-
 
 
 async def test_fetch_page_real():
@@ -112,7 +115,7 @@ async def test_basic_read_mode():
         print(f"    Report: {len(result.get('report', ''))} chars")
         print(f"    Word count: {result.get('word_count', 0)}")
 
-        if result.get('report'):
+        if result.get("report"):
             print("\n  Report preview:")
             print(f"    {result['report'][:200]}...")
 
@@ -127,6 +130,7 @@ async def test_basic_read_mode():
     except Exception as e:
         print(f"  ✗ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -148,7 +152,7 @@ async def test_multihop_read_mode():
     print(f"\n  URLs: {test_urls}")
     print(f"  Goal: {goal}")
     print(f"  Max hops: {max_hops}")
-    print(f"  Target reports: {max_hops ** 2}")
+    print(f"  Target reports: {max_hops**2}")
 
     try:
         result = await reader.multihop_read(
@@ -163,13 +167,13 @@ async def test_multihop_read_mode():
         print(f"    Citations: {len(result.get('citations', []))}")
         print(f"    Trajectory entries: {len(result.get('trajectory', []))}")
 
-        hop_dist = result.get('hop_distribution', {})
+        hop_dist = result.get("hop_distribution", {})
         print("\n  Hop distribution:")
         for hop, count in hop_dist.items():
             print(f"    Hop {hop}: {count} reports")
 
         # Show sample reports
-        all_reports = result.get('all_reports', [])
+        all_reports = result.get("all_reports", [])
         if all_reports:
             print("\n  Sample reports:")
             for i, report in enumerate(all_reports[:3], 1):
@@ -179,13 +183,13 @@ async def test_multihop_read_mode():
                 print(f"       Preview: {report.get('report', '')[:100]}...")
 
         # Show trajectory
-        trajectory = result.get('trajectory', [])
+        trajectory = result.get("trajectory", [])
         if trajectory:
             print("\n  Trajectory (first 5):")
             for entry in trajectory[:5]:
-                status = entry.get('status', '?')
-                hop = entry.get('hop', '?')
-                url = entry.get('url', '')[:60]
+                status = entry.get("status", "?")
+                hop = entry.get("hop", "?")
+                url = entry.get("url", "")[:60]
                 print(f"    [Hop {hop}] {status}: {url}")
 
         # Verify structure
@@ -200,6 +204,7 @@ async def test_multihop_read_mode():
     except Exception as e:
         print(f"  ✗ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -245,6 +250,7 @@ async def run_all_multihop_tests():
         except Exception as e:
             print(f"✗ ERROR: {name} - {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 

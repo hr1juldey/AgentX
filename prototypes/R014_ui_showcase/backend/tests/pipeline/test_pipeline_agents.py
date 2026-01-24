@@ -71,9 +71,15 @@ def test_analyst_pass2():
     # Mock contextualized data
     contextualized_data = {
         "results": [
-            {"title": "AI Introduction", "snippet": "AI is a branch of computer science..."},
+            {
+                "title": "AI Introduction",
+                "snippet": "AI is a branch of computer science...",
+            },
             {"title": "Machine Learning Basics", "snippet": "ML is a subset of AI..."},
-            {"title": "Neural Networks", "snippet": "Neural networks are computing systems..."},
+            {
+                "title": "Neural Networks",
+                "snippet": "Neural networks are computing systems...",
+            },
         ]
     }
 
@@ -93,7 +99,9 @@ def test_analyst_pass2():
 
     # Verify structure
     assert isinstance(result, dict), "Result should be a dict"
-    assert "quality_score" in result or "completeness" in result, "Missing quality metrics"
+    assert "quality_score" in result or "completeness" in result, (
+        "Missing quality metrics"
+    )
 
 
 def test_analyst_device_contexts():
@@ -140,7 +148,9 @@ def test_researcher_basic():
         result = agent(analysis=analysis)
 
         print(f"\n  Results found: {len(result.get('raw_data', []))}")
-        print(f"  Key facts: {len(result.get('structured_data', {}).get('key_facts', []))}")
+        print(
+            f"  Key facts: {len(result.get('structured_data', {}).get('key_facts', []))}"
+        )
         print(f"  Citations: {len(result.get('citations', []))}")
 
         # Verify structure
@@ -254,7 +264,9 @@ def test_pipeline_full_workflow():
         research_result = researcher(analysis=analysis)
 
         print(f"    Results: {len(research_result.get('raw_data', []))}")
-        print(f"    Key facts: {len(research_result.get('structured_data', {}).get('key_facts', []))}")
+        print(
+            f"    Key facts: {len(research_result.get('structured_data', {}).get('key_facts', []))}"
+        )
         print(f"    Citations: {len(research_result.get('citations', []))}")
 
         # Pass 3: Data Judgment (optional)
@@ -339,6 +351,7 @@ def run_all_pipeline_tests():
         except Exception as e:
             print(f"  ✗ ERROR: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 

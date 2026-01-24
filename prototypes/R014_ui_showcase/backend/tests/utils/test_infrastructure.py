@@ -61,8 +61,12 @@ def test_decision_tree_nested():
             condition=lambda ctx: ctx["number"] > 0,
             true_branch=ConditionNode(
                 condition=lambda ctx: ctx["number"] % 2 == 0,
-                true_branch=ActionNode(lambda ctx: {"result": "positive even"}, name="pos_even"),
-                false_branch=ActionNode(lambda ctx: {"result": "positive odd"}, name="pos_odd"),
+                true_branch=ActionNode(
+                    lambda ctx: {"result": "positive even"}, name="pos_even"
+                ),
+                false_branch=ActionNode(
+                    lambda ctx: {"result": "positive odd"}, name="pos_odd"
+                ),
                 name="is_even",
             ),
             false_branch=ActionNode(lambda ctx: {"result": "negative"}, name="neg"),
@@ -78,7 +82,9 @@ def test_decision_tree_nested():
 
     for num, expected in tests:
         result = tree.execute({"number": num})
-        assert result["result"] == expected, f"{num}: Expected '{expected}', got {result}"
+        assert result["result"] == expected, (
+            f"{num}: Expected '{expected}', got {result}"
+        )
         print(f"  ✓ {num} -> '{expected}'")
 
 
@@ -90,25 +96,31 @@ def test_decision_tree_builder():
     builder = DecisionTreeBuilder()
 
     chart_tree = (
-        builder
-        .when(lambda ctx: ctx["data_type"] == "parts_of_whole")
+        builder.when(lambda ctx: ctx["data_type"] == "parts_of_whole")
         .then(lambda ctx: {"chart_type": "pie", "rationale": "Showing parts of whole"})
         .otherwise(
             DecisionTree(
                 root=ConditionNode(
                     condition=lambda ctx: ctx["data_type"] == "time_series",
                     true_branch=ActionNode(
-                        lambda ctx: {"chart_type": "line", "rationale": "Showing trends over time"},
-                        name="line"
+                        lambda ctx: {
+                            "chart_type": "line",
+                            "rationale": "Showing trends over time",
+                        },
+                        name="line",
                     ),
                     false_branch=ActionNode(
-                        lambda ctx: {"chart_type": "bar", "rationale": "Comparing categories"},
-                        name="bar"
+                        lambda ctx: {
+                            "chart_type": "bar",
+                            "rationale": "Comparing categories",
+                        },
+                        name="bar",
                     ),
-                    name="is_time_series"
+                    name="is_time_series",
                 )
             )
-        ).build(lambda ctx: {"chart_type": "table", "rationale": "Default fallback"})
+        )
+        .build(lambda ctx: {"chart_type": "table", "rationale": "Default fallback"})
     )
 
     tests = [
@@ -120,8 +132,12 @@ def test_decision_tree_builder():
 
     for ctx, expected_type in tests:
         result = chart_tree.execute(ctx)
-        assert result["chart_type"] == expected_type, f"Expected {expected_type}, got {result}"
-        print(f"  ✓ {ctx['data_type']} -> {result['chart_type']}: {result['rationale']}")
+        assert result["chart_type"] == expected_type, (
+            f"Expected {expected_type}, got {result}"
+        )
+        print(
+            f"  ✓ {ctx['data_type']} -> {result['chart_type']}: {result['rationale']}"
+        )
 
 
 def test_chunking_basic():
@@ -225,8 +241,16 @@ def test_numbered_list_parsing():
 
     test_cases = [
         ("1. First item\n2. Second item", ["First item", "Second item"], "Dot format"),
-        ("1) First item\n2) Second item", ["First item", "Second item"], "Paren format"),
-        ("Mixed line\n1. Numbered\nAnother", ["Mixed line", "Numbered", "Another"], "Mixed format"),
+        (
+            "1) First item\n2) Second item",
+            ["First item", "Second item"],
+            "Paren format",
+        ),
+        (
+            "Mixed line\n1. Numbered\nAnother",
+            ["Mixed line", "Numbered", "Another"],
+            "Mixed format",
+        ),
     ]
 
     for text, expected, desc in test_cases:
@@ -256,7 +280,9 @@ def test_float_score_parsing():
         result = parse_float_score(text, default=0.0)
         # Allow small tolerance for qualitative values
         if "qualitative" in desc:
-            assert result >= expected - 0.1, f"{desc}: Expected ~{expected}, got {result}"
+            assert result >= expected - 0.1, (
+                f"{desc}: Expected ~{expected}, got {result}"
+            )
         else:
             assert result == expected, f"{desc}: Expected {expected}, got {result}"
         print(f"  ✓ {desc}: '{text}' -> {result}")

@@ -143,9 +143,7 @@ async def test_websocket_widget_generation(
             start_time = asyncio.get_event_loop().time()
             while True:
                 try:
-                    message = await asyncio.wait_for(
-                        ws.recv(), timeout=5.0
-                    )
+                    message = await asyncio.wait_for(ws.recv(), timeout=5.0)
                 except asyncio.TimeoutError:
                     # Check if we've received complete signal
                     if results["complete"]:
@@ -162,7 +160,9 @@ async def test_websocket_widget_generation(
 
                 if msg_type == "widget":
                     widget = data.get("data", {})
-                    widget_type = widget.get("type", widget.get("descriptor_type", "unknown"))
+                    widget_type = widget.get(
+                        "type", widget.get("descriptor_type", "unknown")
+                    )
                     results["widgets"].append(widget)
                     print(f"  📦 Widget: {widget_type}")
 
@@ -197,13 +197,15 @@ async def test_websocket_widget_generation(
     print(f"    Widgets received: {len(results['widgets'])}")
     print(f"    QA checkpoints: {len(results['qa_checkpoints'])}")
     print(f"    Complete: {results['complete']}")
-    if results['error']:
+    if results["error"]:
         print(f"    Error: {results['error']}")
 
     return results
 
 
-async def test_websocket_search(query: str, max_hops: int = 3, timeout: int = 120) -> dict:
+async def test_websocket_search(
+    query: str, max_hops: int = 3, timeout: int = 120
+) -> dict:
     """Test WebSocket search with streaming."""
     print("\n=== Test: WebSocket Multi-Hop Search ===")
     print(f"  Query: '{query[:80]}...'")
@@ -232,9 +234,7 @@ async def test_websocket_search(query: str, max_hops: int = 3, timeout: int = 12
             start_time = asyncio.get_event_loop().time()
             while True:
                 try:
-                    message = await asyncio.wait_for(
-                        ws.recv(), timeout=5.0
-                    )
+                    message = await asyncio.wait_for(ws.recv(), timeout=5.0)
                 except asyncio.TimeoutError:
                     if results["complete"]:
                         break
@@ -277,7 +277,7 @@ async def test_websocket_search(query: str, max_hops: int = 3, timeout: int = 12
     print("\n  Summary:")
     print(f"    Hop events: {len(results['hop_events'])}")
     print(f"    Complete: {results['complete']}")
-    if results['error']:
+    if results["error"]:
         print(f"    Error: {results['error']}")
 
     return results
@@ -294,7 +294,9 @@ async def run_e2e_tests():
     if not await test_health_check():
         print("\n❌ Cannot proceed - backend is not running!")
         print("\n💡 Start the backend with:")
-        print("   cd /home/riju279/Documents/Code/XRIG/AgentX/prototypes/R014_ui_showcase/backend")
+        print(
+            "   cd /home/riju279/Documents/Code/XRIG/AgentX/prototypes/R014_ui_showcase/backend"
+        )
         print("   python main.py")
         return False
 
@@ -309,9 +311,7 @@ async def run_e2e_tests():
     print("TEST SUITE 1: REST Search Endpoint")
     print("=" * 70)
 
-    test_result = await test_rest_search(
-        "What are the latest developments in AI?"
-    )
+    test_result = await test_rest_search("What are the latest developments in AI?")
     if test_result:
         results["passed"] += 1
         results["tests"].append(("REST Search", "PASSED"))

@@ -4,14 +4,16 @@
 # Fills markdown widgets with content + citations + POVs
 # =============================================================================
 
+import logging
 import uuid
 from datetime import datetime
 
 from typing import Any
 
 import dspy
-
 from services.tools.hydrators import MarkdownHydratorModule
+
+logger = logging.getLogger(__name__)
 
 
 class MarkdownHydrator(dspy.Module):
@@ -43,8 +45,16 @@ class MarkdownHydrator(dspy.Module):
         """
         beautiful_data = researched_data.get("beautiful_data", {})
         citations = researched_data.get("citations", [])
+        structured_report = researched_data.get("structured_report", "")
         points_of_view = design.get("points_of_view", [])
         nuanced_analysis = design.get("nuanced_analysis", "")
+
+        # Log what we received for debugging
+        logger.info("  📊 [MARKDOWN HYDRATOR] Received data:")
+        logger.info(f"      - beautiful_data keys: {list(beautiful_data.keys())}")
+        logger.info(f"      - citations: {len(citations)} items")
+        logger.info(f"      - structured_report: {len(structured_report)} chars")
+        logger.info(f"      - points_of_view: {len(points_of_view)} items")
 
         # Prepare data for hydration
         hydration_input = {

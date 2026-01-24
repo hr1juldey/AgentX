@@ -4,14 +4,21 @@
 # Phase 7: What Order?
 # =============================================================================
 
+import logging
 from typing import Optional
 
 import dspy
-
+from services.pipeline.sequencer_logging import (
+    log_narrative_flow_result,
+    log_pacing_result,
+)
+from services.pipeline.sequencer_utils import create_delivery_plan
 from services.tools.sequencing_tools import (
     FlowPlannerModule,
     PacingCalculatorModule,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class SequencerAgent(dspy.Module):
@@ -49,21 +56,20 @@ class SequencerAgent(dspy.Module):
         )
 
         # Plan narrative flow
+        logger.info("  [SEQUENCER] Planning narrative flow...")
         flow_result_raw = self.flow_planner(widgets=widgets, user_query=user_query)
-        flow_result = flow_result_raw if hasattr(flow_result_raw, "get") else {}
+        flow_result: dict = (
+            flow_result_raw if hasattr(flow_result_raw, "get") else {}  # type: ignore[bad-assignment]
+        )
 
         sequence = (
             flow_result.get("sequence", widgets)
             if hasattr(flow_result, "get")
             else widgets
         )
-        narrative_arc = (
-            flow_result.get("narrative_arc", "hook → context → insight → action")
-            if hasattr(flow_result, "get")
-            else "hook → context → insight → action"
-        )
-        is_valid = (
-            flow_result.get("is_valid", True) if hasattr(flow_result, "get") else True
+        narrative_arc, is_valid = log_narrative_flow_result(flow_result)
+        logger.info(
+            f"    → Sequence length: {len(sequence)} widgets, valid: {is_valid}"
         )
 
         # Create sequence items with order
@@ -80,11 +86,14 @@ class SequencerAgent(dspy.Module):
             )
 
         # Calculate pacing for staggered delivery
+        logger.info("  [SEQUENCER] Calculating pacing...")
         pacing_result_raw = self.pacing_calculator(
             widgets=widgets,
             sequence=sequence_items,
         )
-        pacing_result = pacing_result_raw if hasattr(pacing_result_raw, "get") else {}
+        pacing_result: dict = (
+            pacing_result_raw if hasattr(pacing_result_raw, "get") else {}  # type: ignore[bad-assignment]
+        )
 
         sequence_for_plan = (
             pacing_result.get("sequence", sequence_items)
@@ -92,43 +101,15 @@ class SequencerAgent(dspy.Module):
             else sequence_items
         )
 
+        total_duration = log_pacing_result(pacing_result, sequence)
+
         return {
             "sequence": sequence_for_plan,
             "narrative_arc": narrative_arc,
             "is_valid": is_valid,
-            "total_duration": pacing_result.get("total_duration", 0)
-            if hasattr(pacing_result, "get")
-            else 0,
-            "delivery_plan": self._create_delivery_plan(
+            "total_duration": total_duration,
+            "delivery_plan": create_delivery_plan(
                 sequence_for_plan,
                 visual_hierarchy,
             ),
         }
-
-    def _create_delivery_plan(self, sequence: list, visual_hierarchy: list) -> list:
-        """Create detailed delivery plan."""
-        delivery_plan = []
-
-        for item in sequence:
-            widget = item.get("widget", "unknown")
-            order = item.get("order", 1)
-            delay = item.get("delay_sec", 0.0)
-
-            # Determine visual role based on order and hierarchy
-            if len(visual_hierarchy) > 0:
-                role_index = min(order - 1, len(visual_hierarchy) - 1)
-                visual_role = visual_hierarchy[role_index]
-            else:
-                visual_role = "standard"
-
-            delivery_plan.append(
-                {
-                    "widget": widget,
-                    "order": order,
-                    "delay_sec": delay,
-                    "visual_role": visual_role,
-                    "delivery_type": "immediate" if delay == 0 else "staggered",
-                }
-            )
-
-        return delivery_plan

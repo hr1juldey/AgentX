@@ -119,6 +119,7 @@ class LatePhases:
         widget_selection: dict,
         sequence_plan: dict,
         design_result: dict,
+        researched_data: dict,
     ) -> dict[str, Any]:
         """Phase 8: PRESENTER - Final polish and QA.
 
@@ -127,6 +128,7 @@ class LatePhases:
             widget_selection: Result from widget selector
             sequence_plan: Result from sequencer
             design_result: Result from designer
+            researched_data: Research data from contextualizer
 
         Returns:
             Presentation ready dict
@@ -138,6 +140,7 @@ class LatePhases:
                 widgets=widget_selection.get("widgets", []),
                 sequence=sequence_plan.get("sequence", []),
                 design=design_result,
+                researched_data=researched_data,
             ),
         )
         return result

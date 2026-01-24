@@ -84,7 +84,9 @@ def test_widget_matcher_basic():
         # Verify
         assert isinstance(widgets, list), "Widgets should be a list"
         assert len(widgets) > 0, "Should select at least one widget"
-        assert all(w in module.VALID_WIDGETS for w in widgets), f"Invalid widget in {widgets}"
+        assert all(w in module.VALID_WIDGETS for w in widgets), (
+            f"Invalid widget in {widgets}"
+        )
 
         # Check if expected widget is in the selection
         if case["expected_widget"] in widgets:
@@ -100,22 +102,22 @@ def test_widget_matcher_complex():
     complex_cases = [
         {
             "query": "I need to visualize sales data broken down by region and quarter, "
-                     "showing trends over the past 5 years with comparisons between products",
+            "showing trends over the past 5 years with comparisons between products",
             "data_type": "numerical_time_series",
         },
         {
             "query": "Create a dashboard showing project status, team assignments, "
-                     "deadlines, and progress percentages for all active sprints",
+            "deadlines, and progress percentages for all active sprints",
             "data_type": "general",
         },
         {
             "query": "Display customer reviews with ratings, photos, and timestamps "
-                     "in a scrollable format with filtering options",
+            "in a scrollable format with filtering options",
             "data_type": "visual_image",
         },
         {
             "query": "Build an interactive calculator for mortgage payments with "
-                     "amortization schedule and pie chart breakdown",
+            "amortization schedule and pie chart breakdown",
             "data_type": "numerical_time_series",
         },
     ]
@@ -394,6 +396,7 @@ def run_all_selector_tests():
         except Exception as e:
             print(f"  ✗ ERROR: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 

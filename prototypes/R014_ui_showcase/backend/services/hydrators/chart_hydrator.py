@@ -4,14 +4,16 @@
 # Fills chart widgets with data + POV overlay
 # =============================================================================
 
+import logging
 import uuid
 from datetime import datetime
 
 from typing import Any
 
 import dspy
-
 from services.tools.hydrators import ChartHydratorModule
+
+logger = logging.getLogger(__name__)
 
 
 class ChartHydrator(dspy.Module):
@@ -45,6 +47,14 @@ class ChartHydrator(dspy.Module):
         color_scheme = design.get("color_scheme", {})
         points_of_view = design.get("points_of_view", [])
 
+        # Log what we received for debugging
+        logger.info("  📊 [CHART HYDRATOR] Received data:")
+        logger.info(f"      - beautiful_data keys: {list(beautiful_data.keys())}")
+        logger.info(f"      - points_of_view: {len(points_of_view)} items")
+        logger.info(
+            f"      - color_scheme: {list(color_scheme.keys()) if color_scheme else 'none'}"
+        )
+
         # Prepare data for hydration
         hydration_input = {
             "researched_data": {
@@ -74,7 +84,6 @@ class ChartHydrator(dspy.Module):
             "timestamp": datetime.utcnow().isoformat(),
             "content": content,
             "metadata": {
-                "color_scheme": color_scheme,
                 "pov_count": len(points_of_view),
                 "data_source": "researched",
             },

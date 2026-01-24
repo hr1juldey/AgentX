@@ -63,8 +63,12 @@ def test_full_research_workflow():
         research_result = researcher(analysis=analysis)
 
         print(f"    Raw data: {len(research_result.get('raw_data', []))} items")
-        print(f"    Key facts: {len(research_result.get('structured_data', {}).get('key_facts', []))}")
-        print(f"    Trends: {len(research_result.get('structured_data', {}).get('trends', []))}")
+        print(
+            f"    Key facts: {len(research_result.get('structured_data', {}).get('key_facts', []))}"
+        )
+        print(
+            f"    Trends: {len(research_result.get('structured_data', {}).get('trends', []))}"
+        )
         print(f"    Citations: {len(research_result.get('citations', []))}")
 
         # Verify Step 2
@@ -181,26 +185,26 @@ def test_contextualization_workflow():
                 "title": "Solar Energy Growth 2025",
                 "snippet": "Solar installations increased by 30%...",
                 "url": "https://example.com/solar",
-                "content": "Solar energy capacity grew by 30% in 2025..."
+                "content": "Solar energy capacity grew by 30% in 2025...",
             },
             {
                 "title": "Wind Power Trends",
                 "snippet": "Wind energy now accounts for 10%...",
                 "url": "https://example.com/wind",
-                "content": "Wind power provides 10% of global electricity..."
+                "content": "Wind power provides 10% of global electricity...",
             },
             {
                 "title": "Battery Technology Advances",
                 "snippet": "New battery designs improve storage...",
                 "url": "https://example.com/battery",
-                "content": "New battery technologies enable longer storage..."
+                "content": "New battery technologies enable longer storage...",
             },
         ],
         "beautiful_data": {
             "key_facts": ["Solar grew 30%", "Wind at 10%", "Battery tech improved"],
             "trends": ["Renewable adoption increasing", "Storage costs dropping"],
             "comparisons": [],
-        }
+        },
     }
 
     print(f"    Mock data: {len(mock_research_data['raw_data'])} items")
@@ -213,12 +217,15 @@ def test_contextualization_workflow():
             original_query=query,
         )
 
-        print(f"    Contextualized data: {len(contextualized.get('contextualized_data', []))}")
+        print(
+            f"    Contextualized data: {len(contextualized.get('contextualized_data', []))}"
+        )
         print(f"    Query relevance: {contextualized.get('query_relevance', 'N/A')}")
 
     except Exception as e:
         print(f"    ⚠ Contextualization failed: {e}")
         import traceback
+
         traceback.print_exc()
         contextualized = mock_research_data
 
@@ -339,10 +346,12 @@ def test_end_to_end_real_world():
     try:
         research_result = researcher(analysis=analysis)
 
-        raw_count = len(research_result.get('raw_data', []))
-        facts_count = len(research_result.get('structured_data', {}).get('key_facts', []))
-        trends_count = len(research_result.get('structured_data', {}).get('trends', []))
-        citations_count = len(research_result.get('citations', []))
+        raw_count = len(research_result.get("raw_data", []))
+        facts_count = len(
+            research_result.get("structured_data", {}).get("key_facts", [])
+        )
+        trends_count = len(research_result.get("structured_data", {}).get("trends", []))
+        citations_count = len(research_result.get("citations", []))
 
         print(f"    Sources found: {raw_count}")
         print(f"    Key facts: {facts_count}")
@@ -370,8 +379,8 @@ def test_end_to_end_real_world():
         device_context="desktop",
     )
 
-    widgets = widget_result.get('widgets', [])
-    rationale = widget_result.get('rationale', '')
+    widgets = widget_result.get("widgets", [])
+    rationale = widget_result.get("rationale", "")
 
     print(f"    Recommended widgets: {widgets}")
     print(f"    Rationale: {rationale[:100]}...")
@@ -419,6 +428,7 @@ def run_all_integration_tests():
         except Exception as e:
             print(f"  ✗ ERROR: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 

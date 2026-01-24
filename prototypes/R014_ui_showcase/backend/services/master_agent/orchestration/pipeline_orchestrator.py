@@ -139,6 +139,7 @@ class PipelineOrchestrator:
             widget_selection,
             sequence_plan,
             design_result,
+            contextualized_result,  # Pass research data for hydrators
         )
 
         return {
@@ -146,4 +147,5 @@ class PipelineOrchestrator:
             "design_result": design_result,
             "widget_selection": widget_selection,
             "presentation_ready": presentation_ready,
+            "researched_data": contextualized_result,  # Include for hydrators
         }

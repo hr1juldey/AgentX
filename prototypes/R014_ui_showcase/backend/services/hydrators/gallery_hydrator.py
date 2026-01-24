@@ -4,14 +4,16 @@
 # Fills gallery widgets with multiple images
 # =============================================================================
 
+import logging
 import uuid
 from datetime import datetime
 
 from typing import Any
 
 import dspy
-
 from services.tools.hydrators import GalleryHydratorModule
+
+logger = logging.getLogger(__name__)
 
 
 class GalleryHydrator(dspy.Module):
@@ -42,6 +44,10 @@ class GalleryHydrator(dspy.Module):
             Gallery widget descriptor with OpenGraph URLs
         """
         url_list = researched_data.get("url_list", [])
+
+        # Log what we received for debugging
+        logger.info("  📊 [GALLERY HYDRATOR] Received data:")
+        logger.info(f"      - url_list: {len(url_list)} items")
 
         if len(url_list) > 1:
             # Multiple URLs → gallery of OpenGraph cards

@@ -88,7 +88,7 @@ def test_insight_extractor_small():
     print(f"\n  Query: '{small_query}'")
     print(f"    Insights count: {len(result.get('insights', []))}")
     print("    Insights:")
-    for i, insight in enumerate(result.get('insights', []), 1):
+    for i, insight in enumerate(result.get("insights", []), 1):
         print(f"      {i}. {insight}")
 
     # Verify
@@ -110,7 +110,8 @@ def test_insight_extractor_large():
     module = InsightExtractorModule()
 
     # Large query (> 500 chars) - should trigger chunking
-    large_query = """
+    large_query = (
+        """
     Artificial intelligence has revolutionized numerous fields in recent years.
     Machine learning algorithms can now recognize patterns in vast datasets that
     would be impossible for humans to discern. Deep learning, a subset of ML,
@@ -121,7 +122,9 @@ def test_insight_extractor_large():
     Transformers have emerged as a powerful architecture, enabling models like
     GPT to generate human-like text. The future of AI lies in developing more
     efficient, interpretable, and fair systems that can reason about the world.
-    """ * 2  # Make it even larger
+    """
+        * 2
+    )  # Make it even larger
 
     print(f"  Query length: {len(large_query)} characters")
 
@@ -129,7 +132,7 @@ def test_insight_extractor_large():
 
     print(f"\n  Insights count: {len(result.get('insights', []))}")
     print("  Insights:")
-    for i, insight in enumerate(result.get('insights', [])[:10], 1):
+    for i, insight in enumerate(result.get("insights", [])[:10], 1):
         print(f"    {i}. {insight[:80]}...")
 
     # Verify no corruption (each insight should be meaningful)
@@ -154,7 +157,9 @@ def test_insight_extractor_edge_cases():
     # Edge case 1: Very short query
     very_short = "AI"
     result = module(query=very_short)
-    print(f"\n  Very short query ('{very_short}'): {len(result.get('insights', []))} insights")
+    print(
+        f"\n  Very short query ('{very_short}'): {len(result.get('insights', []))} insights"
+    )
 
     # Edge case 2: Query with special characters
     special = "AI & ML: Deep learning, NLP, Computer Vision (CV) + Robotics!"
@@ -181,7 +186,6 @@ def test_insight_extractor_real_world():
         Images are built using Dockerfiles which specify base images, dependencies, and commands.
         Docker Compose orchestrates multi-container applications with services, networks, and volumes.
         """,
-
         # Business case study
         """
         Netflix's recommendation system processes 1 billion playback events per day.
@@ -189,7 +193,6 @@ def test_insight_extractor_real_world():
         Personalization increases viewer engagement by 20% and saves $1B annually
         in customer retention. The algorithm runs on Spark clusters with 1000+ nodes.
         """,
-
         # Scientific explanation
         """
         CRISPR-Cas9 is a revolutionary gene-editing tool derived from bacterial immune systems.
@@ -246,6 +249,7 @@ def run_all_analyst_tests():
         except Exception as e:
             print(f"  ✗ ERROR: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 

@@ -4,14 +4,16 @@
 # Fills form widgets with action items based on insights
 # =============================================================================
 
+import logging
 import uuid
 from datetime import datetime
 
 from typing import Any
 
 import dspy
-
 from services.tools.hydrators import FormHydratorModule
+
+logger = logging.getLogger(__name__)
 
 
 class FormHydrator(dspy.Module):
@@ -43,6 +45,11 @@ class FormHydrator(dspy.Module):
         """
         insights = design.get("insights", [])
         beautiful_data = researched_data.get("beautiful_data", {})
+
+        # Log what we received for debugging
+        logger.info("  📊 [FORM HYDRATOR] Received data:")
+        logger.info(f"      - beautiful_data keys: {list(beautiful_data.keys())}")
+        logger.info(f"      - insights: {len(insights)} items")
 
         # Prepare data for hydration
         hydration_input = {

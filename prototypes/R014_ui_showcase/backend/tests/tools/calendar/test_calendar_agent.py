@@ -74,7 +74,9 @@ def test_calendar_day_of_week():
         print(f"    Expected hint: {expected_hint}")
 
         # Check if answer contains the day (case-insensitive)
-        assert expected_hint.lower() in answer.lower(), f"Answer should mention {expected_hint}"
+        assert expected_hint.lower() in answer.lower(), (
+            f"Answer should mention {expected_hint}"
+        )
 
 
 def test_calendar_date_calculations():
@@ -98,7 +100,9 @@ def test_calendar_date_calculations():
         print(f"    Answer: {answer}")
 
         # Verify answer contains a date format
-        assert any(char.isdigit() for char in answer), "Answer should contain numbers/date"
+        assert any(char.isdigit() for char in answer), (
+            "Answer should contain numbers/date"
+        )
 
 
 def test_calendar_date_differences():
@@ -229,16 +233,12 @@ def test_calendar_real_world_scenarios():
     scenarios = [
         # Project planning
         "If a project starts on Monday and takes 15 business days, when does it end?",
-
         # Event planning
         "I need to plan a meeting 2 weeks from Friday. What date is that?",
-
         # Birthday calculation
         "I was born on March 15, 1990. How many days old am I?",
-
         # Holiday planning
         "Thanksgiving is on the fourth Thursday of November. What date is that in 2025?",
-
         # Countdown
         "How many days until January 1, 2030?",
     ]
@@ -295,6 +295,7 @@ def run_all_calendar_tests():
         except Exception as e:
             print(f"  ✗ ERROR: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 

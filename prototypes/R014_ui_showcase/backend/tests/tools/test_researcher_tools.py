@@ -34,11 +34,27 @@ def test_search_term_extractor():
     module = SearchTermExtractorModule()
 
     test_queries = [
-        ("What are the latest developments in quantum computing?", "technology", ["AI", "computing"]),
-        ("Compare Python vs JavaScript for web development", "programming", ["languages", "development"]),
+        (
+            "What are the latest developments in quantum computing?",
+            "technology",
+            ["AI", "computing"],
+        ),
+        (
+            "Compare Python vs JavaScript for web development",
+            "programming",
+            ["languages", "development"],
+        ),
         ("How does CRISPR gene editing work?", "biology", ["gene editing", "DNA"]),
-        ("Climate change effects on polar bear populations", "environment", ["climate", "wildlife"]),
-        ("Best practices for Docker container security", "devops", ["containers", "security"]),
+        (
+            "Climate change effects on polar bear populations",
+            "environment",
+            ["climate", "wildlife"],
+        ),
+        (
+            "Best practices for Docker container security",
+            "devops",
+            ["containers", "security"],
+        ),
     ]
 
     for query, domain, insights in test_queries:
@@ -62,25 +78,35 @@ def test_search_term_extractor_complex():
 
     complex_cases = [
         # Multi-question query
-        ("""
+        (
+            """
         I need to research machine learning algorithms for predicting stock prices.
         Specifically, I'm interested in LSTM networks, random forests, and
         how they compare for time-series forecasting in financial markets.
-        """, "finance", ["LSTM", "stock prediction", "time-series"]),
-
+        """,
+            "finance",
+            ["LSTM", "stock prediction", "time-series"],
+        ),
         # Domain-specific query
-        ("""
+        (
+            """
         Explain the difference between TCP and UDP protocols in networking,
         including their use cases, header formats, and how they handle
         reliability, flow control, and congestion control.
-        """, "networking", ["protocols", "TCP", "UDP"]),
-
+        """,
+            "networking",
+            ["protocols", "TCP", "UDP"],
+        ),
         # Academic query
-        ("""
+        (
+            """
         Recent advances in transformer architectures for natural language processing,
         including attention mechanisms, positional encoding, and pre-training strategies
         used in models like GPT-4, BERT, and T5.
-        """, "AI research", ["transformers", "attention", "NLP"]),
+        """,
+            "AI research",
+            ["transformers", "attention", "NLP"],
+        ),
     ]
 
     titles = ["ML for Stock Prediction", "TCP vs UDP", "Transformer Architectures"]
@@ -276,8 +302,10 @@ def test_data_structurer_small():
     result = module(beautiful_data=beautiful_data)
     structured = result.get("structured_data", {})
 
-    print(f"  Input: {len(beautiful_data.get('key_facts', []))} facts, "
-          f"{len(beautiful_data.get('trends', []))} trends")
+    print(
+        f"  Input: {len(beautiful_data.get('key_facts', []))} facts, "
+        f"{len(beautiful_data.get('trends', []))} trends"
+    )
     print("\n  Structured output:")
     print(f"    Key facts: {len(structured.get('key_facts', []))}")
     for fact in structured.get("key_facts", []):
@@ -299,10 +327,14 @@ def test_data_structurer_large():
     module = DataStructurerModule()
 
     # Large beautiful data that will trigger chunking
-    large_facts = [f"Fact {i}: AI insight number {i} demonstrates machine learning capability."
-                   for i in range(20)]
-    large_trends = [f"Trend {i}: Deep learning trend {i} shows exponential growth in sector {i % 5}."
-                    for i in range(15)]
+    large_facts = [
+        f"Fact {i}: AI insight number {i} demonstrates machine learning capability."
+        for i in range(20)
+    ]
+    large_trends = [
+        f"Trend {i}: Deep learning trend {i} shows exponential growth in sector {i % 5}."
+        for i in range(15)
+    ]
 
     beautiful_data = {
         "key_facts": large_facts,
@@ -353,11 +385,11 @@ def test_data_structurer_real_world():
 
     print("\n  Structured Analysis:")
     print(f"    Key Facts Extracted: {len(structured.get('key_facts', []))}")
-    for fact in structured.get('key_facts', []):
+    for fact in structured.get("key_facts", []):
         print(f"      {fact}")
 
     print(f"\n    Trends Identified: {len(structured.get('trends', []))}")
-    for trend in structured.get('trends', []):
+    for trend in structured.get("trends", []):
         print(f"      {trend}")
 
     # Verify output is properly structured
@@ -397,6 +429,7 @@ def run_all_researcher_tests():
         except Exception as e:
             print(f"  ✗ ERROR: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 
