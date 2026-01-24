@@ -1,8 +1,8 @@
 "use client";
 
-import { motion, useMotionValue, useTransform } from "framer-motion";
-import { X, Search, Activity, FileSearch } from "lucide-react";
-import { memo, useCallback, useEffect } from "react";
+import { motion, useMotionValue } from "framer-motion";
+import { Search, Activity, FileSearch } from "lucide-react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   FileText,
   Layout,
@@ -31,7 +31,6 @@ interface ToolIslandProps {
   isActive: boolean;
   onClick: () => void;
   onDragEnd: (x: number, y: number) => void;
-  onDismiss: () => void;
 }
 
 // Widget type to icon mapping
@@ -72,10 +71,10 @@ export const ToolIsland = memo(function ToolIsland({
   isActive,
   onClick,
   onDragEnd,
-  onDismiss,
 }: ToolIslandProps) {
   const dragX = useMotionValue(position.x);
   const dragY = useMotionValue(position.y);
+  const dragDistanceRef = useRef(0);
 
   const IconComponent = widgetIcons[widget.descriptor_type] || FileText;
   const islandColor = widgetColors[widget.descriptor_type] || "hsl(var(--island-white))";
@@ -86,6 +85,10 @@ export const ToolIsland = memo(function ToolIsland({
     dragY.set(position.y);
   }, [position.x, position.y, dragX, dragY]);
 
+  const handleDrag = useCallback(() => {
+    dragDistanceRef.current++;
+  }, []);
+
   const handleDragEnd = useCallback(
     (_: unknown, info: { offset: { x: number; y: number } }) => {
       onDragEnd(position.x + info.offset.x, position.y + info.offset.y);
@@ -93,12 +96,15 @@ export const ToolIsland = memo(function ToolIsland({
     [onDragEnd, position]
   );
 
-  const handleDismiss = useCallback(
+  const handleClick = useCallback(
     (e: React.MouseEvent) => {
-      e.stopPropagation();
-      onDismiss();
+      // Only trigger onClick if there was no significant drag
+      if (dragDistanceRef.current < 5) {
+        onClick();
+      }
+      dragDistanceRef.current = 0;
     },
-    [onDismiss]
+    [onClick]
   );
 
   return (
@@ -108,6 +114,7 @@ export const ToolIsland = memo(function ToolIsland({
       dragElastic={0}
       dragMomentum={false}
       whileDrag={{ scale: 1.05, cursor: "grabbing", zIndex: 50 }}
+      onDrag={handleDrag}
       onDragEnd={handleDragEnd}
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: isActive ? 1.05 : 1 }}
@@ -117,7 +124,7 @@ export const ToolIsland = memo(function ToolIsland({
     >
       <div className="relative group">
         <motion.button
-          onClick={onClick}
+          onClick={handleClick}
           className={`
             relative rounded-full shadow-lg hover:shadow-xl
             flex items-center justify-center
@@ -153,15 +160,6 @@ export const ToolIsland = memo(function ToolIsland({
             />
           )}
         </motion.button>
-
-        {/* Dismiss button - outside the main button, visible on hover */}
-        <button
-          onClick={handleDismiss}
-          className="absolute -top-1 -right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity shadow-sm"
-          aria-label="Dismiss widget"
-        >
-          <X className="w-3 h-3" />
-        </button>
       </div>
 
       {/* Tooltip */}

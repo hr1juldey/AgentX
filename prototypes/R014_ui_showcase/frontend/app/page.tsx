@@ -161,7 +161,6 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
           isActive={false}
           onClick={onCycleState}
           onDragEnd={onDragEnd}
-          onDismiss={onDismiss}
         />
       )}
 
