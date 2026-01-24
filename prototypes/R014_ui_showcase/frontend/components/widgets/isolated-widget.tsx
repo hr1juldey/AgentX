@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useState, useRef } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { X, Minimize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -85,19 +85,21 @@ export const IsolatedWidget = memo(function IsolatedWidget({
   }, []); // ← Empty deps = stable forever
 
   /**
-   * Stable drag end handler
+   * Stable drag end handler - uses functional setState to avoid stale closures
    * Updates internal position and notifies parent
    */
   const handleDragEnd = useCallback(
     (x: number, y: number) => {
-      const newPosition = {
-        x: position.x + x,
-        y: position.y + y,
-      };
-      setPosition(newPosition);
-      onPositionChange?.(descriptor.descriptor_id, newPosition);
+      setPosition((prevPos) => {
+        const newPosition = {
+          x: prevPos.x + x,
+          y: prevPos.y + y,
+        };
+        onPositionChange?.(descriptor.descriptor_id, newPosition);
+        return newPosition;
+      });
     },
-    [descriptor.descriptor_id, position, onPositionChange]
+    [descriptor.descriptor_id, onPositionChange]
   );
 
   /**
@@ -108,8 +110,8 @@ export const IsolatedWidget = memo(function IsolatedWidget({
     onDelete?.(descriptor.descriptor_id);
   }, [descriptor.descriptor_id, onDelete]);
 
-  // Track drag distance to distinguish clicks from drags
-  const dragDistanceRef = { current: 0 };
+  // Track drag distance to distinguish clicks from drags (pattern from working commit)
+  const dragDistanceRef = useRef(0);
   const CLICK_THRESHOLD = 5;
 
   const handleDrag = useCallback(() => {
@@ -117,16 +119,34 @@ export const IsolatedWidget = memo(function IsolatedWidget({
   }, []);
 
   const handleClick = useCallback(() => {
+    // Only cycle if it was a click (not a drag)
     if (dragDistanceRef.current < CLICK_THRESHOLD) {
       handleCycleState();
     }
     dragDistanceRef.current = 0;
   }, [handleCycleState]);
 
+  // Island state uses ToolIsland's own drag detection - no wrapper needed
+  const handleIslandDragEnd = useCallback((x: number, y: number) => {
+    // ToolIsland already handles click vs drag detection
+    // Just update position when called
+    setPosition((prevPos) => {
+      const newPosition = {
+        x: prevPos.x + x,
+        y: prevPos.y + y,
+      };
+      onPositionChange?.(descriptor.descriptor_id, newPosition);
+      return newPosition;
+    });
+  }, [descriptor.descriptor_id, onPositionChange]);
+
+  // Card/Full states use local drag detection
   const handleDragEndWrapper = useCallback(
     (_: unknown, info: PanInfo) => {
+      // Process the drag position update
       handleDragEnd(info.offset.x, info.offset.y);
-      dragDistanceRef.current = 0;
+      // NOTE: Don't reset dragDistanceRef here - let handleClick do it after checking
+      // If we reset here, onClick will fire with counter=0 and think it's a click
     },
     [handleDragEnd]
   );
@@ -200,7 +220,7 @@ export const IsolatedWidget = memo(function IsolatedWidget({
           position={position}
           isActive={false}
           onClick={handleCycleState}
-          onDragEnd={handleDragEnd}
+          onDragEnd={handleIslandDragEnd}
         />
       )}
 
@@ -376,9 +396,13 @@ export const IsolatedWidget = memo(function IsolatedWidget({
 
 // Export with a custom comparison function for React.memo
 // Only re-render if the descriptor content actually changes
+// Position changes are handled internally by the widget's own state - no re-render needed!
 export default memo(IsolatedWidget, (prevProps, nextProps) => {
-  return (
-    prevProps.descriptor === nextProps.descriptor &&
-    prevProps.initialPosition === nextProps.initialPosition
-  );
+  // Compare only descriptor ID and content (things that affect rendering)
+  // Ignore position changes - those are handled by internal state
+  // Ignore initialPosition changes - widget uses internal state after mount
+  return prevProps.descriptor.descriptor_id === nextProps.descriptor.descriptor_id &&
+    prevProps.descriptor.content === nextProps.descriptor.content;
+    // Deliberately NOT comparing initialPosition, onDelete, onPositionChange
+    // These callback refs don't affect rendering and position is internal state
 });

@@ -651,14 +651,17 @@ export default function HomePage() {
   }, []); // ← Empty deps = stable forever
 
   /**
-   * Simple stable callback for widget position changes
-   * Optional: Can persist to localStorage/backend here
+   * Handle widget position changes - does NOT update widgets array
+   *
+   * KEY: IsolatedWidget manages position internally (State Colocation pattern)
+   * Updating the widgets array would cause ALL widgets to re-render
+   * Position changes are only for persistence/debugging, not rendering
    */
   const handleWidgetPositionChange = useCallback((id: string, position: { x: number; y: number }) => {
-    console.log(`[STATE COLOCATION] Widget ${id} moved to`, position);
-    // Optional: Persist to localStorage/backend
-    // localStorage.setItem(`widget-pos-${id}`, JSON.stringify(position));
-  }, []); // ← Empty deps = stable forever
+    // Optional: Persist to localStorage or backend
+    // console.log(`Widget ${id} moved to`, position);
+    // DON'T update widgets array - that would cause cascade re-renders!
+  }, []);
 
   /**
    * Safe position generator - deterministic positioning for new widgets
@@ -786,15 +789,24 @@ export default function HomePage() {
   }, [updateQACheckpoint, handleWidgetMessage, handleCompleteMessage]);
 
   // Pre-compute safe positions for all widgets with collision detection
-  // This ensures widgets don't overlap when spawned
+  // Uses widget's initial x/y from creation (NOT synced by handleWidgetPositionChange)
+  // IsolatedWidget manages position internally after initial mount
+  // Only generates positions for NEW widgets (no x/y yet)
   const widgetPositions = useMemo(() => {
     const positions: Record<string, { x: number; y: number }> = {};
     const placed: UIDescriptor[] = [];
 
     for (const widget of widgets) {
+      // Use widget's initial x/y if available (from creation, NOT from drag updates)
+      if (widget.x !== undefined && widget.y !== undefined) {
+        positions[widget.descriptor_id] = { x: widget.x, y: widget.y };
+        placed.push({ ...widget, x: widget.x, y: widget.y });
+        continue;
+      }
+
+      // Generate NEW position for widgets without x/y (newly spawned)
       const pos = generateSafePosition(widget.descriptor_id, placed);
       positions[widget.descriptor_id] = pos;
-      // Add to placed list with computed position for collision detection
       placed.push({ ...widget, x: pos.x, y: pos.y });
     }
 
