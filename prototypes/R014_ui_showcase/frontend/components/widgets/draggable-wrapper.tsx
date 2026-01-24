@@ -1,14 +1,14 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { useRef } from "react"
+import { useRef, memo } from "react"
 
 interface DraggableWrapperProps {
   children: React.ReactNode
   className?: string
 }
 
-export function DraggableWrapper({ children, className = "" }: DraggableWrapperProps) {
+export const DraggableWrapper = memo(function DraggableWrapper({ children, className = "" }: DraggableWrapperProps) {
   const constraintsRef = useRef<HTMLDivElement>(null)
 
   return (
@@ -30,4 +30,4 @@ export function DraggableWrapper({ children, className = "" }: DraggableWrapperP
       </motion.div>
     </div>
   )
-}
+});

@@ -13,7 +13,7 @@ import {
   Images,
   LineChart,
 } from "lucide-react";
-import { memo, useCallback, useState } from "react";
+import React, { memo, useCallback, useState, useMemo } from "react";
 
 interface UIDescriptor {
   descriptor_id: string;
@@ -129,6 +129,26 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
     [onDismiss]
   );
 
+  // Memoized handlers map to prevent re-renders in map() callback
+  const widgetHandlers = useMemo(() => {
+    const handlers: Record<string, {
+      onDragEnd: (_: unknown, info: { offset: { x: number; y: number } }) => void;
+      onClick: () => void;
+      onDismiss: (e: React.MouseEvent) => void;
+    }> = {};
+
+    visibleWidgets.forEach(widget => {
+      const id = widget.descriptor_id;
+      handlers[id] = {
+        onDragEnd: (_: unknown, info: { offset: { x: number; y: number } }) => handleDragEnd(id, _, info),
+        onClick: () => handleClick(id),
+        onDismiss: (e: React.MouseEvent) => handleDismiss(e, id),
+      };
+    });
+
+    return handlers;
+  }, [visibleWidgets, handleDragEnd, handleClick, handleDismiss]);
+
   return (
     <div className="md:hidden fixed inset-0 pointer-events-none z-40">
       <AnimatePresence>
@@ -144,6 +164,7 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
           };
 
           const position = bubblePositions[widget.descriptor_id] || defaultPosition;
+          const handlers = widgetHandlers[widget.descriptor_id];
 
           return (
             <motion.div
@@ -152,7 +173,7 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
               drag
               dragElastic={0.2}
               dragMomentum={false}
-              onDragEnd={(_, info) => handleDragEnd(widget.descriptor_id, _, info)}
+              onDragEnd={handlers?.onDragEnd}
               whileDrag={{ scale: 1.05, cursor: "grabbing" }}
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: isExpanded ? 1.1 : 1 }}
@@ -162,7 +183,7 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
             >
               <div className="relative">
                 <motion.button
-                  onClick={() => handleClick(widget.descriptor_id)}
+                  onClick={handlers?.onClick}
                   className="relative rounded-full shadow-lg"
                   style={{
                     width: `${BUBBLE_SIZE}px`,
@@ -194,7 +215,7 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
 
                 {/* Dismiss button - outside the main button */}
                 <button
-                  onClick={(e) => handleDismiss(e, widget.descriptor_id)}
+                  onClick={handlers?.onDismiss}
                   className="absolute -top-1 -right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 hover:opacity-100 transition-opacity shadow-sm"
                   aria-label="Dismiss widget"
                 >

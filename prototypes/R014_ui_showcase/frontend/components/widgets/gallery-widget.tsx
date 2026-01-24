@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Images, ChevronDown } from "lucide-react"
-import { memo, useCallback, useState, useMemo } from "react"
+import React, { memo, useCallback, useState, useMemo } from "react"
 
 interface ImageItem {
   url: string
@@ -61,6 +61,14 @@ export const GalleryWidget = memo(function GalleryWidget({
     ];
   }, [images, descriptor_id]);
 
+  // Memoized thumbnail click handlers to prevent re-renders in map
+  const thumbnailClickHandlers = useMemo(() => {
+    return displayImages.map((_, index) => (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setSelectedIndex(index);
+    });
+  }, [displayImages]);
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -72,10 +80,7 @@ export const GalleryWidget = memo(function GalleryWidget({
       dragMomentum={false}
       dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
       whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
-      onDragEnd={(_, info) => onDragEnd?.(
-        (dragPosition?.x || 0) + info.offset.x,
-        (dragPosition?.y || 0) + info.offset.y
-      )}
+      onDragEnd={handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
       className="relative bg-card cursor-grab shadow-lg hover:shadow-xl border border-border rounded-lg overflow-hidden"
     >
@@ -177,10 +182,7 @@ export const GalleryWidget = memo(function GalleryWidget({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className="relative aspect-square rounded-lg overflow-hidden border border-border"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedIndex(index);
-                    }}
+                    onClick={thumbnailClickHandlers[index]}
                   >
                     <img
                       src={image.url}

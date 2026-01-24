@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef, useEffect } from "react"
+import { useState, useCallback, useRef, useEffect, memo } from "react"
 import { motion, useMotionValue, useTransform, useSpring, AnimatePresence } from "framer-motion"
 import { Mic, MessageCircle, X, Send, ChevronUp, ChevronDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -13,7 +13,7 @@ interface CentralIslandProps {
   onVoiceToggle?: () => void
 }
 
-export function CentralIsland({ onSendMessage, onVoiceToggle }: CentralIslandProps) {
+export const CentralIsland = memo(function CentralIsland({ onSendMessage, onVoiceToggle }: CentralIslandProps) {
   const [mode, setMode] = useState<Mode>("idle")
   const [chatInput, setChatInput] = useState("")
   const [isExpanded, setIsExpanded] = useState(false)
@@ -226,4 +226,4 @@ export function CentralIsland({ onSendMessage, onVoiceToggle }: CentralIslandPro
       </AnimatePresence>
     </div>
   )
-}
+});

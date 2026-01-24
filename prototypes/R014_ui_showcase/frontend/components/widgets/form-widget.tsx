@@ -62,10 +62,7 @@ export const FormWidget = memo(function FormWidget({
       dragMomentum={false}
       dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
       whileDrag={{ scale: 1.02, rotate: 1, cursor: "grabbing", zIndex: 50 }}
-      onDragEnd={(_, info) => onDragEnd?.(
-        (dragPosition?.x || 0) + info.offset.x,
-        (dragPosition?.y || 0) + info.offset.y
-      )}
+      onDragEnd={handleDragEnd}
       style={{ x: dragPosition?.x || 0, y: dragPosition?.y || 0 }}
       className="relative bg-card border border-border rounded-lg cursor-grab shadow-lg hover:shadow-xl"
     >

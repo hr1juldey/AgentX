@@ -87,6 +87,11 @@ interface Session {
 const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8014";
 const appName = process.env.NEXT_PUBLIC_APP_NAME || "R014 UI Showcase";
 
+// Stable no-op functions to prevent re-renders (identity-stable across renders)
+const NOOP_FN = () => {};
+const NOOP_DRAG_FN = (_x: number, _y: number) => {};
+const STOP_PROPAGATION = (e: React.MouseEvent) => e.stopPropagation();
+
 // UI boundaries to prevent widgets from spawning over fixed UI elements
 const UI_BOUNDARIES = {
   HEADER_HEIGHT: 56,
@@ -157,6 +162,12 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
     onDragEnd(info.offset.x, info.offset.y);
     dragDistanceRef.current = 0;
   }, [onDragEnd]);
+
+  // Memoized dismiss handler that stops propagation
+  const handleDismissClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDismiss();
+  }, [onDismiss]);
 
   // Get widget icon based on type
   const getWidgetIcon = () => {
@@ -277,7 +288,7 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
 
             {/* Dismiss button */}
             <button
-              onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+              onClick={handleDismissClick}
               className="absolute -top-2 -right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity shadow-lg"
               aria-label="Dismiss widget"
             >
@@ -331,19 +342,19 @@ const Widget3StateRenderer = memo(function Widget3StateRenderer({
             {/* Content - pass no-op dismiss to prevent accidental deletion */}
             <div
               className="rounded-b-2xl shadow-2xl backdrop-blur-md bg-card/95 border border-t-0 border-border/50 overflow-hidden select-text"
-              onClick={(e) => e.stopPropagation()}
+              onClick={STOP_PROPAGATION}
             >
               <DirectWidgetRenderer
                 descriptor={widget}
-                onDismiss={() => {}}  // No-op - dismiss only via top-right button
+                onDismiss={NOOP_FN}  // No-op - dismiss only via top-right button
                 dragPosition={{ x: 0, y: 0 }}
-                onDragEnd={() => {}}
+                onDragEnd={NOOP_DRAG_FN}
               />
             </div>
 
             {/* Dismiss button */}
             <button
-              onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+              onClick={handleDismissClick}
               className="absolute top-16 right-2 p-2 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 hover:opacity-100 transition-opacity shadow-lg"
               aria-label="Dismiss widget"
             >
@@ -397,7 +408,7 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           title={descriptor.title}
           fields={descriptor.fields || []}
           submitLabel={descriptor.submit_button_text}
-          onSubmit={() => {}}
+          onSubmit={NOOP_FN}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -420,7 +431,7 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           title={descriptor.title}
           content={descriptor.content}
           buttonText={descriptor.button_text || "Action"}
-          onAction={() => {}}
+          onAction={NOOP_FN}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -433,8 +444,8 @@ const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
           message={descriptor.message || ""}
           confirmLabel={descriptor.confirm_label}
           cancelLabel={descriptor.cancel_label}
-          onConfirm={() => {}}
-          onCancel={() => {}}
+          onConfirm={NOOP_FN}
+          onCancel={NOOP_FN}
           onDismiss={onDismiss}
           dragPosition={dragPosition}
           onDragEnd={onDragEnd}
@@ -546,6 +557,19 @@ const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
     }
   }, [descriptor.descriptor_type]);
 
+  // Memoized handlers to prevent re-renders
+  const handleCollapsedDragEnd = useCallback((_: unknown, info: PanInfo) => {
+    onDragEnd(
+      (descriptor.x || 0) + info.offset.x,
+      (descriptor.y || 0) + info.offset.y
+    );
+  }, [onDragEnd, descriptor.x, descriptor.y]);
+
+  const handleDismissClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDismiss();
+  }, [onDismiss]);
+
   return (
     <motion.div
       layout
@@ -570,10 +594,7 @@ const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
               dragMomentum={false}
               dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
               whileDrag={{ scale: 1.05, cursor: "grabbing", zIndex: 50 }}
-              onDragEnd={(_, info) => onDragEnd(
-                (descriptor.x || 0) + info.offset.x,
-                (descriptor.y || 0) + info.offset.y
-              )}
+              onDragEnd={handleCollapsedDragEnd}
               onClick={onToggleCollapse}
               style={{ x: descriptor.x || 0, y: descriptor.y || 0 }}
               className="relative bg-card border border-border rounded-full cursor-grab shadow-lg hover:shadow-xl px-4 py-2 flex items-center gap-2 hover:bg-muted/50 transition-colors"
@@ -583,15 +604,13 @@ const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
                 {descriptor.title || descriptor.descriptor_type}
               </span>
               {/* Dismiss button */}
-              {onDismiss && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onDismiss(); }}
-                  className="p-1 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
-                  aria-label="Dismiss"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
+              <button
+                onClick={handleDismissClick}
+                className="p-1 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
+                aria-label="Dismiss"
+              >
+                <X className="w-3 h-3" />
+              </button>
             </motion.button>
           </motion.div>
         ) : (
@@ -681,7 +700,7 @@ const WidgetRenderer = memo(function WidgetRenderer({
             title={descriptor.title}
             fields={descriptor.fields || []}
             submitLabel={descriptor.submit_button_text}
-            onSubmit={() => {}}
+            onSubmit={NOOP_FN}
             onDismiss={onDismiss}
             dragPosition={dragPosition}
             onDragEnd={onDragEnd}
@@ -720,7 +739,7 @@ const WidgetRenderer = memo(function WidgetRenderer({
             title={descriptor.title}
             content={descriptor.content}
             buttonText={descriptor.button_text || "Action"}
-            onAction={() => {}}
+            onAction={NOOP_FN}
             onDismiss={onDismiss}
             dragPosition={dragPosition}
             onDragEnd={onDragEnd}
@@ -741,8 +760,8 @@ const WidgetRenderer = memo(function WidgetRenderer({
             message={descriptor.message || ""}
             confirmLabel={descriptor.confirm_label}
             cancelLabel={descriptor.cancel_label}
-            onConfirm={() => {}}
-            onCancel={() => {}}
+            onConfirm={NOOP_FN}
+            onCancel={NOOP_FN}
             onDismiss={onDismiss}
             dragPosition={dragPosition}
             onDragEnd={onDragEnd}
@@ -1322,6 +1341,7 @@ export default function HomePage() {
       onCycleState: () => void;
       onDragEnd: (x: number, y: number) => void;
       onDismiss: () => void;
+      onPanelClose: () => void;
     }> = {};
 
     widgets.forEach(w => {
@@ -1330,11 +1350,20 @@ export default function HomePage() {
         onCycleState: () => cycleWidgetState(id),
         onDragEnd: (x: number, y: number) => handleIslandDragEnd(id, x, y),
         onDismiss: () => dismissWidget(id),
+        onPanelClose: () => handlePanelClose(id),
       };
     });
 
     return cache;
-  }, [widgets, cycleWidgetState, handleIslandDragEnd, dismissWidget]);
+  }, [widgets, cycleWidgetState, handleIslandDragEnd, dismissWidget, handlePanelClose]);
+
+  // Sidebar navigation handlers - memoized to prevent re-renders
+  const handleCloseSidebar = useCallback(() => setSidebarOpen(false), []);
+  const handleToggleSidebar = useCallback(() => setSidebarOpen(prev => !prev), []);
+  const handleNavMain = useCallback(() => { setView("main"); setSidebarOpen(false); }, []);
+  const handleNavGallery = useCallback(() => { setView("gallery"); setSidebarOpen(false); }, []);
+  const handleNavSessions = useCallback(() => { setView("sessions"); setSidebarOpen(false); }, []);
+  const handleNavConnectors = useCallback(() => { setView("connectors"); setSidebarOpen(false); }, []);
 
   // Sidebar
   const Sidebar = () => (
@@ -1346,7 +1375,7 @@ export default function HomePage() {
     >
       <div className="p-4 border-b border-border flex items-center justify-between">
         <h2 className="font-semibold text-lg">Navigation</h2>
-        <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
+        <Button variant="ghost" size="icon" onClick={handleCloseSidebar}>
           <X className="w-5 h-5" />
         </Button>
       </div>
@@ -1355,7 +1384,7 @@ export default function HomePage() {
         <Button
           variant={view === "main" ? "secondary" : "ghost"}
           className="w-full justify-start"
-          onClick={() => { setView("main"); setSidebarOpen(false); }}
+          onClick={handleNavMain}
         >
           <MessageSquare className="w-4 h-4 mr-2" />
           Main Workspace
@@ -1363,7 +1392,7 @@ export default function HomePage() {
         <Button
           variant={view === "gallery" ? "secondary" : "ghost"}
           className="w-full justify-start"
-          onClick={() => { setView("gallery"); setSidebarOpen(false); }}
+          onClick={handleNavGallery}
         >
           <Images className="w-4 h-4 mr-2" />
           Widget Gallery
@@ -1371,7 +1400,7 @@ export default function HomePage() {
         <Button
           variant={view === "sessions" ? "secondary" : "ghost"}
           className="w-full justify-start"
-          onClick={() => { setView("sessions"); setSidebarOpen(false); }}
+          onClick={handleNavSessions}
         >
           <History className="w-4 h-4 mr-2" />
           Sessions
@@ -1379,7 +1408,7 @@ export default function HomePage() {
         <Button
           variant={view === "connectors" ? "secondary" : "ghost"}
           className="w-full justify-start"
-          onClick={() => { setView("connectors"); setSidebarOpen(false); }}
+          onClick={handleNavConnectors}
         >
           <Database className="w-4 h-4 mr-2" />
           Connectors
@@ -1518,7 +1547,7 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
           { name: "rating", type: "select", label: "Rating", options: ["Excellent", "Good", "Fair", "Poor"] },
         ]}
         submitLabel="Submit Feedback"
-        onSubmit={() => {}}
+        onSubmit={NOOP_FN}
       />
 
       <ProgressWidget
@@ -1531,7 +1560,7 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
         title="Start Analysis"
         content="Click to begin processing your data"
         buttonText="Start New Analysis"
-        onAction={() => {}}
+        onAction={NOOP_FN}
       />
 
       <ConfirmationWidget
@@ -1540,8 +1569,8 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
         confirmLabel="Delete"
         cancelLabel="Cancel"
         variant="destructive"
-        onConfirm={() => {}}
-        onCancel={() => {}}
+        onConfirm={NOOP_FN}
+        onCancel={NOOP_FN}
       />
 
       <ImageWidget
@@ -1596,6 +1625,15 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
     </div>
   );
 
+  // Memoized connector toggle handlers to prevent re-renders in map
+  const connectorToggleHandlers = useMemo(() => {
+    const handlers: Record<string, () => void> = {};
+    Object.keys(connectors).forEach(name => {
+      handlers[name] = () => setConnectors(prev => ({ ...prev, [name]: !prev[name as keyof typeof prev] }));
+    });
+    return handlers;
+  }, [connectors]);
+
   // Connectors view
   const ConnectorsView = () => (
     <div className="space-y-6">
@@ -1617,7 +1655,7 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
               </div>
               <Button
                 variant={connected ? "outline" : "default"}
-                onClick={() => setConnectors((prev) => ({ ...prev, [name]: !prev[name as keyof typeof prev] }))}
+                onClick={connectorToggleHandlers[name]}
               >
                 {connected ? "Disconnect" : "Connect"}
               </Button>
@@ -1638,7 +1676,7 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
+          onClick={handleToggleSidebar}
           className="mr-4"
         >
           <Plus className="w-5 h-5" />
@@ -1683,6 +1721,7 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
             .filter((w) => widgetStates[w.descriptor_id] === "full")
             .map((widget) => {
               const handlers = getWidgetHandlers(widget.descriptor_id);
+              const widgetHandlers = stableHandlers[widget.descriptor_id];
               const dragPos = { x: widget.x || 0, y: widget.y || 0 };
               return (
                 <div key={widget.descriptor_id} className="w-full max-w-md max-h-[80vh] overflow-auto">
@@ -1695,7 +1734,7 @@ This widget is perfect for displaying AI-generated explanations, documentation, 
                   <Button
                     variant="outline"
                     className="w-full mt-4"
-                    onClick={() => handlePanelClose(widget.descriptor_id)}
+                    onClick={widgetHandlers?.onPanelClose}
                   >
                     Close
                   </Button>
