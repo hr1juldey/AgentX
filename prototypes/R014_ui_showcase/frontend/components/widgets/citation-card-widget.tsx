@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react"
-import { memo, useCallback, useState } from "react"
+import { memo, useCallback, useState, useMemo } from "react"
 
 interface Citation {
   cited_text: string
@@ -55,6 +55,11 @@ export const CitationCardWidget = memo(function CitationCardWidget({
     []
   )
 
+  // Memoized toggle handlers to prevent re-renders in map
+  const toggleHandlers = useMemo(() => {
+    return citations.map((_, index) => () => toggleCard(index))
+  }, [citations, toggleCard])
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -96,7 +101,7 @@ export const CitationCardWidget = memo(function CitationCardWidget({
             {/* Collapsed View */}
             <div
               className="p-3 cursor-pointer hover:bg-muted/50"
-              onClick={() => toggleCard(index)}
+              onClick={toggleHandlers[index]}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
