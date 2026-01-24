@@ -1,116 +1,81 @@
 "use client";
 
-import { memo, useCallback, useState, useRef } from "react";
+import { memo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { X, Minimize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ToolIsland } from "@/components/islands/tool-island";
 import { DirectWidgetRenderer } from "@/components/widgets/direct-widget-renderer";
+import { useWidgetStore, type UIDescriptor, type ViewState, type Position } from "@/store/widget-store";
 
-// Constants from page.tsx
+// Constants
 const NOOP_FN = () => {};
 const NOOP_DRAG_FN = (_x: number, _y: number) => {};
 const STOP_PROPAGATION = (e: React.MouseEvent) => e.stopPropagation();
 
-interface UIDescriptor {
-  descriptor_id: string;
-  descriptor_type: string;
-  title?: string;
-  x?: number;
-  y?: number;
-  collapsed?: boolean;
-  metadata?: Record<string, unknown>;
-  content?: string;
-  fields?: Array<{
-    name: string;
-    type: string;
-    label: string;
-    required: boolean;
-    options?: string[];
-  }>;
-  button_text?: string;
-  message?: string;
-  confirm_label?: string;
-  cancel_label?: string;
-  submit_button_text?: string;
-  citations?: Array<Record<string, unknown>>;
-  hop_events?: Array<Record<string, unknown>>;
-  id?: string;
-}
-
 interface IsolatedWidgetProps {
-  descriptor: UIDescriptor;
-  initialPosition: { x: number; y: number };
-  onDelete?: (id: string) => void;
-  onPositionChange?: (id: string, position: { x: number; y: number }) => void;
+  descriptorId: string;
 }
 
 /**
- * IsolatedWidget - A self-contained widget component that owns its internal state.
+ * IsolatedWidget - A self-contained widget component using Zustand for state management.
  *
- * This component implements the State Colocation Pattern:
- * - Manages its own position, view state, and collapsed state
- * - Only re-renders when its own props or state change
+ * This component implements external state management with Zustand:
+ * - Reads state from Zustand store (not internal useState)
+ * - Only re-renders when ITS specific data changes in the store
  * - Does NOT re-render when other widgets change
  *
  * Key benefits:
- * - Prevents cascade re-renders across all widgets
- * - Stable handlers (empty dependency arrays where possible)
- * - Clear component boundaries
+ * - Eliminates cascade re-renders completely
+ * - State survives parent re-renders
+ * - Simpler props (just descriptorId)
+ * - No callback props needed (onDelete, onPositionChange)
  */
 export const IsolatedWidget = memo(function IsolatedWidget({
-  descriptor,
-  initialPosition,
-  onDelete,
-  onPositionChange,
+  descriptorId,
 }: IsolatedWidgetProps) {
-  // Internal state - NOT affected by other widgets
-  const [viewState, setViewState] = useState<"island" | "card" | "full">("island");
-  const [position, setPosition] = useState(initialPosition);
+  // Selector-based subscriptions - each creates independent subscription
+  // These will ONLY trigger re-render when THIS widget's specific data changes
+  const widget = useWidgetStore((s) => s.widgets.get(descriptorId));
+  const viewState = useWidgetStore((s) => s.viewStates.get(descriptorId)) as ViewState | undefined;
+  const position = useWidgetStore((s) => s.positions.get(descriptorId));
+
+  // Actions from store - stable references, never recreated
+  const cycleState = useWidgetStore((s) => s.cycleViewState);
+  const updatePositionDelta = useWidgetStore((s) => s.updatePositionDelta);
+  const removeWidget = useWidgetStore((s) => s.removeWidget);
+
+  // Early return if widget doesn't exist (was deleted from store)
+  if (!widget || !viewState || !position) {
+    return null;
+  }
 
   /**
-   * Stable cycle handler - empty deps = never recreated
-   * This is the key to preventing re-renders when other widgets change
+   * Cycle handler - calls store action
    */
   const handleCycleState = useCallback(() => {
-    setViewState((prev) => {
-      const cycle: Record<string, "island" | "card" | "full"> = {
-        island: "card",
-        card: "full",
-        full: "island",
-      };
-      return cycle[prev];
-    });
-  }, []); // ← Empty deps = stable forever
+    cycleState(descriptorId);
+  }, [cycleState, descriptorId]);
 
   /**
-   * Stable drag end handler - uses functional setState to avoid stale closures
-   * Updates internal position and notifies parent
+   * Drag end handler - updates position via store
    */
   const handleDragEnd = useCallback(
     (x: number, y: number) => {
-      setPosition((prevPos) => {
-        const newPosition = {
-          x: prevPos.x + x,
-          y: prevPos.y + y,
-        };
-        onPositionChange?.(descriptor.descriptor_id, newPosition);
-        return newPosition;
-      });
+      updatePositionDelta(descriptorId, x, y);
     },
-    [descriptor.descriptor_id, onPositionChange]
+    [updatePositionDelta, descriptorId]
   );
 
   /**
-   * Stable dismiss handler
-   * Notifies parent to remove this widget from the list
+   * Dismiss handler - removes widget from store
    */
   const handleDismiss = useCallback(() => {
-    onDelete?.(descriptor.descriptor_id);
-  }, [descriptor.descriptor_id, onDelete]);
+    removeWidget(descriptorId);
+  }, [removeWidget, descriptorId]);
 
-  // Track drag distance to distinguish clicks from drags (pattern from working commit)
+  // Track drag distance to distinguish clicks from drags
   const dragDistanceRef = useRef(0);
   const CLICK_THRESHOLD = 5;
 
@@ -126,27 +91,15 @@ export const IsolatedWidget = memo(function IsolatedWidget({
     dragDistanceRef.current = 0;
   }, [handleCycleState]);
 
-  // Island state uses ToolIsland's own drag detection - no wrapper needed
+  // Island state uses ToolIsland's own drag detection
   const handleIslandDragEnd = useCallback((x: number, y: number) => {
-    // ToolIsland already handles click vs drag detection
-    // Just update position when called
-    setPosition((prevPos) => {
-      const newPosition = {
-        x: prevPos.x + x,
-        y: prevPos.y + y,
-      };
-      onPositionChange?.(descriptor.descriptor_id, newPosition);
-      return newPosition;
-    });
-  }, [descriptor.descriptor_id, onPositionChange]);
+    updatePositionDelta(descriptorId, x, y);
+  }, [updatePositionDelta, descriptorId]);
 
   // Card/Full states use local drag detection
   const handleDragEndWrapper = useCallback(
     (_: unknown, info: PanInfo) => {
-      // Process the drag position update
       handleDragEnd(info.offset.x, info.offset.y);
-      // NOTE: Don't reset dragDistanceRef here - let handleClick do it after checking
-      // If we reset here, onClick will fire with counter=0 and think it's a click
     },
     [handleDragEnd]
   );
@@ -156,9 +109,14 @@ export const IsolatedWidget = memo(function IsolatedWidget({
     handleDismiss();
   }, [handleDismiss]);
 
+  // Debug logging for render verification (can be removed in production)
+  useEffect(() => {
+    console.log(`[IsolatedWidget ${descriptorId}] Rendered, viewState:`, viewState);
+  }, [descriptorId, viewState]);
+
   // Get widget icon based on type
   const getWidgetIcon = () => {
-    switch (descriptor.descriptor_type) {
+    switch (widget.descriptor_type) {
       case "markdown":
         return "📝";
       case "card":
@@ -204,7 +162,7 @@ export const IsolatedWidget = memo(function IsolatedWidget({
       "hop-progress": "hsl(var(--island-hop-progress))",
       "citation-card": "hsl(var(--island-citation-card))",
     };
-    return colors[descriptor.descriptor_type] || "hsl(var(--island-white))";
+    return colors[widget.descriptor_type] || "hsl(var(--island-white))";
   };
 
   const widgetColor = getWidgetColor();
@@ -216,7 +174,7 @@ export const IsolatedWidget = memo(function IsolatedWidget({
       {viewState === "island" && (
         <ToolIsland
           key="island"
-          widget={descriptor}
+          widget={widget}
           position={position}
           isActive={false}
           onClick={handleCycleState}
@@ -260,7 +218,7 @@ export const IsolatedWidget = memo(function IsolatedWidget({
                 <span className="text-2xl">{getWidgetIcon()}</span>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-sm text-white truncate select-text">
-                    {descriptor.title || descriptor.descriptor_type}
+                    {widget.title || widget.descriptor_type}
                   </h3>
                 </div>
                 {/* Cycle indicator */}
@@ -287,7 +245,7 @@ export const IsolatedWidget = memo(function IsolatedWidget({
               <div className="p-4 overflow-hidden">
                 <div className="text-sm text-foreground/80 line-clamp-3 select-text prose prose-sm max-w-none dark:prose-invert [&>*]:mb-0 [&>*]:mt-0 [&_p]:inline [&_ul]:inline [&_ol]:inline [&_li]:inline">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {descriptor.content || "Click to expand"}
+                    {widget.content || "Click to expand"}
                   </ReactMarkdown>
                 </div>
               </div>
@@ -340,7 +298,7 @@ export const IsolatedWidget = memo(function IsolatedWidget({
               <span className="text-2xl">{getWidgetIcon()}</span>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-base text-white truncate select-text">
-                  {descriptor.title || descriptor.descriptor_type}
+                  {widget.title || widget.descriptor_type}
                 </h3>
               </div>
               {/* Cycle indicator */}
@@ -371,7 +329,7 @@ export const IsolatedWidget = memo(function IsolatedWidget({
               onClick={STOP_PROPAGATION}
             >
               <DirectWidgetRenderer
-                descriptor={descriptor as any}
+                descriptor={widget as any}
                 onDismiss={NOOP_FN}
                 dragPosition={{ x: 0, y: 0 }}
                 onDragEnd={NOOP_DRAG_FN}
@@ -394,15 +352,7 @@ export const IsolatedWidget = memo(function IsolatedWidget({
   );
 });
 
-// Export with a custom comparison function for React.memo
-// Only re-render if the descriptor content actually changes
-// Position changes are handled internally by the widget's own state - no re-render needed!
-export default memo(IsolatedWidget, (prevProps, nextProps) => {
-  // Compare only descriptor ID and content (things that affect rendering)
-  // Ignore position changes - those are handled by internal state
-  // Ignore initialPosition changes - widget uses internal state after mount
-  return prevProps.descriptor.descriptor_id === nextProps.descriptor.descriptor_id &&
-    prevProps.descriptor.content === nextProps.descriptor.content;
-    // Deliberately NOT comparing initialPosition, onDelete, onPositionChange
-    // These callback refs don't affect rendering and position is internal state
-});
+// Note: We still use memo, but the custom comparison is no longer needed
+// because Zustand's selector-based subscriptions already prevent unnecessary re-renders
+// Each widget only subscribes to its own data, so sibling changes don't trigger re-renders
+export default IsolatedWidget;

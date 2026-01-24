@@ -25,6 +25,7 @@ import { HopProgressWidget } from "@/components/widgets/hop-progress-widget";
 import { CitationCardWidget } from "@/components/widgets/citation-card-widget";
 import { IsolatedWidget } from "@/components/widgets/isolated-widget";
 import { ToolIsland, MobileBubbleLayer } from "@/components/islands";
+import { useWidgetStore } from "@/store/widget-store";
 
 interface UIDescriptor {
   descriptor_id: string;
@@ -641,32 +642,23 @@ export default function HomePage() {
   // ============================================================================
 
   /**
-   * Simple stable callback for widget deletion
+   * Simple stable callback for widget deletion - now uses Zustand store
    * Empty deps = stable forever, prevents re-renders of other widgets
    */
   const handleWidgetDelete = useCallback((id: string) => {
     startTransition(() => {
+      // Remove from Zustand store
+      useWidgetStore.getState().removeWidget(id);
+      // Also remove from local widgets array (for non-island mode and MobileBubbleLayer)
       setWidgets(prev => prev.filter(w => w.descriptor_id !== id));
     });
   }, []); // ← Empty deps = stable forever
 
   /**
-   * Handle widget position changes - does NOT update widgets array
-   *
-   * KEY: IsolatedWidget manages position internally (State Colocation pattern)
-   * Updating the widgets array would cause ALL widgets to re-render
-   * Position changes are only for persistence/debugging, not rendering
-   */
-  const handleWidgetPositionChange = useCallback((id: string, position: { x: number; y: number }) => {
-    // Optional: Persist to localStorage or backend
-    // console.log(`Widget ${id} moved to`, position);
-    // DON'T update widgets array - that would cause cascade re-renders!
-  }, []);
-
-  /**
    * Safe position generator - deterministic positioning for new widgets
    * Uses hash of widget ID for consistent positioning
    * Respects UI boundaries (header: 56px, sidebar: 320px when open)
+   * Note: This is now handled by Zustand store, but kept for MobileBubbleLayer
    */
   const generateSafePosition = useCallback((id: string, existingWidgets: UIDescriptor[] = []) => {
     const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
@@ -721,7 +713,7 @@ export default function HomePage() {
     return { x, y };
   }, [sidebarOpen]);
 
-  // Handle incoming widget message
+  // Handle incoming widget message - now uses Zustand store
   const handleWidgetMessage = useCallback((data: { id: string; type: string; title?: string; content?: string; metadata?: Record<string, unknown> }) => {
     const widgetId = data.id || `widget-${Date.now()}`;
     const widget: UIDescriptor = {
@@ -733,14 +725,17 @@ export default function HomePage() {
       dismissible: true,
     };
 
-    setWidgets(prev => {
-      // Append new widgets at the end to prevent re-rendering existing ones
-      return [...prev, widget];
-    });
+    // Add to Zustand store (handles position generation and state initialization)
+    useWidgetStore.getState().addWidget(widget);
+
+    // Also keep local widgets array in sync (for non-island mode and MobileBubbleLayer)
+    setWidgets(prev => [...prev, widget]);
+
     setHasWidgetsArrived(true); // Mark that widgets have arrived
     console.log(`📦 Widget delivered: ${widget.descriptor_type}`);
 
-    // 3-state cycle: new widgets start in "island" state (default)
+    // Note: View state management is now handled by Zustand store
+    // New widgets start in "island" state (default)
     // Users click to cycle: island -> card -> full -> island
   }, []);
 
@@ -789,9 +784,8 @@ export default function HomePage() {
   }, [updateQACheckpoint, handleWidgetMessage, handleCompleteMessage]);
 
   // Pre-compute safe positions for all widgets with collision detection
-  // Uses widget's initial x/y from creation (NOT synced by handleWidgetPositionChange)
-  // IsolatedWidget manages position internally after initial mount
-  // Only generates positions for NEW widgets (no x/y yet)
+  // NOTE: For island mode with Zustand, positions are handled by the store
+  // This is only used for non-island mode and MobileBubbleLayer
   const widgetPositions = useMemo(() => {
     const positions: Record<string, { x: number; y: number }> = {};
     const placed: UIDescriptor[] = [];
@@ -812,6 +806,9 @@ export default function HomePage() {
 
     return positions;
   }, [widgets, generateSafePosition]);
+
+  // Get widget IDs from Zustand store for island mode rendering
+  const storeWidgetIds = useWidgetStore((s) => s.widgetIds);
 
   // Feature flag for island UI
   const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
@@ -1167,37 +1164,45 @@ export default function HomePage() {
       {/* Generated Widgets - 3-State Cycle System (Island -> Card -> Full) */}
       <LayoutGroup>
         <AnimatePresence mode="popLayout">
-          {widgets.map((widget) => {
-            // Island UI mode - use IsolatedWidget with State Colocation Pattern
-            if (enableIslands) {
+          {enableIslands ? (
+            // Island UI mode - use Zustand store with IsolatedWidget
+            storeWidgetIds.map((id) => (
+              <IsolatedWidget
+                key={id}
+                descriptorId={id}
+              />
+            ))
+          ) : (
+            // Traditional mode (CollapsibleWidgetWrapper) - use controlled isExpanded
+            widgets.map((widget) => {
+              const handlers = getWidgetHandlers(widget.descriptor_id);
               return (
-                <IsolatedWidget
+                <WidgetRenderer
                   key={widget.descriptor_id}
                   descriptor={widget}
-                  initialPosition={widgetPositions[widget.descriptor_id] || { x: window.innerWidth / 2, y: window.innerHeight / 2 }}
-                  onDelete={handleWidgetDelete}
-                  onPositionChange={handleWidgetPositionChange}
+                  onDismiss={handlers.onDismiss}
+                  onDragEnd={handlers.onDragEndCompat}
+                  onToggleCollapse={handlers.onToggleCollapse}
+                  isExpanded={!widget.collapsed}
                 />
               );
-            }
-
-            // Traditional mode (CollapsibleWidgetWrapper) - use controlled isExpanded
-            const handlers = getWidgetHandlers(widget.descriptor_id);
-            return (
-              <WidgetRenderer
-                key={widget.descriptor_id}
-                descriptor={widget}
-                onDismiss={handlers.onDismiss}
-                onDragEnd={handlers.onDragEndCompat}
-                onToggleCollapse={handlers.onToggleCollapse}
-                isExpanded={!widget.collapsed}
-              />
-            );
-          })}
+            })
+          )}
         </AnimatePresence>
       </LayoutGroup>
 
-      {widgets.length === 0 && (
+      {(!enableIslands && widgets.length === 0) && (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+            <p className="text-muted-foreground">
+              No widgets yet. Click the Central Island button below to generate your first widget.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {enableIslands && storeWidgetIds.length === 0 && (
         <Card className="border-dashed">
           <CardContent className="py-12 text-center">
             <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
