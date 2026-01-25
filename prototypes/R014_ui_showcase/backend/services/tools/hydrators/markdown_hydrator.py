@@ -35,4 +35,5 @@ class MarkdownHydratorModule(dspy.Module):
             "content": markdown_result.markdown_content
             if hasattr(markdown_result, "markdown_content")
             else "",
+            "citations": citations,  # Include citations for frontend display
         }

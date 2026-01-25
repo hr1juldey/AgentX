@@ -35,6 +35,8 @@ class Settings(BaseSettings):
 
     # CORS
     frontend_url: str = "http://localhost:3014"
+    # Additional CORS origins (comma-separated for local network testing)
+    cors_origins: str = ""
 
     # =============================================================================
     # LLM Configuration

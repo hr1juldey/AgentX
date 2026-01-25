@@ -58,22 +58,43 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         />
       ) : null;
     case "card":
-      return descriptor.content ? (
+      // Handle both mock (string content) and real data (content.cards array)
+      let cardContent = "";
+      if (typeof descriptor.content === "string") {
+        cardContent = descriptor.content;
+      } else if ((descriptor.content as any)?.cards) {
+        // Convert cards array to markdown for CardWidget
+        const cards = (descriptor.content as any).cards;
+        if (Array.isArray(cards)) {
+          cardContent = cards.map((card: any) => {
+            const title = card.title || card.headline || "";
+            const body = card.body || card.content || card.description || "";
+            const source = card.source || card.url ? `*Source: ${card.source || card.url}*` : "";
+            return `### ${title}\n\n${body}\n\n${source}`;
+          }).join("\n\n---\n\n");
+        }
+      }
+      return (
         <CardWidget
           title={descriptor.title}
-          content={descriptor.content}
+          content={cardContent}
           actions={descriptor.metadata?.actions as Array<{ label: string; action: string }> | undefined}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}
           disableDrag={disableDrag}
         />
-      ) : null;
+      );
     case "form":
+      // Handle both mock (fields array at top level) and real data (content.form_fields)
+      const formFields = descriptor.fields
+        || (descriptor.content as any)?.form_fields
+        || descriptor.form_fields
+        || [];
       return (
         <FormWidget
           title={descriptor.title}
-          fields={descriptor.fields}
+          fields={formFields}
           submitLabel={descriptor.submit_button_text}
           onSubmit={NOOP_FN}
           onDismiss={onDismiss}
@@ -147,12 +168,21 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         />
       );
     case "chart":
+      // Handle both mock (metadata.data) and real data (content.data object)
+      const chartContent = descriptor.content as any;
+      const chartData = chartContent?.data
+        || descriptor.metadata?.data
+        || [];
+      const chartType = chartContent?.type
+        || descriptor.metadata?.chartType as "bar" | "line" | "pie" | undefined
+        || "bar";
+      const chartTitle = chartContent?.title || descriptor.title;
       return (
         <ChartWidget
-          title={descriptor.title}
-          content={descriptor.content}
-          chartType={descriptor.metadata?.chartType as "bar" | "line" | "pie" | undefined}
-          data={descriptor.metadata?.data as unknown as undefined}
+          title={chartTitle}
+          content={typeof chartContent === "string" ? chartContent : undefined}
+          chartType={chartType}
+          data={chartData}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}

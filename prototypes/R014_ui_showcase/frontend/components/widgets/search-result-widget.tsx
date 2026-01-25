@@ -140,13 +140,17 @@ export const SearchResultWidget = memo(function SearchResultWidget({
           <p className="text-xs text-muted-foreground mb-2">{citations.length} sources</p>
           <div className="flex flex-wrap gap-2">
             {citations.slice(0, 5).map((citation, index) => (
-              <button
+              <a
                 key={index}
-                className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors"
-                title={citation.document_title}
+                href={citation.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs px-2 py-1 rounded bg-muted hover:bg-muted/80 transition-colors inline-flex items-center gap-1"
+                title={citation.document_title || citation.url}
               >
                 [{index + 1}]
-              </button>
+                <ExternalLink className="w-3 h-3" />
+              </a>
             ))}
             {citations.length > 5 && (
               <span className="text-xs px-2 py-1 text-muted-foreground">
