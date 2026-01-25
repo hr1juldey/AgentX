@@ -2,6 +2,55 @@
 // Type definitions for widgets and UI components
 
 /**
+ * Chart content structure - backend sends object with chart config
+ */
+export interface ChartContent {
+  title?: string;
+  type?: "line" | "bar" | "pie" | "scatter";
+  data?: Array<Record<string, string | number>>;
+  x_axis?: string;
+  y_axis?: string[];
+  colors?: string[];
+  metadata?: {
+    data_points?: number;
+    chart_type?: string;
+    [key: string]: unknown;
+  };
+}
+
+/**
+ * Form field structure - backend sends form_fields with these properties
+ */
+export interface FormField {
+  name: string;
+  type: string;
+  label: string;
+  placeholder?: string;
+  options?: string[];
+  required?: boolean;
+  description?: string;
+}
+
+/**
+ * Form content structure - backend sends form_fields inside content object
+ */
+export interface FormContent {
+  form_fields?: FormField[];
+}
+
+/**
+ * Card content structure - backend sends cards array inside content object
+ */
+export interface CardContent {
+  cards?: unknown[];
+}
+
+/**
+ * Union type for content field - can be string or object depending on widget type
+ */
+export type WidgetContent = string | ChartContent | FormContent | CardContent;
+
+/**
  * Widget descriptor interface - defines all possible widget properties
  * Uses optional properties to support different widget types
  */
@@ -10,24 +59,12 @@ export interface UIDescriptor {
   descriptor_id: string;
   descriptor_type: WidgetType;
   title?: string;
-  content?: string;
+  content?: WidgetContent;
 
   // Form widget fields
-  fields?: Array<{
-    name: string;
-    type: string;
-    label: string;
-    required: boolean;
-    options?: string[];
-  }>;
-  // Backend sends form_fields (preferred name)
-  form_fields?: Array<{
-    label: string;
-    type: string;
-    description?: string;
-    required: boolean;
-    options?: string[];
-  }>;
+  fields?: FormField[];
+  // Backend sends form_fields (preferred name) - matches W4.json structure
+  form_fields?: FormField[];
   submit_button_text?: string;
 
   // Progress widget fields
@@ -145,7 +182,7 @@ export interface WebSocketWidgetData {
   descriptor_type?: WidgetType;
   type?: WidgetType;  // Legacy field for compatibility
   title?: string;
-  content?: string;
+  content?: WidgetContent;
   metadata?: Record<string, unknown>;
 }
 

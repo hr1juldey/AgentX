@@ -50,6 +50,7 @@ class DataJudgmentHandler:
             if hasattr(judgment, "get")
             else False,
             "judgment": judgment.get("reason", "") if hasattr(judgment, "get") else "",
-            # Preserve original query for follow-up searches
+            # Preserve original query and search_terms for follow-up searches
             "query": user_query,
+            "search_terms": contextualized_data.get("search_terms", []),
         }

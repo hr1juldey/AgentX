@@ -53,6 +53,8 @@ def build_contextualized_return(
         },
         # Preserve original research data for hydrators
         "structured_report": research_data.get("structured_report", ""),
+        "structured_data": research_data.get("structured_data", {}),
+        "query": research_data.get("query", ""),
         "citations": research_data.get("citations", []),
         "url_list": research_data.get("url_list", []),
         "documents": research_data.get("documents", []),

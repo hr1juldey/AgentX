@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from services.master_agent.orchestration.early_phases import EarlyPhases
 from services.master_agent.orchestration.late_phases import LatePhases
 from services.master_agent.orchestration.phase_executor import PhaseExecutor
+from services.master_agent.orchestration.research_merger import merge_research_results
 from services.master_agent.qa_checkpoints import QACheckpointModule
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,22 @@ class PipelineOrchestrator:
         executor = PhaseExecutor(qa, qa_callback)
         self.early = EarlyPhases(executor)
         self.late = LatePhases(executor)
+
+    def _merge_research_results(
+        self, first_result: dict, additional_result: dict
+    ) -> dict:
+        """Merge additional research results with first research results.
+
+        Delegates to research_merger module for actual merge logic.
+
+        Args:
+            first_result: First contextualized research result (primary)
+            additional_result: Additional contextualized research result
+
+        Returns:
+            Merged contextualized research result
+        """
+        return merge_research_results(first_result, additional_result)
 
     def execute_pipeline(
         self,
@@ -107,9 +124,13 @@ class PipelineOrchestrator:
                 researcher,
                 judgment_result,
             )
-            contextualized_result = self.early.run_contextualizer_phase(
+            additional_context = self.early.run_contextualizer_phase(
                 data_contextualizer,
                 research_result,
+            )
+            # Merge additional research with first research instead of replacing
+            contextualized_result = self._merge_research_results(
+                contextualized_result, additional_context
             )
 
         # Phase 5: DESIGNER - Add POVs, color schemes

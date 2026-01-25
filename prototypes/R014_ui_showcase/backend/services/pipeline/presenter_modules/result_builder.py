@@ -11,6 +11,23 @@ class PresenterResultBuilder:
     """Builds presentation_ready dict from presenter pipeline results."""
 
     @staticmethod
+    def _ensure_list(value) -> List[str]:
+        """Ensure value is a list of strings. Handles cases where a string is returned instead of a list.
+
+        Args:
+            value: A string, list, or other value to convert to list.
+
+        Returns:
+            A list of strings. If value is a string, wraps it in a list.
+            If value is already a list, returns it as-is. Otherwise returns empty list.
+        """
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, list):
+            return value
+        return []
+
+    @staticmethod
     def build_presentation_ready(
         widgets: list,
         sequence_list: list,
@@ -59,14 +76,19 @@ class PresenterResultBuilder:
                 "color_scheme": design_data.get("color_scheme", {}),
                 "visual_hierarchy": design_data.get("visual_hierarchy", []),
             },
+            "query": researched_data.get("query", ""),
             "researched_data": researched_data,
         }
 
         # Add warnings if issues detected
         issues: List[str] = []
-        issues.extend(flow_result.get("flow_issues", []))
-        issues.extend(flow_result.get("pacing_issues", []))
-        issues.extend(qa_result.get("issues", []))
+        issues.extend(
+            PresenterResultBuilder._ensure_list(flow_result.get("flow_issues", []))
+        )
+        issues.extend(
+            PresenterResultBuilder._ensure_list(flow_result.get("pacing_issues", []))
+        )
+        issues.extend(PresenterResultBuilder._ensure_list(qa_result.get("issues", [])))
 
         if issues:
             presentation_ready["warnings"] = issues

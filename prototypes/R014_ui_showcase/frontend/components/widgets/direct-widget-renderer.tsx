@@ -48,7 +48,7 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
 
   switch (descriptor.descriptor_type) {
     case "markdown":
-      return descriptor.content ? (
+      return descriptor.content && typeof descriptor.content === "string" ? (
         <MarkdownWidget
           content={descriptor.content}
           onDismiss={onDismiss}
@@ -126,7 +126,7 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
       return (
         <ActionWidget
           title={descriptor.title}
-          content={descriptor.content}
+          content={typeof descriptor.content === "string" ? descriptor.content : undefined}
           buttonText={descriptor.button_text}
           onAction={NOOP_FN}
           onDismiss={onDismiss}
@@ -155,7 +155,7 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
       return (
         <ImageWidget
           title={descriptor.title}
-          content={descriptor.content}
+          content={typeof descriptor.content === "string" ? descriptor.content : undefined}
           caption={descriptor.metadata?.caption as string | undefined}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
@@ -167,7 +167,7 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
       return (
         <GalleryWidget
           title={descriptor.title}
-          content={descriptor.content}
+          content={typeof descriptor.content === "string" ? descriptor.content : undefined}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}
@@ -204,7 +204,7 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
     case "search-result":
       return (
         <SearchResultWidget
-          content={descriptor.content || ""}
+          content={typeof descriptor.content === "string" ? descriptor.content : ""}
           citations={descriptor.citations}
           metadata={descriptor.metadata}
           onDismiss={onDismiss}
