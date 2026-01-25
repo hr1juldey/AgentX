@@ -116,9 +116,32 @@ export const IsolatedWidget = memo(function IsolatedWidget({
   }, [handleDismiss]);
 
   // Debug logging for render verification (can be removed in production)
+  // This helps track if widgets are re-rendering when they shouldn't be
+  const prevWidgetRef = useRef<UIDescriptor | undefined>(undefined);
+  const prevViewStateRef = useRef<ViewState | undefined>(undefined);
+  const prevPositionRef = useRef<Position | undefined>(undefined);
+
   useEffect(() => {
-    console.log(`[IsolatedWidget ${descriptorId}] Rendered, viewState:`, viewState);
-  }, [descriptorId, viewState]);
+    const widgetChanged = prevWidgetRef.current !== widget;
+    const viewStateChanged = prevViewStateRef.current !== viewState;
+    const positionChanged = prevPositionRef.current !== position;
+
+    if (widgetChanged || viewStateChanged || positionChanged) {
+      console.log(`[IsolatedWidget ${descriptorId}] Rendered:`, {
+        viewState,
+        widgetChanged,
+        viewStateChanged,
+        positionChanged,
+        reason: widgetChanged ? 'widget data changed' :
+                viewStateChanged ? 'viewState changed' :
+                positionChanged ? 'position changed' : 'unknown'
+      });
+    }
+
+    prevWidgetRef.current = widget;
+    prevViewStateRef.current = viewState;
+    prevPositionRef.current = position;
+  }, [descriptorId, viewState, widget, position]);
 
   // Get widget icon based on type
   const getWidgetIcon = () => {

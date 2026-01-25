@@ -631,7 +631,14 @@ export default function HomePage() {
   }>>({});
 
   // Threshold for click vs drag (in pixels)
+  // Defined as constant outside component to prevent handler recreation
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const CLICK_THRESHOLD = 5;
+
+  // Stable empty Set for MobileBubbleLayer to prevent re-renders
+  // Using ref ensures same object reference across renders
+  const emptyExpandedIdsRef = useRef<Set<string>>(new Set());
+  const stableEmptyExpandFnRef = useRef<() => void>(() => {});
 
   // ============================================================================
   // QA PROGRESS: Now using Network Store
@@ -1092,7 +1099,9 @@ export default function HomePage() {
     // Cache the handlers
     handlersCacheRef.current[id] = handlers;
     return handlers;
-  }, [dismissWidget, handleIslandDragEnd, toggleWidgetCollapse, CLICK_THRESHOLD]);
+    // Note: CLICK_THRESHOLD is a constant, so we exclude it from deps to prevent unnecessary recreation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dismissWidget, handleIslandDragEnd, toggleWidgetCollapse]);
 
   // ============================================================================
   // REMOVED: Old island mode handlers (cycleWidgetState, handlePanelClose,
@@ -1174,8 +1183,8 @@ export default function HomePage() {
       {enableIslands && (
         <MobileBubbleLayer
           widgets={widgets}
-          expandedIds={new Set<string>()} // Empty - widgets track their own state
-          onExpand={() => {}} // No-op - widgets track their own state
+          expandedIds={emptyExpandedIdsRef.current} // Stable ref - same object reference across renders
+          onExpand={stableEmptyExpandFnRef.current} // Stable ref - same function reference across renders
           onDismiss={handleWidgetDelete}
         />
       )}
