@@ -38,33 +38,37 @@ class ChartHydratorModule(dspy.Module):
             )
 
             # Extract structured output from DSPy result
+            # Use new field names matching signature: data_points, y_axis_key
             chart_title = getattr(result, "chart_title", "Chart")
             chart_type = getattr(result, "chart_type", "bar")
-            chart_data_str = getattr(result, "chart_data", "[]")
+            data_points_str = getattr(result, "data_points", "[]")
             x_axis_key = getattr(result, "x_axis_key", "label")
-            y_axis_keys_str = getattr(result, "y_axis_keys", "value")
+            y_axis_key = getattr(result, "y_axis_key", "value")
 
-            # Parse chart_data - LLM may return JSON array or Python list string
+            # Parse data_points - LLM may return JSON array or Python list string
             try:
-                if isinstance(chart_data_str, str):
-                    chart_data = json.loads(chart_data_str)
+                if isinstance(data_points_str, str):
+                    chart_data = json.loads(data_points_str)
                 else:
                     chart_data = (
-                        list(chart_data_str)
-                        if hasattr(chart_data_str, "__iter__")
+                        list(data_points_str)
+                        if hasattr(data_points_str, "__iter__")
                         else []
                     )
             except (json.JSONDecodeError, TypeError):
-                logger.warning(f"Failed to parse chart_data: {chart_data_str}")
+                logger.warning(f"Failed to parse data_points: {data_points_str}")
                 chart_data = []
 
-            # Parse y_axis_keys
-            if isinstance(y_axis_keys_str, str):
-                y_axis_keys = [
-                    k.strip() for k in y_axis_keys_str.split(",") if k.strip()
-                ]
-            else:
-                y_axis_keys = [y_axis_keys_str]
+            # y_axis_key is now singular - convert to list for multi-series support
+            # Also check for multiple value fields in the data
+            y_axis_keys = [y_axis_key]
+            if chart_data and isinstance(chart_data, list) and len(chart_data) > 0:
+                first_point = chart_data[0]
+                if isinstance(first_point, dict):
+                    # Find all keys that aren't the x_axis
+                    value_keys = [k for k in first_point.keys() if k != x_axis_key]
+                    if len(value_keys) > 1:
+                        y_axis_keys = value_keys
 
             # Get domain-appropriate colors
             colors = get_chart_colors(domain=domain, count=len(y_axis_keys))

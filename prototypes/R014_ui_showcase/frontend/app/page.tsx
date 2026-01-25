@@ -24,7 +24,8 @@ import { useContentGeneration } from "@/hooks/use-content-generation";
 import { useWebSocketGeneration } from "@/hooks/use-websocket-generation";
 import { useWidgetHandlers } from "@/hooks/use-widget-handlers";
 import { useWidgetStore, useUIStore, useNetworkStore } from "@/store";
-import type { UIDescriptor, Session, View, QACheckpointStatus } from "@/types/widget-types";
+import type { UIDescriptor, Session, View, QACheckpointStatus, WebSocketWidgetData } from "@/types/widget-types";
+import { extractWidgetType, isWebSocketWidgetData } from "@/types/widget-types";
 import { API_CONFIG, INTERACTION_CONFIG } from "@/constants/widget-constants";
 import { generateSafePosition } from "@/services/position-service";
 
@@ -198,14 +199,21 @@ export default function HomePage() {
 
   // Handle incoming widget message - now uses Zustand store
   const handleWidgetMessage = useCallback((data: unknown) => {
-    const widgetData = data as { id: string; type: string; title?: string; content?: string; metadata?: Record<string, unknown> };
-    const widgetId = widgetData.id || `widget-${Date.now()}`;
+    // Type guard to validate incoming WebSocket data
+    if (!isWebSocketWidgetData(data)) {
+      console.warn("Invalid widget data received:", data);
+      return;
+    }
+
+    const widgetId = data.id || `widget-${Date.now()}`;
+    const widgetType = extractWidgetType(data);
+
     const widget: UIDescriptor = {
       descriptor_id: widgetId,
-      descriptor_type: widgetData.type as any,
-      title: widgetData.title,
-      content: widgetData.content,
-      metadata: widgetData.metadata,
+      descriptor_type: widgetType,
+      title: data.title,
+      content: data.content,
+      metadata: data.metadata,
       dismissible: true,
     };
 

@@ -8,7 +8,7 @@
 export interface UIDescriptor {
   // Core identification
   descriptor_id: string;
-  descriptor_type: string;
+  descriptor_type: WidgetType;
   title?: string;
   content?: string;
 
@@ -118,4 +118,58 @@ export interface Position {
  * QA checkpoint status for tracking generation progress
  */
 export type QACheckpointStatus = "running" | "passed" | "failed";
+
+/**
+ * Widget type discriminator - all possible widget types from backend
+ */
+export type WidgetType =
+  | "markdown"
+  | "card"
+  | "form"
+  | "progress"
+  | "action"
+  | "confirmation"
+  | "image"
+  | "gallery"
+  | "chart"
+  | "search-result"
+  | "hop-progress"
+  | "citation-card";
+
+/**
+ * Incoming WebSocket widget data from backend
+ * Backend sends "descriptor_type", but we also support "type" for legacy compatibility
+ */
+export interface WebSocketWidgetData {
+  id?: string;
+  descriptor_type?: WidgetType;
+  type?: WidgetType;  // Legacy field for compatibility
+  title?: string;
+  content?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Extract widget type from WebSocket data with proper typing
+ * Backend sends "descriptor_type", fallback to "type", default to "markdown"
+ */
+export function extractWidgetType(data: WebSocketWidgetData): WidgetType {
+  // Prefer descriptor_type from backend, fallback to legacy type field
+  return data.descriptor_type ?? data.type ?? "markdown";
+}
+
+/**
+ * Type guard to check if unknown data is valid WebSocketWidgetData
+ */
+export function isWebSocketWidgetData(data: unknown): data is WebSocketWidgetData {
+  if (typeof data !== "object" || data === null) {
+    return false;
+  }
+  const widgetData = data as Record<string, unknown>;
+  return (
+    (typeof widgetData.id === "string" || widgetData.id === undefined) &&
+    (typeof widgetData.descriptor_type === "string" || widgetData.descriptor_type === undefined) &&
+    (typeof widgetData.type === "string" || widgetData.type === undefined)
+  );
+}
 

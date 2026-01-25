@@ -18,12 +18,14 @@ class ChartData(dspy.Signature):
 
     chart_title = dspy.OutputField(desc="Title for the chart")
     chart_type = dspy.OutputField(desc="Type: bar, line, pie, area, timeline")
-    chart_data = dspy.OutputField(
-        desc="Array of data points. Each point must have: label (x-axis), value (y-axis). Optional: color, tooltip. Return as JSON array."
+    # Match natural LLM output - use data_points instead of chart_data
+    data_points = dspy.OutputField(
+        desc="Array of data points as JSON. Each point: label (x-axis), value(s) for y-axis. Example: [{'Year': '2020', 'US': 1.5, 'EU': 1.2}]"
     )
-    x_axis_key = dspy.OutputField(desc="Field name to use for x-axis labels")
-    y_axis_keys = dspy.OutputField(
-        desc="Field names to use for y-axis values (comma separated)"
+    x_axis_key = dspy.OutputField(desc="Field name for x-axis (e.g., 'Year', 'Date')")
+    # Use singular to match natural LLM output
+    y_axis_key = dspy.OutputField(
+        desc="Field name for primary y-axis (e.g., 'Inflation Rate (%)', 'Sales')"
     )
 
 
