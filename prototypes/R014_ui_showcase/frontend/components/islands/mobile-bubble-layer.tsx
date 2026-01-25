@@ -83,11 +83,17 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
   onExpand,
   onDismiss,
 }: MobileBubbleLayerProps) {
-  // CRITICAL: Subscribe to widget IDs array from Zustand store
-  // This creates an isolated subscription - only re-renders when widget IDs change
-  // NOT when parent re-renders!
-  const widgetIds = useWidgetStore((s) => Object.keys(s.widgets));
-  const widgets = useWidgetStore((s) => Object.values(s.widgets));
+  // CRITICAL: Subscribe to widgets object from Zustand store
+  // Using the full object reference ensures we only re-render when widgets are added/removed
+  // NOT when parent re-renders or when individual widget data changes
+  const widgetsRecord = useWidgetStore((s) => s.widgets);
+
+  // Derive widget values from the record (this is fine - it's a local computation)
+  // The widgetsRecord reference only changes when widgets are added/removed
+  const widgets = useMemo(
+    () => Object.values(widgetsRecord),
+    [widgetsRecord]
+  );
 
   const [bubblePositions, setBubblePositions] = useState<Record<string, { x: number; y: number }>>({});
 
