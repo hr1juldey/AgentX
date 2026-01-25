@@ -20,6 +20,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts"
+import { detectXAxisKey, detectValueKeys } from "@/lib/chart-utils"
 
 interface ChartWidgetProps {
   title?: string
@@ -53,41 +54,8 @@ const DEFAULT_DATA = [
   { month: "Jun", value: 700, target: 650 },
 ]
 
-// Helper to detect X-axis key (string column)
-const detectXAxisKey = (data: Array<Record<string, string | number>>): string => {
-  if (!data || data.length === 0) return "month"
-  const firstItem = data[0]
-  const keys = Object.keys(firstItem)
-
-  // Common label keys
-  const labelKeys = new Set(["month", "year", "name", "label", "category", "date"])
-
-  // Find the first key that has a string value or is a common label key
-  for (const key of keys) {
-    if (labelKeys.has(key.toLowerCase()) || typeof firstItem[key] === "string") {
-      return key
-    }
-  }
-
-  return keys[0] || "month"
-}
-
-// Helper to detect value keys (numeric columns)
-const detectValueKeys = (
-  data: Array<Record<string, string | number>>,
-  xAxisKey: string
-): string[] => {
-  if (!data || data.length === 0) return ["value"]
-  const firstItem = data[0]
-  const keys = Object.keys(firstItem)
-
-  // Find numeric keys (excluding the X-axis key)
-  const numericKeys = keys.filter(
-    key => key !== xAxisKey && typeof firstItem[key] === "number"
-  )
-
-  return numericKeys.length > 0 ? numericKeys : ["value"]
-}
+// EXTRACTED: detectXAxisKey, detectValueKeys (was lines 57-90)
+// See: /lib/chart-utils.ts
 
 export const ChartWidget = memo(function ChartWidget({
   title,

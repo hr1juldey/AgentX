@@ -1,40 +1,9 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
+import type { UIDescriptor, ViewState, Position } from '@/types/widget-types'
 
-// Types
-export type ViewState = 'island' | 'card' | 'full'
-
-export interface Position {
-  x: number
-  y: number
-}
-
-// Reusing UIDescriptor interface from existing code
-export interface UIDescriptor {
-  descriptor_id: string
-  descriptor_type: string
-  title?: string
-  x?: number
-  y?: number
-  collapsed?: boolean
-  metadata?: Record<string, unknown>
-  content?: string
-  fields?: Array<{
-    name: string
-    type: string
-    label: string
-    required: boolean
-    options?: string[]
-  }>
-  button_text?: string
-  message?: string
-  confirm_label?: string
-  cancel_label?: string
-  submit_button_text?: string
-  citations?: Array<Record<string, unknown>>
-  hop_events?: Array<Record<string, unknown>>
-  id?: string
-}
+// Re-export types for backward compatibility
+export type { UIDescriptor, ViewState, Position } from '@/types/widget-types';
 
 // ATOMIC STATE PATTERN (Fixes cascade re-render issue)
 //

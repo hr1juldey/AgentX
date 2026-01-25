@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useRef, useEffect, useSyncExternalStore } from "react";
+import { memo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { X, Minimize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -8,6 +8,8 @@ import remarkGfm from "remark-gfm";
 import { ToolIsland } from "@/components/islands/tool-island";
 import { DirectWidgetRenderer } from "@/components/widgets/direct-widget-renderer";
 import { useWidgetStore, type UIDescriptor, type ViewState, type Position } from "@/store/widget-store";
+import { useWidgetSlice } from "@/hooks/use-widget-slice";
+import { getWidgetIcon, getWidgetColor } from "@/lib/widget-utils";
 
 // Constants
 const NOOP_FN = () => {};
@@ -37,39 +39,8 @@ interface IsolatedWidgetProps {
  *
  * This is how Jira/Linear/Asana achieve efficient card-based UIs with hundreds of items.
  */
-// Custom hook to subscribe to a single widget's atomic slice
-// This prevents cascade re-renders when OTHER widgets change
-function useWidgetSlice<T>(key: string): T | undefined {
-  // Extract widget ID from key for logging (e.g., "widget_mock-card-001_data" -> "mock-card-001")
-  const widgetIdMatch = key.match(/widget_([^_]+)_/);
-  const widgetId = widgetIdMatch ? widgetIdMatch[1] : key;
-
-  return useSyncExternalStore(
-    (callback) => {
-      // Subscribe only to changes in this specific slice
-      const unsubscribe = useWidgetStore.subscribe((state, prevState) => {
-        const currentValue = state[key] as T;
-        const previousValue = prevState[key] as T;
-
-        // DIAGNOSTIC: Log every subscription notification for this widget
-        console.log(`[useWidgetSlice ${widgetId}] Key="${key}"`, {
-          'current === previous': currentValue === previousValue,
-          'current': currentValue,
-          'previous': previousValue,
-          'willCallback': currentValue !== previousValue
-        });
-
-        // Only trigger callback if THIS slice changed
-        if (currentValue !== previousValue) {
-          callback();
-        }
-      });
-      return unsubscribe;
-    },
-    () => useWidgetStore.getState()[key] as T,
-    () => useWidgetStore.getState()[key] as T
-  );
-}
+// EXTRACTED: useWidgetSlice hook (was lines 42-72)
+// See: /hooks/use-widget-slice.ts
 
 // Comparison function - must be defined before component usage
 function areIsolatedWidgetPropsEqual(
@@ -196,58 +167,10 @@ function IsolatedWidgetComponent({
     prevPositionRef.current = position;
   }, [descriptorId, viewState, widget, position]);
 
-  // Get widget icon based on type
-  const getWidgetIcon = () => {
-    switch (widget.descriptor_type) {
-      case "markdown":
-        return "📝";
-      case "card":
-        return "📇";
-      case "form":
-        return "📋";
-      case "progress":
-        return "📊";
-      case "action":
-        return "⚡";
-      case "confirmation":
-        return "❓";
-      case "image":
-        return "🖼️";
-      case "gallery":
-        return "🖼️";
-      case "chart":
-        return "📈";
-      case "search-result":
-        return "🔍";
-      case "hop-progress":
-        return "🔄";
-      case "citation-card":
-        return "📚";
-      default:
-        return "📦";
-    }
-  };
+  // EXTRACTED: getWidgetIcon, getWidgetColor (was lines 170-218)
+  // See: /lib/widget-utils.ts
 
-  // Get color for widget type
-  const getWidgetColor = () => {
-    const colors: Record<string, string> = {
-      markdown: "hsl(var(--island-markdown))",
-      card: "hsl(var(--island-card))",
-      form: "hsl(var(--island-form))",
-      progress: "hsl(var(--island-progress))",
-      action: "hsl(var(--island-action))",
-      confirmation: "hsl(var(--island-confirmation))",
-      image: "hsl(var(--island-image))",
-      gallery: "hsl(var(--island-gallery))",
-      chart: "hsl(var(--island-chart))",
-      "search-result": "hsl(var(--island-search-result))",
-      "hop-progress": "hsl(var(--island-hop-progress))",
-      "citation-card": "hsl(var(--island-citation-card))",
-    };
-    return colors[widget.descriptor_type] || "hsl(var(--island-white))";
-  };
-
-  const widgetColor = getWidgetColor();
+  const widgetColor = getWidgetColor(widget.descriptor_type);
   const currentState = viewState;
   const zIndex = 1000;
 
@@ -297,7 +220,7 @@ function IsolatedWidgetComponent({
                 className="flex items-center gap-3 p-4 border-b border-border/50"
                 style={{ background: widgetColor }}
               >
-                <span className="text-2xl">{getWidgetIcon()}</span>
+                <span className="text-2xl">{getWidgetIcon(widget.descriptor_type)}</span>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-sm text-white truncate select-text">
                     {widget.title || widget.descriptor_type}
@@ -377,7 +300,7 @@ function IsolatedWidgetComponent({
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.99 }}
             >
-              <span className="text-2xl">{getWidgetIcon()}</span>
+              <span className="text-2xl">{getWidgetIcon(widget.descriptor_type)}</span>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-base text-white truncate select-text">
                   {widget.title || widget.descriptor_type}

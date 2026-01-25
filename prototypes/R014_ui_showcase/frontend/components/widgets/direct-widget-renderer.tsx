@@ -15,34 +15,10 @@ import {
   HopProgressWidget,
   CitationCardWidget,
 } from "@/components/widgets";
+import type { UIDescriptor } from "@/types/widget-types";
 
 // No-op function for widgets that don't need action handlers
 const NOOP_FN = () => {};
-
-interface UIDescriptor {
-  descriptor_id: string;
-  descriptor_type: string;
-  title?: string;
-  content?: string;
-  fields?: Array<{ name: string; type: string; label: string; required: boolean; options?: string[] }>;
-  submit_button_text?: string;
-  task_name?: string;
-  progress_percent?: number;
-  status_text?: string;
-  button_text?: string;
-  action_id?: string;
-  message?: string;
-  confirm_label?: string;
-  cancel_label?: string;
-  dismissible?: boolean;
-  x?: number;
-  y?: number;
-  collapsed?: boolean;
-  id?: string;
-  metadata?: Record<string, unknown>;
-  citations?: Array<Record<string, unknown>>;
-  hop_events?: Array<Record<string, unknown>>;
-}
 
 interface DirectWidgetRendererProps {
   descriptor: UIDescriptor;
@@ -75,7 +51,6 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
       return descriptor.content ? (
         <MarkdownWidget
           content={descriptor.content}
-          title={descriptor.title}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}
@@ -83,22 +58,22 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         />
       ) : null;
     case "card":
-      return (
+      return descriptor.content ? (
         <CardWidget
-          title={descriptor.title || ""}
-          content={descriptor.content || ""}
-          actions={[]}
+          title={descriptor.title}
+          content={descriptor.content}
+          actions={descriptor.metadata?.actions as Array<{ label: string; action: string }> | undefined}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}
           disableDrag={disableDrag}
         />
-      );
+      ) : null;
     case "form":
       return (
         <FormWidget
           title={descriptor.title}
-          fields={descriptor.fields || []}
+          fields={descriptor.fields}
           submitLabel={descriptor.submit_button_text}
           onSubmit={NOOP_FN}
           onDismiss={onDismiss}
@@ -110,8 +85,8 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
     case "progress":
       return (
         <ProgressWidget
-          title={descriptor.title || "Processing"}
-          value={(descriptor.progress_percent || 0) / 100}
+          title={descriptor.title}
+          value={descriptor.progress_percent}
           statusText={descriptor.status_text}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
@@ -124,7 +99,7 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         <ActionWidget
           title={descriptor.title}
           content={descriptor.content}
-          buttonText={descriptor.button_text || "Action"}
+          buttonText={descriptor.button_text}
           onAction={NOOP_FN}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
@@ -135,10 +110,11 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
     case "confirmation":
       return (
         <ConfirmationWidget
-          title={descriptor.title || "Confirm"}
+          title={descriptor.title}
           message={descriptor.message || ""}
           confirmLabel={descriptor.confirm_label}
           cancelLabel={descriptor.cancel_label}
+          variant="destructive"
           onConfirm={NOOP_FN}
           onCancel={NOOP_FN}
           onDismiss={onDismiss}
@@ -152,11 +128,10 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         <ImageWidget
           title={descriptor.title}
           content={descriptor.content}
-          caption={descriptor.content}
+          caption={descriptor.metadata?.caption as string | undefined}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}
-          descriptor_id={descriptor.descriptor_id}
           disableDrag={disableDrag}
         />
       );
@@ -165,11 +140,9 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         <GalleryWidget
           title={descriptor.title}
           content={descriptor.content}
-          images={descriptor.metadata?.images as Array<{ url: string; caption?: string; title?: string }> | undefined}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}
-          descriptor_id={descriptor.descriptor_id}
           disableDrag={disableDrag}
         />
       );
@@ -178,9 +151,8 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         <ChartWidget
           title={descriptor.title}
           content={descriptor.content}
-          chartType={(descriptor.metadata?.chart_type as "bar" | "line" | "pie" | "area") || "bar"}
-          data={descriptor.metadata?.data as Array<Record<string, string | number>>}
-          dataKeys={descriptor.metadata?.data_keys as string[]}
+          chartType={descriptor.metadata?.chartType as "bar" | "line" | "pie" | undefined}
+          data={descriptor.metadata?.data as unknown as undefined}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}
@@ -188,21 +160,21 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         />
       );
     case "search-result":
-      return descriptor.content ? (
+      return (
         <SearchResultWidget
-          content={descriptor.content}
-          citations={descriptor.citations as any}
+          content={descriptor.content || ""}
+          citations={descriptor.citations}
           metadata={descriptor.metadata}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}
           disableDrag={disableDrag}
         />
-      ) : null;
+      );
     case "hop-progress":
       return (
         <HopProgressWidget
-          events={descriptor.hop_events as any || []}
+          events={descriptor.hop_events || []}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}
@@ -212,7 +184,7 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
     case "citation-card":
       return (
         <CitationCardWidget
-          citations={descriptor.citations as any || []}
+          citations={descriptor.citations || []}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}

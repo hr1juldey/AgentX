@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo, memo, useRef, startTransition } from "react";
 import { motion, AnimatePresence, PanInfo, LayoutGroup } from "framer-motion";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { Plus, MessageSquare, X, Sparkles, Images, History, Database, ChevronDown, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,559 +9,50 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ThemeToggle } from "@/components/showcase/theme-toggle";
 import { QAProgressDisplay } from "@/components/ui/qa-progress";
 import { CentralIsland } from "@/components/ui/central-island";
-import { MarkdownWidget } from "@/components/widgets/markdown-widget";
-import { CardWidget } from "@/components/widgets/card-widget";
-import { FormWidget } from "@/components/widgets/form-widget";
-import { ProgressWidget } from "@/components/widgets/progress-widget";
-import { ActionWidget } from "@/components/widgets/action-widget";
-import { ConfirmationWidget } from "@/components/widgets/confirmation-widget";
-import { ImageWidget } from "@/components/widgets/image-widget";
-import { GalleryWidget } from "@/components/widgets/gallery-widget";
-import { ChartWidget } from "@/components/widgets/chart-widget";
-import { SearchResultWidget } from "@/components/widgets/search-result-widget";
-import { HopProgressWidget } from "@/components/widgets/hop-progress-widget";
-import { CitationCardWidget } from "@/components/widgets/citation-card-widget";
 import { IsolatedWidget } from "@/components/widgets/isolated-widget";
-import { ToolIsland, MobileBubbleLayer } from "@/components/islands";
+import { DirectWidgetRenderer } from "@/components/widgets/direct-widget-renderer";
+import { CollapsibleWidgetWrapper } from "@/components/widgets/collapsible-widget-wrapper";
+import { WidgetRenderer } from "@/components/widgets/widget-renderer";
+import { ToolIsland, MobileBubbleLayer, IslandModeWidgets } from "@/components/islands";
+import { Sidebar } from "@/components/home/sidebar";
+import { SessionsView, ConnectorsView } from "@/components/home/views";
+import { GalleryView } from "@/components/home/gallery-view";
+import { MainView } from "@/components/home/main-view";
+import { PageHeader } from "@/components/home/page-header";
 import { useWidgetStore, useUIStore, useNetworkStore } from "@/store";
+import type { UIDescriptor, Session, View } from "@/types/widget-types";
+import { API_CONFIG, INTERACTION_CONFIG } from "@/constants/widget-constants";
+import { generateSafePosition } from "@/services/position-service";
 
-interface UIDescriptor {
-  descriptor_id: string;
-  descriptor_type: string;
-  title?: string;
-  content?: string;
-  fields?: Array<{ name: string; type: string; label: string; required: boolean; options?: string[] }>;
-  submit_button_text?: string;
-  task_name?: string;
-  progress_percent?: number;
-  status_text?: string;
-  button_text?: string;
-  action_id?: string;
-  message?: string;
-  confirm_label?: string;
-  cancel_label?: string;
-  dismissible?: boolean;
-  // Position tracking for draggable widgets
-  x?: number;
-  y?: number;
-  // Collapsible widget state
-  collapsed?: boolean;
-  // Backend response fields
-  id?: string;
-  type?: string;
-  timestamp?: string;
-  metadata?: Record<string, unknown>;
-  // Multi-hop search optional fields
-  progress?: number;
-  hops_completed?: number;
-  total_hops?: number;
-  reflection_reasoning?: string;
-  citations?: Array<{
-    cited_text: string;
-    document_index: number;
-    document_title?: string;
-    url?: string;
-  }>;
-  hop_events?: Array<{
-    event_type: string;
-    hop_number: number;
-    total_hops: number;
-    message: string;
-    progress: number;
-    eta_seconds?: number;
-    documents_found?: number;
-    query_used?: string;
-    reflection_reasoning?: string;
-  }>;
-  eta_seconds?: number;
-}
+// EXTRACTED: UIDescriptor interface (was lines 30-79)
+// EXTRACTED: Session interface (was lines 81-87)
+// EXTRACTED: View type (was line 97)
+// See: /types/widget-types.ts
 
-interface Session {
-  id?: string;
-  session_id?: string;
-  title: string;
-  created_at?: string;
-  date?: string;
-}
-
-const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8014";
-const appName = process.env.NEXT_PUBLIC_APP_NAME || "R014 UI Showcase";
+// EXTRACTED: API_CONFIG.URL, API_CONFIG.APP_NAME constants (was lines 89-90)
+// See: /constants/widget-constants.ts
 
 // Stable no-op functions to prevent re-renders (identity-stable across renders)
 const NOOP_FN = () => {};
 const NOOP_DRAG_FN = (_x: number, _y: number) => {};
 const STOP_PROPAGATION = (e: React.MouseEvent) => e.stopPropagation();
 
-type View = "main" | "gallery" | "sessions" | "connectors";
-
 // ============================================================================
 // NOTE: Widget3StateRenderer removed - replaced by IsolatedWidget
 // which implements the State Colocation Pattern for better performance
 // ============================================================================
 
-// Widget content renderer without wrapper (for Island mode)
-// Island mode uses expandedPanelIds for collapse, so widgets are always fully shown
-const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
-  descriptor,
-  onDismiss,
-  dragPosition,
-  onDragEnd,
-}: {
-  descriptor: UIDescriptor;
-  onDismiss: () => void;
-  dragPosition?: { x: number; y: number };
-  onDragEnd: (x: number, y: number) => void;
-}) {
-  switch (descriptor.descriptor_type) {
-    case "markdown":
-      return descriptor.content ? (
-        <MarkdownWidget
-          content={descriptor.content}
-          title={descriptor.title}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-        />
-      ) : null;
-    case "card":
-      return (
-        <CardWidget
-          title={descriptor.title || ""}
-          content={descriptor.content || ""}
-          actions={[]}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-        />
-      );
-    case "form":
-      return (
-        <FormWidget
-          title={descriptor.title}
-          fields={descriptor.fields || []}
-          submitLabel={descriptor.submit_button_text}
-          onSubmit={NOOP_FN}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-        />
-      );
-    case "progress":
-      return (
-        <ProgressWidget
-          title={descriptor.title || "Processing"}
-          value={(descriptor.progress_percent || 0) / 100}
-          statusText={descriptor.status_text}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-        />
-      );
-    case "action":
-      return (
-        <ActionWidget
-          title={descriptor.title}
-          content={descriptor.content}
-          buttonText={descriptor.button_text || "Action"}
-          onAction={NOOP_FN}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-        />
-      );
-    case "confirmation":
-      return (
-        <ConfirmationWidget
-          title={descriptor.title || "Confirm"}
-          message={descriptor.message || ""}
-          confirmLabel={descriptor.confirm_label}
-          cancelLabel={descriptor.cancel_label}
-          onConfirm={NOOP_FN}
-          onCancel={NOOP_FN}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-        />
-      );
-    case "image":
-      return (
-        <ImageWidget
-          title={descriptor.title}
-          content={descriptor.content}
-          caption={descriptor.content}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-          descriptor_id={descriptor.descriptor_id}
-        />
-      );
-    case "gallery":
-      return (
-        <GalleryWidget
-          title={descriptor.title}
-          content={descriptor.content}
-          images={descriptor.metadata?.images as Array<{ url: string; caption?: string; title?: string }> | undefined}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-          descriptor_id={descriptor.descriptor_id}
-        />
-      );
-    case "chart":
-      return (
-        <ChartWidget
-          title={descriptor.title}
-          content={descriptor.content}
-          chartType={(descriptor.metadata?.chart_type as "bar" | "line" | "pie" | "area") || "bar"}
-          data={descriptor.metadata?.data as Array<Record<string, string | number>>}
-          dataKeys={descriptor.metadata?.data_keys as string[]}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-        />
-      );
-    case "search-result":
-      return descriptor.content ? (
-        <SearchResultWidget
-          content={descriptor.content}
-          citations={descriptor.citations}
-          metadata={descriptor.metadata}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-        />
-      ) : null;
-    case "hop-progress":
-      return (
-        <HopProgressWidget
-          events={descriptor.hop_events || []}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-        />
-      );
-    case "citation-card":
-      return (
-        <CitationCardWidget
-          citations={descriptor.citations || []}
-          onDismiss={onDismiss}
-          dragPosition={dragPosition}
-          onDragEnd={onDragEnd}
-        />
-      );
-    default:
-      return null;
-  }
-});
+// EXTRACTED: DirectWidgetRenderer (was lines 51-221)
+// See: /components/widgets/direct-widget-renderer.tsx
 
-// Collapsible wrapper for widgets - uses controlled component pattern (FIXED)
-const CollapsibleWidgetWrapper = memo(function CollapsibleWidgetWrapper({
-  descriptor,
-  onDismiss,
-  onDragEnd,
-  onToggleCollapse,
-  isExpanded, // NEW: Controlled by parent
-  children,
-}: {
-  descriptor: UIDescriptor;
-  onDismiss: () => void;
-  onDragEnd: (x: number, y: number) => void;
-  onToggleCollapse: () => void;
-  isExpanded: boolean; // NEW: Controlled prop
-  children: React.ReactNode;
-}) {
-  // Widget type icons
-  const getWidgetIcon = useCallback(() => {
-    switch (descriptor.descriptor_type) {
-      case "markdown": return "📝";
-      case "card": return "📇";
-      case "form": return "📋";
-      case "progress": return "📊";
-      case "action": return "⚡";
-      case "confirmation": return "❓";
-      case "image": return "🖼️";
-      case "gallery": return "🖼️";
-      case "chart": return "📈";
-      case "search-result": return "🔍";
-      case "hop-progress": return "🔄";
-      case "citation-card": return "📚";
-      default: return "📦";
-    }
-  }, [descriptor.descriptor_type]);
+// EXTRACTED: IslandModeWidgets (was lines 44-83)
+// See: /components/islands/island-mode-widgets.tsx
 
-  // Memoized handlers to prevent re-renders
-  const handleCollapsedDragEnd = useCallback((_: unknown, info: PanInfo) => {
-    onDragEnd(
-      (descriptor.x || 0) + info.offset.x,
-      (descriptor.y || 0) + info.offset.y
-    );
-  }, [onDragEnd, descriptor.x, descriptor.y]);
+// EXTRACTED: CollapsibleWidgetWrapper (was lines 83-187)
+// See: /components/widgets/collapsible-widget-wrapper.tsx
 
-  const handleDismissClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDismiss();
-  }, [onDismiss]);
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }}
-    >
-      {/* Collapsed mini island */}
-      <AnimatePresence mode="wait">
-        {!isExpanded ? (
-          <motion.div
-            key="collapsed"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="relative"
-          >
-            <motion.button
-              drag
-              dragElastic={0.2}
-              dragMomentum={false}
-              dragConstraints={{ left: -500, right: 500, top: -500, bottom: 500 }}
-              whileDrag={{ scale: 1.05, cursor: "grabbing", zIndex: 50 }}
-              onDragEnd={handleCollapsedDragEnd}
-              onClick={onToggleCollapse}
-              style={{ x: descriptor.x || 0, y: descriptor.y || 0 }}
-              className="relative bg-card border border-border rounded-full cursor-grab shadow-lg hover:shadow-xl px-4 py-2 flex items-center gap-2 hover:bg-muted/50 transition-colors"
-            >
-              <span className="text-lg">{getWidgetIcon()}</span>
-              <span className="text-sm font-medium truncate max-w-[120px]">
-                {descriptor.title || descriptor.descriptor_type}
-              </span>
-              {/* Dismiss button */}
-              <button
-                onClick={handleDismissClick}
-                className="p-1 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors"
-                aria-label="Dismiss"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </motion.button>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="expanded"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-});
-
-// Traditional widget renderer with CollapsibleWidgetWrapper
-const WidgetRenderer = memo(function WidgetRenderer({
-  descriptor,
-  onDismiss,
-  onDragEnd,
-  onToggleCollapse,
-  isExpanded, // NEW: Controlled prop
-}: {
-  descriptor: UIDescriptor;
-  onDismiss: () => void;
-  onDragEnd: (x: number, y: number) => void;
-  onToggleCollapse: () => void;
-  isExpanded: boolean; // NEW: Controlled prop
-}) {
-  const dragPosition = useMemo(
-    () =>
-      descriptor.x !== undefined || descriptor.y !== undefined
-        ? { x: descriptor.x || 0, y: descriptor.y || 0 }
-        : undefined,
-    [descriptor.x, descriptor.y]
-  );
-
-  switch (descriptor.descriptor_type) {
-    case "markdown":
-      return descriptor.content ? (
-        <CollapsibleWidgetWrapper
-          descriptor={descriptor}
-          onDismiss={onDismiss}
-          onDragEnd={onDragEnd}
-          onToggleCollapse={onToggleCollapse}
-          isExpanded={isExpanded}
-        >
-          <MarkdownWidget
-            content={descriptor.content}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        </CollapsibleWidgetWrapper>
-      ) : null;
-    case "card":
-      return (
-        <CollapsibleWidgetWrapper
-          descriptor={descriptor}
-          onDismiss={onDismiss}
-          onDragEnd={onDragEnd}
-          onToggleCollapse={onToggleCollapse}
-          isExpanded={isExpanded}
-        >
-          <CardWidget
-            title={descriptor.title || ""}
-            content={descriptor.content || ""}
-            actions={[]}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        </CollapsibleWidgetWrapper>
-      );
-    case "form":
-      return (
-        <CollapsibleWidgetWrapper
-          descriptor={descriptor}
-          onDismiss={onDismiss}
-          onDragEnd={onDragEnd}
-          onToggleCollapse={onToggleCollapse}
-          isExpanded={isExpanded}
-        >
-          <FormWidget
-            title={descriptor.title}
-            fields={descriptor.fields || []}
-            submitLabel={descriptor.submit_button_text}
-            onSubmit={NOOP_FN}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        </CollapsibleWidgetWrapper>
-      );
-    case "progress":
-      return (
-        <CollapsibleWidgetWrapper
-          descriptor={descriptor}
-          onDismiss={onDismiss}
-          onDragEnd={onDragEnd}
-          onToggleCollapse={onToggleCollapse}
-          isExpanded={isExpanded}
-        >
-          <ProgressWidget
-            title={descriptor.title || "Processing"}
-            value={(descriptor.progress_percent || 0) / 100}
-            statusText={descriptor.status_text}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        </CollapsibleWidgetWrapper>
-      );
-    case "action":
-      return (
-        <CollapsibleWidgetWrapper
-          descriptor={descriptor}
-          onDismiss={onDismiss}
-          onDragEnd={onDragEnd}
-          onToggleCollapse={onToggleCollapse}
-          isExpanded={isExpanded}
-        >
-          <ActionWidget
-            title={descriptor.title}
-            content={descriptor.content}
-            buttonText={descriptor.button_text || "Action"}
-            onAction={NOOP_FN}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        </CollapsibleWidgetWrapper>
-      );
-    case "confirmation":
-      return (
-        <CollapsibleWidgetWrapper
-          descriptor={descriptor}
-          onDismiss={onDismiss}
-          onDragEnd={onDragEnd}
-          onToggleCollapse={onToggleCollapse}
-          isExpanded={isExpanded}
-        >
-          <ConfirmationWidget
-            title={descriptor.title || "Confirm"}
-            message={descriptor.message || ""}
-            confirmLabel={descriptor.confirm_label}
-            cancelLabel={descriptor.cancel_label}
-            onConfirm={NOOP_FN}
-            onCancel={NOOP_FN}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        </CollapsibleWidgetWrapper>
-      );
-    case "image":
-      return (
-        <CollapsibleWidgetWrapper
-          descriptor={descriptor}
-          onDismiss={onDismiss}
-          onDragEnd={onDragEnd}
-          onToggleCollapse={onToggleCollapse}
-          isExpanded={isExpanded}
-        >
-          <ImageWidget
-            title={descriptor.title}
-            content={descriptor.content}
-            caption={descriptor.content}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        </CollapsibleWidgetWrapper>
-      );
-    case "gallery":
-      return (
-        <CollapsibleWidgetWrapper
-          descriptor={descriptor}
-          onDismiss={onDismiss}
-          onDragEnd={onDragEnd}
-          onToggleCollapse={onToggleCollapse}
-          isExpanded={isExpanded}
-        >
-          <GalleryWidget
-            title={descriptor.title}
-            content={descriptor.content}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        </CollapsibleWidgetWrapper>
-      );
-    case "chart":
-      return (
-        <CollapsibleWidgetWrapper
-          descriptor={descriptor}
-          onDismiss={onDismiss}
-          onDragEnd={onDragEnd}
-          onToggleCollapse={onToggleCollapse}
-          isExpanded={isExpanded}
-        >
-          <ChartWidget
-            title={descriptor.title}
-            content={descriptor.content}
-            chartType={(descriptor.metadata?.chart_type as "bar" | "line" | "pie" | "area") || "bar"}
-            data={descriptor.metadata?.data as Array<Record<string, string | number>>}
-            dataKeys={descriptor.metadata?.data_keys as string[]}
-            onDismiss={onDismiss}
-            dragPosition={dragPosition}
-            onDragEnd={onDragEnd}
-          />
-        </CollapsibleWidgetWrapper>
-      );
-    default:
-      return null;
-  }
-});
+// EXTRACTED: WidgetRenderer (was lines 51-90)
+// See: /components/widgets/widget-renderer.tsx
 
 export default function HomePage() {
   // ============================================================================
@@ -631,9 +120,10 @@ export default function HomePage() {
   }>>({});
 
   // Threshold for click vs drag (in pixels)
+  // EXTRACTED: INTERACTION_CONFIG.CLICK_THRESHOLD constant (was line 636)
   // Defined as constant outside component to prevent handler recreation
+  // See: /constants/widget-constants.ts
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const CLICK_THRESHOLD = 5;
 
   // Stable empty Set for MobileBubbleLayer to prevent re-renders
   // Using ref ensures same object reference across renders
@@ -687,58 +177,12 @@ export default function HomePage() {
    * Uses hash of widget ID for consistent positioning
    * Respects UI boundaries (header: 56px, sidebar: 320px when open)
    * Note: This is now handled by Zustand store, but kept for MobileBubbleLayer
+   *
+   * EXTRACTED: generateSafePosition logic (was lines 639-690)
+   * See: /services/position-service.ts
    */
-  const generateSafePosition = useCallback((id: string, existingWidgets: UIDescriptor[] = []) => {
-    const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
-    const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-
-    // Safe zones (respect header: 56px, sidebar: 320px when open)
-    const sidebarOffset = sidebarOpen ? 320 : 0;
-    const minX = sidebarOffset + 80;
-    const maxX = vw - 80;
-    const minY = 80;
-    const maxY = vh - 200;
-
-    // Widget collision dimensions (approximate)
-    const widgetWidth = 300;  // Approximate widget width
-    const widgetHeight = 200; // Approximate widget height
-    const padding = 20;       // Padding between widgets
-
-    // Use hash of ID for deterministic starting position
-    const hash = id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
-    // Try up to 50 positions to find a non-colliding spot
-    for (let attempt = 0; attempt < 50; attempt++) {
-      // Generate position with hash + attempt offset for determinism
-      const x = ((hash + attempt * 137) % (maxX - minX - widgetWidth)) + minX;
-      const y = ((hash + attempt * 251) % (maxY - minY - widgetHeight)) + minY;
-
-      // Check for collisions with existing widgets
-      let hasCollision = false;
-      for (const widget of existingWidgets) {
-        const wx = widget.x ?? (maxX / 2);
-        const wy = widget.y ?? (maxY / 2);
-
-        // Simple AABB collision detection
-        const xOverlap = Math.abs(x - wx) < (widgetWidth + padding);
-        const yOverlap = Math.abs(y - wy) < (widgetHeight + padding);
-
-        if (xOverlap && yOverlap) {
-          hasCollision = true;
-          break;
-        }
-      }
-
-      // Return first non-colliding position
-      if (!hasCollision) {
-        return { x, y };
-      }
-    }
-
-    // Fallback: use hash-based position (may overlap but guaranteed to return)
-    const x = (hash % (maxX - minX)) + minX;
-    const y = (hash % (maxY - minY)) + minY;
-    return { x, y };
+  const generateSafePositionCallback = useCallback((id: string, existingWidgets: UIDescriptor[] = []) => {
+    return generateSafePosition(id, existingWidgets, { sidebarOpen });
   }, [sidebarOpen]);
 
   // Handle incoming widget message - now uses Zustand store
@@ -833,13 +277,13 @@ export default function HomePage() {
       }
 
       // Generate NEW position for widgets without x/y (newly spawned)
-      const pos = generateSafePosition(widget.descriptor_id, placed);
+      const pos = generateSafePositionCallback(widget.descriptor_id, placed);
       positions[widget.descriptor_id] = pos;
       placed.push({ ...widget, x: pos.x, y: pos.y });
     }
 
     return positions;
-  }, [widgets, generateSafePosition]);
+  }, [widgets, generateSafePositionCallback]);
 
   // Get widget IDs from Zustand store for island mode rendering
   // With atomic state pattern, we use the widgetIds array directly
@@ -873,19 +317,19 @@ export default function HomePage() {
 
   // Fetch health status
   useEffect(() => {
-    fetch(`${apiUrl}/api/v1/health`)
+    fetch(`${API_CONFIG.URL}/api/v1/health`)
       .then((res) => res.json())
       .then((data) => setHealth(data.status))
       .catch(() => setHealth("disconnected"));
-  }, [apiUrl]);
+  }, [API_CONFIG.URL]);
 
   // Fetch sessions
   useEffect(() => {
-    fetch(`${apiUrl}/api/v1/mock/sessions`)
+    fetch(`${API_CONFIG.URL}/api/v1/mock/sessions`)
       .then((res) => res.json())
       .then((data) => setSessions(data.sessions || []))
       .catch(() => setSessions([]));
-  }, [apiUrl]);
+  }, [API_CONFIG.URL]);
 
   const generateContent = async (prompt: string, widgetType?: string) => {
     if (!prompt.trim()) return;
@@ -893,8 +337,8 @@ export default function HomePage() {
     console.log("🟢 generateContent called:", { prompt, widgetType });
     setLoading(true);
     try {
-      console.log("🟢 Fetching from:", `${apiUrl}/api/v1/generate-widget`);
-      const res = await fetch(`${apiUrl}/api/v1/generate-widget`, {
+      console.log("🟢 Fetching from:", `${API_CONFIG.URL}/api/v1/generate-widget`);
+      const res = await fetch(`${API_CONFIG.URL}/api/v1/generate-widget`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -954,7 +398,7 @@ export default function HomePage() {
 
   // Connect to WebSocket
   const connectWebSocket = useCallback(() => {
-    const ws = new WebSocket(`${apiUrl.replace("http", "ws")}/api/v1/ws/generate-widget`);
+    const ws = new WebSocket(`${API_CONFIG.URL.replace("http", "ws")}/api/v1/ws/generate-widget`);
 
     ws.onopen = () => {
       console.log("🔌 WebSocket connected");
@@ -971,7 +415,7 @@ export default function HomePage() {
     };
 
     return ws;
-  }, [apiUrl]);
+  }, [API_CONFIG.URL]);
 
   // Main generation function using WebSocket
   const generateContentWithWebSocket = useCallback(async (prompt: string) => {
@@ -1083,12 +527,12 @@ export default function HomePage() {
         info.point.x - state.startPos.x,
         info.point.y - state.startPos.y
       );
-      dragStateRef.current[id] = { ...state, hasMoved: distance > CLICK_THRESHOLD, moveDistance: distance };
+      dragStateRef.current[id] = { ...state, hasMoved: distance > INTERACTION_CONFIG.CLICK_THRESHOLD, moveDistance: distance };
     };
 
     const handleDragEnd = (_: any, info: PanInfo) => {
       const state = dragStateRef.current[id];
-      const isClick = state && state.moveDistance < CLICK_THRESHOLD;
+      const isClick = state && state.moveDistance < INTERACTION_CONFIG.CLICK_THRESHOLD;
 
       if (!isClick) {
         handleIslandDragEnd(id, info.offset.x, info.offset.y);
@@ -1099,7 +543,7 @@ export default function HomePage() {
 
     const onDragEndCompat = (x: number, y: number) => {
       const state = dragStateRef.current[id];
-      const isClick = state && state.moveDistance < CLICK_THRESHOLD;
+      const isClick = state && state.moveDistance < INTERACTION_CONFIG.CLICK_THRESHOLD;
 
       if (!isClick) {
         handleIslandDragEnd(id, x, y);
@@ -1116,7 +560,7 @@ export default function HomePage() {
       onDragEndCompat,
       onClick: (e: React.MouseEvent) => {
         const state = dragStateRef.current[id];
-        const isClick = !state || state.moveDistance < CLICK_THRESHOLD;
+        const isClick = !state || state.moveDistance < INTERACTION_CONFIG.CLICK_THRESHOLD;
         if (isClick) {
           toggleWidgetCollapse(id);
         }
@@ -1127,7 +571,7 @@ export default function HomePage() {
     // Cache the handlers
     handlersCacheRef.current[id] = handlers;
     return handlers;
-    // Note: CLICK_THRESHOLD is a constant, so we exclude it from deps to prevent unnecessary recreation
+    // Note: INTERACTION_CONFIG.CLICK_THRESHOLD is a constant, so we exclude it from deps to prevent unnecessary recreation
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dismissWidget, handleIslandDragEnd, toggleWidgetCollapse]);
 
@@ -1146,344 +590,63 @@ export default function HomePage() {
   const handleNavSessions = useCallback(() => { setCurrentView("sessions"); setSidebarOpen(false); }, [setCurrentView, setSidebarOpen]);
   const handleNavConnectors = useCallback(() => { setCurrentView("connectors"); setSidebarOpen(false); }, [setCurrentView, setSidebarOpen]);
 
-  // Sidebar
-  const Sidebar = () => (
-    <motion.aside
-      initial={{ x: -320 }}
-      animate={{ x: sidebarOpen ? 0 : -320 }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
-      className="fixed left-0 top-0 h-full w-80 bg-card border-r border-border z-40 flex flex-col"
-    >
-      <div className="p-4 border-b border-border flex items-center justify-between">
-        <h2 className="font-semibold text-lg">Navigation</h2>
-        <Button variant="ghost" size="icon" onClick={handleCloseSidebar}>
-          <X className="w-5 h-5" />
-        </Button>
-      </div>
+  // Sidebar component reference (uses handlers defined above)
+  // EXTRACTED: Sidebar (was lines 664-717)
+  // See: /components/home/sidebar.tsx
 
-      <nav className="flex-1 p-4 space-y-2">
-        <Button
-          variant={currentView === "main" ? "secondary" : "ghost"}
-          className="w-full justify-start"
-          onClick={handleNavMain}
-        >
-          <MessageSquare className="w-4 h-4 mr-2" />
-          Main Workspace
-        </Button>
-        <Button
-          variant={currentView === "gallery" ? "secondary" : "ghost"}
-          className="w-full justify-start"
-          onClick={handleNavGallery}
-        >
-          <Images className="w-4 h-4 mr-2" />
-          Widget Gallery
-        </Button>
-        <Button
-          variant={currentView === "sessions" ? "secondary" : "ghost"}
-          className="w-full justify-start"
-          onClick={handleNavSessions}
-        >
-          <History className="w-4 h-4 mr-2" />
-          Sessions
-        </Button>
-        <Button
-          variant={currentView === "connectors" ? "secondary" : "ghost"}
-          className="w-full justify-start"
-          onClick={handleNavConnectors}
-        >
-          <Database className="w-4 h-4 mr-2" />
-          Connectors
-        </Button>
-      </nav>
+  // EXTRACTED: MainView (was lines 596-660)
+  // See: /components/home/main-view.tsx
 
-      <div className="p-4 border-t border-border">
-        <ThemeToggle />
-      </div>
-    </motion.aside>
-  );
+  // EXTRACTED: galleryDescriptors, GalleryView (was lines 698-816)
+  // See: /components/home/gallery-view.tsx
 
-  // Main view
-  const MainView = () => (
-    <div className="space-y-6 relative">
-      {/* Mobile Bubble Layer - visible only on mobile */}
-      {/* NOTE: With State Colocation, widgets track their own state.
-          MobileBubbleLayer simplified - parent no longer tracks widget states. */}
-      {enableIslands && (
-        <MobileBubbleLayer
-          expandedIds={emptyExpandedIdsRef.current} // Stable ref - same object reference across renders
-          onExpand={stableEmptyExpandFnRef.current} // Stable ref - same function reference across renders
-          onDismiss={handleWidgetDelete}
-        />
-      )}
+  // EXTRACTED: SessionsView (was lines 856-886)
+  // See: /components/home/views.tsx
 
-      {/* Generated Widgets - 3-State Cycle System (Island -> Card -> Full) */}
-      {enableIslands ? (
-        // Island UI mode - use Zustand store with IsolatedWidget
-        // CRITICAL: No AnimatePresence/LayoutGroup wrapper for island mode
-        // These can cause visual resets when widgets are added/removed
-        // Each IsolatedWidget handles its own animations internally
-        <>
-          {storeWidgetIds.map((id) => (
-            <IsolatedWidget
-              key={id}
-              descriptorId={id}
-            />
-          ))}
-        </>
-      ) : (
-        // Traditional mode (CollapsibleWidgetWrapper) - use controlled isExpanded
-        // Keep AnimatePresence for traditional mode smooth transitions
-        <LayoutGroup>
-          <AnimatePresence mode="popLayout">
-            {widgets.map((widget) => {
-              const handlers = getWidgetHandlers(widget.descriptor_id);
-              return (
-                <WidgetRenderer
-                  key={widget.descriptor_id}
-                  descriptor={widget}
-                  onDismiss={handlers.onDismiss}
-                  onDragEnd={handlers.onDragEndCompat}
-                  onToggleCollapse={handlers.onToggleCollapse}
-                  isExpanded={!widget.collapsed}
-                />
-              );
-            })}
-          </AnimatePresence>
-        </LayoutGroup>
-      )}
-
-      {(!enableIslands && widgets.length === 0) && (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-            <p className="text-muted-foreground">
-              No widgets yet. Click the Central Island button below to generate your first widget.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {enableIslands && storeWidgetIds.length === 0 && (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-            <p className="text-muted-foreground">
-              No widgets yet. Click the Central Island button below to generate your first widget.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-
-  // Gallery view
-  const GalleryView = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Widget Gallery</CardTitle>
-          <CardDescription>
-            All 10 generative UI widget types showcased with example content
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      <MarkdownWidget
-        content={`# Markdown Heading
-
-This is a **markdown block** widget that supports:
-
-- **Bold** and *italic* text
-- Lists (ordered and unordered)
-- [Links](https://example.com)
-- \`inline code\` and code blocks
-
-\`\`\`javascript
-const greeting = "Hello, World!";
-console.log(greeting);
-\`\`\`
-
-> Blockquotes are also supported
-
-This widget is perfect for displaying AI-generated explanations, documentation, and formatted text.
-        `}
-      />
-
-      <CardWidget
-        title="Travel Tips: Japan"
-        content="### Best Time to Visit\n\nSpring (March-May) for cherry blossoms or Autumn (November) for fall colors.\n\n### Must-Visit Places\n- Tokyo (modern culture)\n- Kyoto (temples and traditions)\n- Osaka (food capital)\n\n### Travel Tips\n- Get a JR Pass for unlimited train travel\n- Learn basic Japanese phrases\n- Cash is still king in many places"
-        actions={[
-          { label: "View Details", action: "view-details" },
-          { label: "Book Now", action: "book-now" },
-        ]}
-      />
-
-      <FormWidget
-        title="User Feedback Form"
-        fields={[
-          { name: "name", type: "text", label: "Your Name" },
-          { name: "email", type: "email", label: "Email Address" },
-          { name: "feedback", type: "textarea", label: "Your Feedback" },
-          { name: "rating", type: "select", label: "Rating", options: ["Excellent", "Good", "Fair", "Poor"] },
-        ]}
-        submitLabel="Submit Feedback"
-        onSubmit={NOOP_FN}
-      />
-
-      <ProgressWidget
-        title="Processing Documents"
-        value={0.65}
-        statusText="15 of 23 documents processed"
-      />
-
-      <ActionWidget
-        title="Start Analysis"
-        content="Click to begin processing your data"
-        buttonText="Start New Analysis"
-        onAction={NOOP_FN}
-      />
-
-      <ConfirmationWidget
-        title="Delete Document"
-        message="Are you sure you want to delete this document? This action cannot be undone."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        variant="destructive"
-        onConfirm={NOOP_FN}
-        onCancel={NOOP_FN}
-      />
-
-      <ImageWidget
-        title="Mountain Landscape"
-        content="A beautiful mountain landscape showcasing nature's grandeur"
-        caption="Photo from Picsum Photos"
-      />
-
-      <GalleryWidget
-        title="Nature Collection"
-        content="A curated gallery of stunning nature photographs"
-      />
-
-      <ChartWidget
-        title="Monthly Sales Data"
-        content="Revenue trends over the past 6 months showing consistent growth"
-        chartType="bar"
-      />
-    </div>
-  );
-
-  // Sessions view
-  const SessionsView = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Sessions</CardTitle>
-          <CardDescription>
-            Your previous conversation sessions and generated widgets
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {sessions.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No sessions yet</p>
-          ) : (
-            <div className="space-y-2">
-              {sessions.map((session) => (
-                <div
-                  key={session.id || session.session_id}
-                  className="p-3 border rounded-lg hover:bg-muted cursor-pointer"
-                >
-                  <h3 className="font-medium">{session.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {session.created_at || session.date || "Unknown date"}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  // Memoized connector toggle handlers to prevent re-renders in map
-  const connectorToggleHandlers = useMemo(() => {
-    const handlers: Record<string, () => void> = {};
-    Object.keys(connectors).forEach(name => {
-      handlers[name] = () => setConnector(name as keyof typeof connectors, !connectors[name as keyof typeof connectors]);
-    });
-    return handlers;
-  }, [connectors, setConnector]);
-
-  // Connectors view
-  const ConnectorsView = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Connectors</CardTitle>
-          <CardDescription>
-            Configure external service connections
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {Object.entries(connectors).map(([name, connected]) => (
-            <div key={name} className="flex items-center justify-between p-3 border rounded-lg">
-              <div>
-                <h3 className="font-medium capitalize">{name}</h3>
-                <p className="text-sm text-muted-foreground capitalize">
-                  {connected ? "Connected" : "Not connected"}
-                </p>
-              </div>
-              <Button
-                variant={connected ? "outline" : "default"}
-                onClick={connectorToggleHandlers[name]}
-              >
-                {connected ? "Disconnect" : "Connect"}
-              </Button>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
-  );
+  // EXTRACTED: connectorToggleHandlers, ConnectorsView (was lines 888-927)
+  // ConnectorsView now handles toggle internally via onToggleConnector prop
+  // See: /components/home/views.tsx
 
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <Sidebar />
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        currentView={currentView}
+        onCloseSidebar={handleCloseSidebar}
+        onNavMain={handleNavMain}
+        onNavGallery={handleNavGallery}
+        onNavSessions={handleNavSessions}
+        onNavConnectors={handleNavConnectors}
+      />
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 h-16 border-b border-border bg-card/80 backdrop-blur-sm z-30 flex items-center px-4 lg:px-6">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleToggleSidebar}
-          className="mr-4"
-        >
-          <Plus className="w-5 h-5" />
-        </Button>
-        <h1 className="text-xl font-semibold">{appName}</h1>
-        <div className="ml-auto flex items-center gap-2">
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-            health === "healthy" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" :
-            health === "disconnected" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100" :
-            "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100"
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              health === "healthy" ? "bg-green-500" :
-              health === "disconnected" ? "bg-red-500" :
-              "bg-gray-500"
-            }`} />
-            {health === "healthy" ? "Connected" : health}
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        health={health}
+        onToggleSidebar={handleToggleSidebar}
+      />
 
       {/* Main Content */}
       <main className="pt-20 px-4 lg:px-6 pb-32">
-        {currentView === "main" && <MainView />}
+        {currentView === "main" && (
+          <MainView
+            enableIslands={enableIslands}
+            emptyExpandedIds={emptyExpandedIdsRef}
+            stableEmptyExpandFn={stableEmptyExpandFnRef}
+            onWidgetDelete={handleWidgetDelete}
+            storeWidgetIds={storeWidgetIds}
+            widgets={widgets}
+            getWidgetHandlers={getWidgetHandlers}
+          />
+        )}
         {currentView === "gallery" && <GalleryView />}
-        {currentView === "sessions" && <SessionsView />}
-        {currentView === "connectors" && <ConnectorsView />}
+        {currentView === "sessions" && <SessionsView sessions={sessions} />}
+        {currentView === "connectors" && (
+          <ConnectorsView
+            connectors={connectors}
+            onToggleConnector={(name) => setConnector(name as keyof typeof connectors, !connectors[name as keyof typeof connectors])}
+          />
+        )}
       </main>
 
       {/* Central Island - always visible at bottom center */}
