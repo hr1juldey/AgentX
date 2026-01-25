@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence, useMotionValue } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import {
   FileText,
@@ -14,6 +14,7 @@ import {
   LineChart,
 } from "lucide-react";
 import React, { memo, useCallback, useState, useMemo } from "react";
+import { useWidgetStore } from "@/store/widget-store";
 
 interface UIDescriptor {
   descriptor_id: string;
@@ -22,7 +23,6 @@ interface UIDescriptor {
 }
 
 interface MobileBubbleLayerProps {
-  widgets: UIDescriptor[];
   expandedIds: Set<string>;
   onExpand: (id: string) => void;
   onDismiss: (id: string) => void;
@@ -62,6 +62,12 @@ const EDGE_MARGIN = 16;
 /**
  * MobileBubbleLayer - Mobile-only floating bubble layout
  *
+ * KEY DESIGN PRINCIPLE (Jira/Linear style isolation):
+ * - Reads widgets directly from Zustand store (NO props passed from parent)
+ * - Parent re-renders DO NOT affect this component
+ * - Only re-renders when the specific widget data it subscribes to changes
+ * - This prevents cascade re-renders when widgets are added/removed
+ *
  * Features:
  * - 48px bubbles (vs 56px desktop)
  * - Vertical stack along right edge
@@ -73,15 +79,23 @@ const EDGE_MARGIN = 16;
 const MAX_EXPANDED_MOBILE = 4;
 
 export const MobileBubbleLayer = memo(function MobileBubbleLayer({
-  widgets,
   expandedIds,
   onExpand,
   onDismiss,
 }: MobileBubbleLayerProps) {
+  // CRITICAL: Subscribe to widget IDs array from Zustand store
+  // This creates an isolated subscription - only re-renders when widget IDs change
+  // NOT when parent re-renders!
+  const widgetIds = useWidgetStore((s) => Object.keys(s.widgets));
+  const widgets = useWidgetStore((s) => Object.values(s.widgets));
+
   const [bubblePositions, setBubblePositions] = useState<Record<string, { x: number; y: number }>>({});
 
   // Only show up to MAX_BUBBLES
-  const visibleWidgets = widgets.slice(0, MAX_BUBBLES);
+  const visibleWidgets = useMemo(
+    () => widgets.slice(0, MAX_BUBBLES),
+    [widgets]
+  );
 
   const handleDragEnd = useCallback(
     (id: string, _: unknown, info: { offset: { x: number; y: number } }) => {
@@ -235,4 +249,20 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
       )}
     </div>
   );
+}, (prevProps, nextProps) => {
+  // Custom comparison for MobileBubbleLayer
+  // Only re-render if expandedIds Set actually changed
+  // This prevents re-renders when parent's local state changes but expandedIds didn't
+  if (prevProps.expandedIds.size !== nextProps.expandedIds.size) {
+    return false;
+  }
+  const prevIds = Array.from(prevProps.expandedIds);
+  const nextIds = Array.from(nextProps.expandedIds);
+  for (let i = 0; i < prevIds.length; i++) {
+    if (prevIds[i] !== nextIds[i]) {
+      return false;
+    }
+  }
+  // If all IDs match, don't re-render
+  return true;
 });

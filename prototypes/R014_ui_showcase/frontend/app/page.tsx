@@ -671,10 +671,16 @@ export default function HomePage() {
     startTransition(() => {
       // Remove from Zustand store
       useWidgetStore.getState().removeWidget(id);
-      // Also remove from local widgets array (for non-island mode and MobileBubbleLayer)
-      setWidgets(prev => prev.filter(w => w.descriptor_id !== id));
+
+      // CRITICAL: Only update local state when NOT in island mode
+      // Island mode derives everything from Zustand store - no duplication!
+      // enableIslands is a build-time constant from env var
+      const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
+      if (!enableIslands) {
+        setWidgets(prev => prev.filter(w => w.descriptor_id !== id));
+      }
     });
-  }, []); // ← Empty deps = stable forever
+  }, []); // ← Empty deps = stable forever (enableIslands is a constant)
 
   /**
    * Safe position generator - deterministic positioning for new widgets
@@ -750,8 +756,14 @@ export default function HomePage() {
     // Add to Zustand store (handles position generation and state initialization)
     useWidgetStore.getState().addWidget(widget, { sidebarOpen });
 
-    // Also keep local widgets array in sync (for non-island mode and MobileBubbleLayer)
-    setWidgets(prev => [...prev, widget]);
+    // CRITICAL: Only update local state when NOT in island mode
+    // Island mode derives everything from Zustand store - no duplication!
+    // This prevents cascade re-renders caused by dual state management
+    // enableIslands is a build-time constant from env var
+    const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";
+    if (!enableIslands) {
+      setWidgets(prev => [...prev, widget]);
+    }
 
     setHasWidgetsArrived(true); // Mark that widgets have arrived
     console.log(`📦 Widget delivered: ${widget.descriptor_type}`);
@@ -759,7 +771,7 @@ export default function HomePage() {
     // Note: View state management is now handled by Zustand store
     // New widgets start in "island" state (default)
     // Users click to cycle: island -> card -> full -> island
-  }, []);
+  }, [sidebarOpen]); // enableIslands is a constant, excluded from deps
 
   // Complete message handler
   const [generationComplete, setGenerationComplete] = useState(false);
@@ -1182,7 +1194,6 @@ export default function HomePage() {
           MobileBubbleLayer simplified - parent no longer tracks widget states. */}
       {enableIslands && (
         <MobileBubbleLayer
-          widgets={widgets}
           expandedIds={emptyExpandedIdsRef.current} // Stable ref - same object reference across renders
           onExpand={stableEmptyExpandFnRef.current} // Stable ref - same function reference across renders
           onDismiss={handleWidgetDelete}
@@ -1190,19 +1201,25 @@ export default function HomePage() {
       )}
 
       {/* Generated Widgets - 3-State Cycle System (Island -> Card -> Full) */}
-      <LayoutGroup>
-        <AnimatePresence mode="popLayout">
-          {enableIslands ? (
-            // Island UI mode - use Zustand store with IsolatedWidget
-            storeWidgetIds.map((id) => (
-              <IsolatedWidget
-                key={id}
-                descriptorId={id}
-              />
-            ))
-          ) : (
-            // Traditional mode (CollapsibleWidgetWrapper) - use controlled isExpanded
-            widgets.map((widget) => {
+      {enableIslands ? (
+        // Island UI mode - use Zustand store with IsolatedWidget
+        // CRITICAL: No AnimatePresence/LayoutGroup wrapper for island mode
+        // These can cause visual resets when widgets are added/removed
+        // Each IsolatedWidget handles its own animations internally
+        <>
+          {storeWidgetIds.map((id) => (
+            <IsolatedWidget
+              key={id}
+              descriptorId={id}
+            />
+          ))}
+        </>
+      ) : (
+        // Traditional mode (CollapsibleWidgetWrapper) - use controlled isExpanded
+        // Keep AnimatePresence for traditional mode smooth transitions
+        <LayoutGroup>
+          <AnimatePresence mode="popLayout">
+            {widgets.map((widget) => {
               const handlers = getWidgetHandlers(widget.descriptor_id);
               return (
                 <WidgetRenderer
@@ -1214,10 +1231,10 @@ export default function HomePage() {
                   isExpanded={!widget.collapsed}
                 />
               );
-            })
-          )}
-        </AnimatePresence>
-      </LayoutGroup>
+            })}
+          </AnimatePresence>
+        </LayoutGroup>
+      )}
 
       {(!enableIslands && widgets.length === 0) && (
         <Card className="border-dashed">
