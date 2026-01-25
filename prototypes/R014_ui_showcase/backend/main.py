@@ -15,9 +15,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router
 from config.settings import settings
 
-# Configure INFO logging (cleaner than DEBUG, shows agent steps)
+# Configure logging from settings (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+log_level = getattr(logging, settings.log_level.upper(), logging.INFO)
 logging.basicConfig(
-    level=logging.INFO,
+    level=log_level,
     format="%(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)

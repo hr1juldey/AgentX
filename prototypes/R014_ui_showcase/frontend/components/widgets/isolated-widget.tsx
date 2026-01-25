@@ -3,10 +3,9 @@
 import { memo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { X, Minimize2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { ToolIsland } from "@/components/islands/tool-island";
 import { DirectWidgetRenderer } from "@/components/widgets/direct-widget-renderer";
+import { WidgetContentRenderer } from "@/lib/widget-content-renderer";
 import { useWidgetStore, type UIDescriptor, type ViewState, type Position } from "@/store/widget-store";
 import { useWidgetSlice } from "@/hooks/use-widget-slice";
 import { getWidgetIcon, getWidgetColor } from "@/lib/widget-utils";
@@ -246,13 +245,12 @@ function IsolatedWidgetComponent({
                 </div>
               </div>
 
-              {/* Content summary with markdown rendering */}
+              {/* Content summary with type-safe rendering */}
               <div className="p-4 overflow-hidden">
-                <div className="text-sm text-foreground/80 line-clamp-3 select-text prose prose-sm max-w-none dark:prose-invert [&>*]:mb-0 [&>*]:mt-0 [&_p]:inline [&_ul]:inline [&_ol]:inline [&_li]:inline">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {widget.content || "Click to expand"}
-                  </ReactMarkdown>
-                </div>
+                <WidgetContentRenderer
+                  widget={widget}
+                  className="text-sm text-foreground/80 line-clamp-3 select-text prose prose-sm max-w-none dark:prose-invert [&>*]:mb-0 [&>*]:mt-0 [&_p]:inline [&_ul]:inline [&_ol]:inline [&_li]:inline"
+                />
               </div>
 
               {/* Footer with hint */}

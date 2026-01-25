@@ -20,6 +20,14 @@ export interface UIDescriptor {
     required: boolean;
     options?: string[];
   }>;
+  // Backend sends form_fields (preferred name)
+  form_fields?: Array<{
+    label: string;
+    type: string;
+    description?: string;
+    required: boolean;
+    options?: string[];
+  }>;
   submit_button_text?: string;
 
   // Progress widget fields

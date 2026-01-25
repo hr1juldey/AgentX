@@ -6,11 +6,13 @@
 
 import logging
 
+from config.settings import settings
+
 logger = logging.getLogger(__name__)
 
 
-# Constants (Rule 5: No magic numbers)
-MAX_RESULTS = 25
+# Constants (Rule 5: No magic numbers - max_results from settings)
+MAX_RESULTS = settings.max_results
 SCORE_LOG_SAMPLE_SIZE = 5
 DISCARD_SAMPLE_SIZE = 5
 

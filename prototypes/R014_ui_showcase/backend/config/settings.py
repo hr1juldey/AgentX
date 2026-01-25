@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = True
     mock_mode: bool = False
+    log_level: str = "INFO"
 
     # Server
     host: str = "0.0.0.0"
@@ -68,6 +69,12 @@ class Settings(BaseSettings):
     max_hops: int = 5
     docs_per_hop: int = 5
     stop_threshold: float = 0.85
+
+    # Research Result Cap (max sources for contextualizer)
+    max_results: int = 25
+
+    # Async Configuration (max concurrent LLM calls)
+    max_concurrent: int = 4
 
     # =============================================================================
     # Async Configuration

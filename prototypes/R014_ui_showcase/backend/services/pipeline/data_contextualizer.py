@@ -117,3 +117,18 @@ class DataContextualizerAgent(dspy.Module):
             top_facts=top_facts,
             research_data=research_data,
         )
+
+    async def aforward(
+        self,
+        research_data: dict,
+        original_query: str = "",
+    ) -> dict:
+        """Async execute DATA CONTEXTUALIZER agent pipeline with parallel processing.
+
+        Delegates to async_contextualize_forward for implementation.
+        """
+        from services.pipeline.data_contextualizer_async import (
+            async_contextualize_forward,
+        )
+
+        return await async_contextualize_forward(self, research_data, original_query)

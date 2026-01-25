@@ -3,7 +3,11 @@
 import { memo, useMemo } from "react";
 import { CollapsibleWidgetWrapper } from "@/components/widgets/collapsible-widget-wrapper";
 import { DirectWidgetRenderer } from "@/components/widgets/direct-widget-renderer";
+import { WidgetContentRenderer } from "@/lib/widget-content-renderer";
 import type { UIDescriptor } from "@/types/widget-types";
+
+// Re-export WidgetContentRenderer for convenience
+export { WidgetContentRenderer };
 
 /**
  * WidgetRenderer - Traditional widget renderer with CollapsibleWidgetWrapper
