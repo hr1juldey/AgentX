@@ -17,7 +17,7 @@ def presentation_quality_score(args: Any, pred: Any) -> float:
     Pure Python logic - no LLM calls. Deterministic and fast.
 
     Scoring:
-    - Widget variety (0.2 points)
+    - Widget appropriateness (0.2 points)
     - Device-appropriate layout (0.3 points)
     - Color accessibility (0.2 points)
     - Visual hierarchy (0.15 points)
@@ -31,12 +31,22 @@ def presentation_quality_score(args: Any, pred: Any) -> float:
 
     score = 0.0
 
-    # Rule 1: Widget variety (0.2 points)
-    widget_types = set(w.get("type", "") for w in plan.get("widgets", []))
-    if len(widget_types) > 1:
-        score += 0.2
-    elif len(widget_types) == 1 and "markdown" in widget_types:
-        score += 0.05
+    # Rule 1: Widget appropriateness (0.2 points) - replaced variety bonus
+    # Now scores based on how well widget types match content type
+    widget_types = [w.get("type", "") for w in plan.get("widgets", [])]
+    content_lower = args.get("content_analysis", "").lower()
+
+    # Information queries should NOT have forms
+    info_keywords = ["explain", "what is", "tell me", "show me", "describe", "compare"]
+    has_info_query = any(kw in content_lower for kw in info_keywords)
+    has_form = "form" in widget_types
+
+    if has_info_query and has_form:
+        score += 0.0  # Penalty: forms inappropriate for informational queries
+    elif len(set(widget_types)) == 1:
+        score += 0.2  # Single well-chosen widget type is optimal
+    else:
+        score += 0.1  # Multiple types without penalty
 
     # Rule 2: Device-appropriate layout (0.3 points)
     score += _device_layout_score(

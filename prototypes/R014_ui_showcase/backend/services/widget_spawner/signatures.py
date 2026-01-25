@@ -13,7 +13,7 @@ class SelectWidgetSignature(dspy.Signature):
     Widget Selection Guide:
     - "markdown": User asks for reports, documents, text, articles, guides, explanations, summaries
     - "card": User asks for highlights, key points, facts, notifications, simple information
-    - "form": User asks for input forms, surveys, data entry, user input, collect information
+    - "form": ONLY when user explicitly asks for: input forms, surveys, data collection, user feedback, signup forms, questionnaires. DO NOT use forms for: information display, explanations, reports, comparisons, or data visualization. Use forms ONLY when the query contains keywords like: create form, build form, signup, submit, collect data, survey, questionnaire
     - "progress": User asks for status, progress, loading state, completion percentage
     - "chart": User asks for graphs, plots, visualizations, data viz, statistics, trends (bar/line/pie/area)
     - "action": User asks for buttons, actions, triggers, execute operations

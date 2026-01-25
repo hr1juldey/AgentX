@@ -8,6 +8,7 @@ import dspy
 import json
 import logging
 
+from services.tools.designer.color_palette import get_chart_colors
 from services.tools.hydrators.signatures import ChartData
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,9 @@ class ChartHydratorModule(dspy.Module):
         data = presentation_ready.get("researched_data", {})
         design = presentation_ready.get("design", {})
         query = presentation_ready.get("query", "")
+
+        # Extract domain for color selection
+        domain = design.get("domain", "general")
 
         try:
             result = self.generate_chart(
@@ -62,13 +66,17 @@ class ChartHydratorModule(dspy.Module):
             else:
                 y_axis_keys = [y_axis_keys_str]
 
-            # Build structured content
+            # Get domain-appropriate colors
+            colors = get_chart_colors(domain=domain, count=len(y_axis_keys))
+
+            # Build structured content with colors
             content = {
                 "title": chart_title,
                 "type": chart_type,
                 "data": chart_data,
                 "x_axis": x_axis_key,
                 "y_axis": y_axis_keys,
+                "colors": colors,
                 "metadata": {
                     "data_points": len(chart_data),
                     "chart_type": chart_type,
@@ -83,12 +91,14 @@ class ChartHydratorModule(dspy.Module):
                     "data_points": len(chart_data),
                     "x_axis": x_axis_key,
                     "y_axis": y_axis_keys,
+                    "colors": colors,
                 },
             }
 
         except Exception as e:
             logger.error(f"Chart hydrator error: {e}")
-            # Return fallback structure
+            # Return fallback structure with default colors
+            default_colors = get_chart_colors(domain="general", count=1)
             return {
                 "descriptor_type": "chart",
                 "content": {
@@ -97,6 +107,7 @@ class ChartHydratorModule(dspy.Module):
                     "data": [],
                     "x_axis": "label",
                     "y_axis": ["value"],
+                    "colors": default_colors,
                     "metadata": {"error": str(e)},
                 },
                 "metadata": {"error": str(e)},

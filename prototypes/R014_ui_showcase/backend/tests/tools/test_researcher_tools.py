@@ -186,17 +186,20 @@ def test_citation_builder_basic():
     print(f"  Citations generated: {len(citations)}")
 
     for i, citation in enumerate(citations, 1):
-        print(f"\n    {i}. {citation.get('title', 'N/A')}")
+        print(f"\n    {i}. {citation.get('document_title', 'N/A')}")
         print(f"       URL: {citation.get('url', 'N/A')}")
-        print(f"       Snippet: {citation.get('snippet', 'N/A')[:60]}...")
+        print(f"       Cited text: {citation.get('cited_text', 'N/A')[:60]}...")
+        print(f"       Index: {citation.get('document_index', 'N/A')}")
 
-    # Verify structure
+    # Verify structure (frontend-compatible format)
     assert isinstance(citations, list), "Citations should be a list"
     assert len(citations) > 0, "Should generate at least one citation"
     for citation in citations:
         assert isinstance(citation, dict), "Each citation should be a dict"
-        assert "title" in citation, "Missing title field"
+        assert "document_title" in citation, "Missing document_title field"
         assert "url" in citation, "Missing url field"
+        assert "cited_text" in citation, "Missing cited_text field"
+        assert "document_index" in citation, "Missing document_index field"
 
 
 def test_citation_builder_with_writing():
@@ -233,18 +236,19 @@ def test_citation_builder_with_writing():
     result = module(raw_data=raw_data, writing=writing)
     citations = result if isinstance(result, list) else []
 
-    print("\n  Citations with relevance scores:")
+    print("\n  Citations with best matching sentences:")
 
     for i, citation in enumerate(citations, 1):
-        relevance = citation.get("relevance", 0.0)
-        print(f"\n    {i}. {citation.get('title', 'N/A')}")
-        print(f"       Relevance: {relevance:.2f}")
-        print(f"       Best snippet: {citation.get('snippet', 'N/A')[:80]}...")
+        print(f"\n    {i}. {citation.get('document_title', 'N/A')}")
+        print(f"       Cited text: {citation.get('cited_text', 'N/A')[:80]}...")
+        print(f"       Index: {citation.get('document_index', 'N/A')}")
 
-    # Verify relevance scores
+    # Verify structure (frontend-compatible format)
     for citation in citations:
-        if "relevance" in citation:
-            assert 0.0 <= citation["relevance"] <= 1.0, "Relevance must be 0.0-1.0"
+        assert "document_title" in citation, "Missing document_title field"
+        assert "url" in citation, "Missing url field"
+        assert "cited_text" in citation, "Missing cited_text field"
+        assert "document_index" in citation, "Missing document_index field"
 
 
 def test_citation_builder_real_world():

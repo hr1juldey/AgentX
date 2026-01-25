@@ -64,6 +64,56 @@ def widget_appropriateness_score(content_analysis: str, widget_type: str) -> flo
     return 0.5
 
 
+def form_appropriateness_penalty(content_analysis: str, widget_type: str) -> float:
+    """Apply penalty for inappropriate form usage.
+
+    Pure logic - no LLM calls.
+    """
+    if widget_type != "form":
+        return 0.0
+
+    content_lower = content_analysis.lower()
+
+    # Informational query keywords that should NOT have forms
+    info_keywords = [
+        "explain",
+        "what is",
+        "tell me about",
+        "show me",
+        "describe",
+        "compare",
+        "latest",
+        "developments",
+        "news",
+        "trends",
+        "overview",
+        "summary",
+    ]
+
+    # Collection keywords that SHOULD have forms
+    collect_keywords = [
+        "create form",
+        "build form",
+        "signup",
+        "submit",
+        "collect data",
+        "survey",
+        "questionnaire",
+        "feedback",
+        "register",
+        "enter data",
+        "input form",
+    ]
+
+    # Check if query is informational
+    if any(kw in content_lower for kw in info_keywords):
+        # Only allow form if collection keywords are also present
+        if not any(kw in content_lower for kw in collect_keywords):
+            return -0.5  # Significant penalty for form in informational query
+
+    return 0.0
+
+
 def layout_position_score(plan: dict[str, Any], widget: dict[str, Any]) -> float:
     """Score how well a widget's position fits the layout.
 

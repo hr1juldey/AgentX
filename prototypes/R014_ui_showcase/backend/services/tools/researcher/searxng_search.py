@@ -33,6 +33,7 @@ class SearXNGSearchModule(dspy.Module):
         query: str,
         categories: Optional[list[str]] = None,
         engines: Optional[list[str]] = None,
+        image_search: bool = False,
     ) -> list[dict]:
         """Execute SearXNG search with fresh async client per request."""
         params = {
@@ -40,8 +41,12 @@ class SearXNGSearchModule(dspy.Module):
             "format": "json",
         }
 
-        if categories:
+        # Image search uses category_images=1, NOT categories=images
+        if image_search:
+            params["category_images"] = "1"
+        elif categories:
             params["categories"] = ",".join(categories)
+
         if engines:
             params["engines"] = ",".join(engines)
 
@@ -71,10 +76,14 @@ class SearXNGSearchModule(dspy.Module):
         Returns:
             Search results with URL list for OpenGraph rendering
         """
-        # Determine categories based on search_type
+        # Determine categories and image search based on search_type
         categories = None
+        image_search = False
+
         if search_type == "news":
             categories = ["news"]
+        elif search_type == "images":
+            image_search = True
 
         # Run async search in sync context
         loop = asyncio.get_event_loop()
@@ -85,16 +94,24 @@ class SearXNGSearchModule(dspy.Module):
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(
                     asyncio.run,
-                    self._search_searxng(query, categories),
+                    self._search_searxng(query, categories, image_search=image_search),
                 )
                 results = future.result()
         else:
-            results = asyncio.run(self._search_searxng(query, categories))
+            results = asyncio.run(
+                self._search_searxng(query, categories, image_search=image_search)
+            )
 
-        # Extract URLs for OpenGraph rendering (not images!)
+        # Extract URLs for OpenGraph rendering
         url_list = []
         for result in results:
-            url = result.get("url", "")
+            # For image search, extract img_src (the actual image URL)
+            # For general/news, extract the page URL
+            if image_search:
+                url = result.get("img_src", "")
+            else:
+                url = result.get("url", "")
+
             if url and url.startswith("http"):
                 url_list.append(
                     {

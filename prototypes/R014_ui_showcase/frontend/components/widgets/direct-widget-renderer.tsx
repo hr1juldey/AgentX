@@ -68,9 +68,13 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         if (Array.isArray(cards)) {
           cardContent = cards.map((card: any) => {
             const title = card.title || card.headline || "";
+            // Backend uses "value" for metrics, fallback to body/content/description
+            const value = card.value ? `**${card.value}**` : "";
             const body = card.body || card.content || card.description || "";
             const source = card.source || card.url ? `*Source: ${card.source || card.url}*` : "";
-            return `### ${title}\n\n${body}\n\n${source}`;
+            // Combine: value (metric) + description
+            const cardBody = value ? `${value}\n\n${body}`.trim() : body;
+            return `### ${title}\n\n${cardBody}\n\n${source}`;
           }).join("\n\n---\n\n");
         }
       }
@@ -104,11 +108,14 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         />
       );
     case "progress":
+      // Handle both old (metadata.value) and new (progress_percent at top level) schemas
+      const progressValue = descriptor.progress_percent ?? (descriptor.metadata?.value as number | undefined);
+      const progressText = descriptor.status_text ?? (descriptor.metadata?.status_text as string | undefined);
       return (
         <ProgressWidget
           title={descriptor.title}
-          value={descriptor.progress_percent}
-          statusText={descriptor.status_text}
+          value={progressValue}
+          statusText={progressText}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}
@@ -177,12 +184,17 @@ export const DirectWidgetRenderer = memo(function DirectWidgetRenderer({
         || descriptor.metadata?.chartType as "bar" | "line" | "pie" | undefined
         || "bar";
       const chartTitle = chartContent?.title || descriptor.title;
+      // Extract colors from backend (domain-appropriate colors)
+      const chartColors = chartContent?.colors
+        || (descriptor.metadata?.colors as string[] | undefined)
+        || undefined;
       return (
         <ChartWidget
           title={chartTitle}
           content={typeof chartContent === "string" ? chartContent : undefined}
           chartType={chartType}
           data={chartData}
+          colors={chartColors}
           onDismiss={onDismiss}
           dragPosition={effectiveDragPosition}
           onDragEnd={effectiveOnDragEnd}

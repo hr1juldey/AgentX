@@ -4,20 +4,24 @@
 # Generates the actual widgets based on a plan
 # =============================================================================
 
+import logging
 import uuid
 
 import dspy
 
+from services.tools.researcher.searxng_search import SearXNGSearchModule
 from services.widget_spawner.builders import (
     build_action_widget,
     build_card_widget,
     build_chart_widget,
     build_confirmation_widget,
     build_form_widget,
-    build_gallery_widget,
-    build_image_widget,
     build_markdown_widget,
     build_progress_widget,
+)
+from services.widget_spawner.executor_helpers import (
+    generate_gallery_widget,
+    generate_image_widget,
 )
 from services.widget_spawner.models import WidgetDescriptor
 from services.widget_spawner.signatures import (
@@ -27,6 +31,8 @@ from services.widget_spawner.signatures import (
     GenerateMarkdownSignature,
     GenerateProgressSignature,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class WidgetExecutorAgent:
@@ -49,6 +55,9 @@ class WidgetExecutorAgent:
         self.progress_generator = dspy.Predict(GenerateProgressSignature)
         self.chart_generator = dspy.Predict(GenerateChartSignature)
 
+        # Initialize SearXNG search for image widgets
+        self.image_search = SearXNGSearchModule()
+
         # Store DSPy-backed builders
         self._dspy_builders = {
             "markdown": (self.markdown_generator, build_markdown_widget),
@@ -62,8 +71,6 @@ class WidgetExecutorAgent:
         self._simple_builders = {
             "action": build_action_widget,
             "confirmation": build_confirmation_widget,
-            "image": build_image_widget,
-            "gallery": build_gallery_widget,
         }
 
     def execute_plan(self, plan: list[dict]) -> list[WidgetDescriptor]:
@@ -103,13 +110,23 @@ class WidgetExecutorAgent:
         """
         widget_id = str(uuid.uuid4())
 
+        # Image widgets: use helper function (does both general + image search)
+        if widget_type == "image":
+            widget_data = generate_image_widget(context, widget_id, self.image_search)
+            return WidgetDescriptor(**widget_data)
+
+        # Gallery widgets: use helper function (does both general + image search)
+        if widget_type == "gallery":
+            widget_data = generate_gallery_widget(context, widget_id, self.image_search)
+            return WidgetDescriptor(**widget_data)
+
         # Check DSPy-backed builders first
         if widget_type in self._dspy_builders:
             generator, builder = self._dspy_builders[widget_type]
             # Generate content using DSPy
             result = generator(user_query=context)
             # Build widget descriptor
-            widget_data = builder(result, widget_id)
+            widget_data = builder(result, widget_id)  # type: ignore[arg-type]
             return WidgetDescriptor(**widget_data)
 
         # Check simple builders
@@ -121,5 +138,5 @@ class WidgetExecutorAgent:
 
         # Fallback to markdown if unknown type
         result = self.markdown_generator(user_query=context)
-        widget_data = build_markdown_widget(result, widget_id)
+        widget_data = build_markdown_widget(result, widget_id)  # type: ignore[arg-type]
         return WidgetDescriptor(**widget_data)

@@ -48,16 +48,21 @@ class FormHydratorModule(dspy.Module):
                 logger.warning(f"Failed to parse form_fields: {fields_str}")
                 fields = []
 
-            # Validate field structure
+            # Validate field structure (match frontend FormWidget interface)
             validated_fields = []
             for field in fields if isinstance(fields, list) else []:
                 if isinstance(field, dict):
+                    label = field.get("label", "Field")
+                    # Generate name from label (snake_case for form submission)
+                    name = label.lower().replace(" ", "_").replace("-", "_")
                     validated_fields.append(
                         {
-                            "label": field.get("label", "Field"),
+                            "name": name,
                             "type": field.get("type", "text"),
-                            "description": field.get("description", ""),
-                            "required": field.get("required", False),
+                            "label": label,
+                            "placeholder": field.get(
+                                "description", ""
+                            ),  # Map description→placeholder
                             "options": field.get("options", []),
                         }
                     )

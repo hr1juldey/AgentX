@@ -63,12 +63,13 @@ class CitationBuilderModule(dspy.Module):
 
         # If no writing, return basic citations
         if not writing:
-            for item in raw_data[:5]:
+            for index, item in enumerate(raw_data[:5]):
                 citations.append(
                     {
-                        "title": item.get("title", ""),
+                        "cited_text": item.get("content", "")[:200],
+                        "document_index": index,
+                        "document_title": item.get("title", ""),
                         "url": item.get("url", ""),
-                        "snippet": item.get("content", "")[:200],
                     }
                 )
             return citations
@@ -76,7 +77,7 @@ class CitationBuilderModule(dspy.Module):
         # Find best spots for each source
         sentences = writing.split(". ")
 
-        for source in raw_data[:5]:
+        for index, source in enumerate(raw_data[:5]):
             source_info = f"{source.get('title', '')} | {source.get('url', '')}"
 
             best_sentence = None
@@ -96,10 +97,10 @@ class CitationBuilderModule(dspy.Module):
             if best_sentence:
                 citations.append(
                     {
-                        "title": source.get("title", ""),
+                        "cited_text": best_sentence[:200],
+                        "document_index": index,
+                        "document_title": source.get("title", ""),
                         "url": source.get("url", ""),
-                        "snippet": best_sentence[:200],
-                        "relevance": best_score,
                     }
                 )
 
