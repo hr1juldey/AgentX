@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useCallback } from "react"
 import { motion, useMotionValue } from "framer-motion"
+import { LAYOUT_PHYSICS } from "@/constants/layout-physics"
+import { calculateRepulsion, calculateAttraction, applyBoundaryConstraints } from "@/lib/force-calculations"
 
 interface WidgetPosition {
   id: string
@@ -27,6 +29,9 @@ interface VoronoiLayoutProps {
  *
  * The result is an even spread of widgets across the available screen space
  * with automatic collision avoidance.
+ *
+ * EXTRACTED: Physics constants and force calculation functions
+ * See: /constants/layout-physics.ts and /lib/force-calculations.ts
  */
 export function VoronoiLayout({ widgets, onPositionsUpdate, children }: VoronoiLayoutProps) {
   const positionsRef = useRef<Map<string, { x: number; y: number }>>(new Map())
@@ -40,69 +45,8 @@ export function VoronoiLayout({ widgets, onPositionsUpdate, children }: VoronoiL
     onPositionsUpdateRef.current = onPositionsUpdate
   }, [onPositionsUpdate])
 
-  // Physics parameters for the force-directed layout
-  const REPULSION_STRENGTH = 5000  // Strength of widget-to-widget repulsion
-  const ATTRACTION_STRENGTH = 0.01 // Strength of center attraction
-  const DAMPING = 0.85              // Velocity damping (0-1)
-  const MIN_DISTANCE = 50          // Minimum distance between widgets
-  const WIDGET_PADDING = 20         // Padding around each widget
-
-  /**
-   * Calculate the repulsive force between two widgets.
-   * Uses inverse-square law (like electrostatic force).
-   */
-  const calculateRepulsion = useCallback((
-    x1: number, y1: number, w1: number, h1: number,
-    x2: number, y2: number, w2: number, h2: number
-  ) => {
-    const dx = x1 - x2
-    const dy = y1 - y2
-    const distance = Math.sqrt(dx * dx + dy * dy)
-
-    // Prevent division by zero and limit minimum distance
-    const effectiveDistance = Math.max(distance, MIN_DISTANCE)
-
-    // Calculate combined size for collision detection
-    const minRequiredDist = (Math.max(w1, w2) + Math.max(h1, h2)) / 2 + WIDGET_PADDING
-
-    // If widgets overlap, apply stronger repulsion
-    const strength = distance < minRequiredDist
-      ? REPULSION_STRENGTH * 3
-      : REPULSION_STRENGTH
-
-    // Inverse-square law: F = k / r^2
-    const force = strength / (effectiveDistance * effectiveDistance)
-
-    return {
-      fx: (dx / distance) * force,
-      fy: (dy / distance) * force
-    }
-  }, [])
-
-  /**
-   * Calculate the attractive force toward the center of the screen.
-   * This keeps widgets from drifting off-screen.
-   */
-  const calculateAttraction = useCallback((x: number, y: number, centerX: number, centerY: number) => {
-    return {
-      fx: (centerX - x) * ATTRACTION_STRENGTH,
-      fy: (centerY - y) * ATTRACTION_STRENGTH
-    }
-  }, [])
-
-  /**
-   * Apply boundary constraints to keep widgets within viewport.
-   */
-  const applyBoundaryConstraints = useCallback((
-    x: number, y: number, width: number, height: number,
-    viewportWidth: number, viewportHeight: number
-  ) => {
-    const margin = 50
-    return {
-      x: Math.max(margin, Math.min(viewportWidth - width - margin, x)),
-      y: Math.max(margin, Math.min(viewportHeight - height - margin, y))
-    }
-  }, [])
+  // EXTRACTED: calculateRepulsion, calculateAttraction, applyBoundaryConstraints
+  // See: /lib/force-calculations.ts
 
   /**
    * Main layout simulation step.
@@ -167,8 +111,8 @@ export function VoronoiLayout({ widgets, onPositionsUpdate, children }: VoronoiL
       // Update velocity
       const vel = velocities.get(widget.id)
       if (vel) {
-        vel.vx = (vel.vx + fx) * DAMPING
-        vel.vy = (vel.vy + fy) * DAMPING
+        vel.vx = (vel.vx + fx) * LAYOUT_PHYSICS.DAMPING
+        vel.vy = (vel.vy + fy) * LAYOUT_PHYSICS.DAMPING
       }
     }
 
@@ -216,10 +160,10 @@ export function VoronoiLayout({ widgets, onPositionsUpdate, children }: VoronoiL
       0
     )
 
-    if (maxVelocity > 0.1 && isLayoutActiveRef.current) {
+    if (maxVelocity > LAYOUT_PHYSICS.SETTLING_THRESHOLD && isLayoutActiveRef.current) {
       animationFrameRef.current = requestAnimationFrame(simulateLayout)
     }
-  }, [widgets, calculateRepulsion, calculateAttraction, applyBoundaryConstraints])
+  }, [widgets])
 
   /**
    * Start the layout simulation when widgets change.

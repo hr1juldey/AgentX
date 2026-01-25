@@ -1,26 +1,15 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
-import {
-  FileText,
-  Layout,
-  ClipboardList,
-  BarChart3,
-  Zap,
-  HelpCircle,
-  Image as ImageIcon,
-  Images,
-  LineChart,
-} from "lucide-react";
+import { X, FileText } from "lucide-react";
 import React, { memo, useCallback, useState, useMemo } from "react";
 import { useWidgetStore } from "@/store/widget-store";
-
-interface UIDescriptor {
-  descriptor_id: string;
-  descriptor_type: string;
-  title?: string;
-}
+import type { UIDescriptor } from "@/types/widget-types";
+import {
+  MOBILE_LAYOUT,
+  WIDGET_LUCIDE_ICONS,
+  WIDGET_CSS_COLORS,
+} from "@/constants/mobile-layout";
 
 interface MobileBubbleLayerProps {
   expandedIds: Set<string>;
@@ -28,36 +17,8 @@ interface MobileBubbleLayerProps {
   onDismiss: (id: string) => void;
 }
 
-// Widget type to icon mapping (same as ToolIsland)
-const widgetIcons: Record<string, React.ElementType> = {
-  markdown: FileText,
-  card: Layout,
-  form: ClipboardList,
-  progress: BarChart3,
-  action: Zap,
-  confirmation: HelpCircle,
-  image: ImageIcon,
-  gallery: Images,
-  chart: LineChart,
-};
-
-// Widget type to CSS color variable mapping (same as ToolIsland)
-const widgetColors: Record<string, string> = {
-  markdown: "var(--island-markdown)",
-  card: "var(--island-card)",
-  form: "var(--island-form)",
-  progress: "var(--island-progress)",
-  action: "var(--island-action)",
-  confirmation: "var(--island-confirmation)",
-  image: "var(--island-image)",
-  gallery: "var(--island-gallery)",
-  chart: "var(--island-chart)",
-};
-
-const BUBBLE_SIZE = 48; // 48px for mobile (vs 56px desktop)
-const MAX_BUBBLES = 6;
-const BUBBLE_SPACING = 60;
-const EDGE_MARGIN = 16;
+// EXTRACTED: Constants and icon/color mappings
+// See: /constants/mobile-layout.ts
 
 /**
  * MobileBubbleLayer - Mobile-only floating bubble layout
@@ -76,8 +37,6 @@ const EDGE_MARGIN = 16;
  * - Max 4 expanded panels (mobile limit)
  * - Visible only on mobile (md:hidden breakpoint)
  */
-const MAX_EXPANDED_MOBILE = 4;
-
 export const MobileBubbleLayer = memo(function MobileBubbleLayer({
   expandedIds,
   onExpand,
@@ -98,7 +57,7 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
 
   // Only show up to MAX_BUBBLES
   const visibleWidgets = useMemo(
-    () => widgets.slice(0, MAX_BUBBLES),
+    () => widgets.slice(0, MOBILE_LAYOUT.MAX_BUBBLES),
     [widgets]
   );
 
@@ -116,8 +75,8 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
         setBubblePositions((prev) => ({
           ...prev,
           [id]: {
-            x: snapToRight ? viewportWidth - EDGE_MARGIN - BUBBLE_SIZE / 2 : EDGE_MARGIN + BUBBLE_SIZE / 2,
-            y: Math.max(EDGE_MARGIN, Math.min(newY, window.innerHeight - EDGE_MARGIN - BUBBLE_SIZE)),
+            x: snapToRight ? viewportWidth - MOBILE_LAYOUT.EDGE_MARGIN - MOBILE_LAYOUT.BUBBLE_SIZE / 2 : MOBILE_LAYOUT.EDGE_MARGIN + MOBILE_LAYOUT.BUBBLE_SIZE / 2,
+            y: Math.max(MOBILE_LAYOUT.EDGE_MARGIN, Math.min(newY, window.innerHeight - MOBILE_LAYOUT.EDGE_MARGIN - MOBILE_LAYOUT.BUBBLE_SIZE)),
           },
         }));
       }
@@ -130,11 +89,11 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
       if (expandedIds.has(id)) {
         // Toggle collapse if clicking the expanded bubble
         onExpand(id); // Parent will handle removal from Set
-      } else if (expandedIds.size < MAX_EXPANDED_MOBILE) {
+      } else if (expandedIds.size < MOBILE_LAYOUT.MAX_EXPANDED_MOBILE) {
         // Expand if under limit
         onExpand(id);
       } else {
-        console.warn(`Maximum ${MAX_EXPANDED_MOBILE} widgets can be expanded on mobile`);
+        console.warn(`Maximum ${MOBILE_LAYOUT.MAX_EXPANDED_MOBILE} widgets can be expanded on mobile`);
       }
     },
     [expandedIds, onExpand]
@@ -172,14 +131,14 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
     <div className="md:hidden fixed inset-0 pointer-events-none z-40">
       <AnimatePresence>
         {visibleWidgets.map((widget, index) => {
-          const IconComponent = widgetIcons[widget.descriptor_type] || FileText;
-          const islandColor = widgetColors[widget.descriptor_type] || "var(--island-white)";
+          const IconComponent = WIDGET_LUCIDE_ICONS[widget.descriptor_type] || FileText;
+          const islandColor = WIDGET_CSS_COLORS[widget.descriptor_type] || "var(--island-white)";
           const isExpanded = expandedIds.has(widget.descriptor_id);
 
           // Default position along right edge
           const defaultPosition = {
-            x: typeof window !== "undefined" ? window.innerWidth - EDGE_MARGIN - BUBBLE_SIZE / 2 : 300,
-            y: EDGE_MARGIN + index * BUBBLE_SPACING,
+            x: typeof window !== "undefined" ? window.innerWidth - MOBILE_LAYOUT.EDGE_MARGIN - MOBILE_LAYOUT.BUBBLE_SIZE / 2 : 300,
+            y: MOBILE_LAYOUT.EDGE_MARGIN + index * MOBILE_LAYOUT.BUBBLE_SPACING,
           };
 
           const position = bubblePositions[widget.descriptor_id] || defaultPosition;
@@ -212,8 +171,8 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
                   onClick={handlers?.onClick}
                   className="relative rounded-full shadow-lg"
                   style={{
-                    width: `${BUBBLE_SIZE}px`,
-                    height: `${BUBBLE_SIZE}px`,
+                    width: `${MOBILE_LAYOUT.BUBBLE_SIZE}px`,
+                    height: `${MOBILE_LAYOUT.BUBBLE_SIZE}px`,
                     background: islandColor,
                   }}
                   whileTap={{ scale: 0.95 }}
@@ -254,9 +213,9 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
       </AnimatePresence>
 
       {/* Overflow indicator */}
-      {widgets.length > MAX_BUBBLES && (
+      {widgets.length > MOBILE_LAYOUT.MAX_BUBBLES && (
         <div className="absolute bottom-4 right-4 bg-muted px-3 py-1 rounded-full text-xs text-muted-foreground">
-          +{widgets.length - MAX_BUBBLES} more
+          +{widgets.length - MOBILE_LAYOUT.MAX_BUBBLES} more
         </div>
       )}
     </div>

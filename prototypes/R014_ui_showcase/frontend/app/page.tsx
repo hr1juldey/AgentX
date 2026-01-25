@@ -19,8 +19,12 @@ import { SessionsView, ConnectorsView } from "@/components/home/views";
 import { GalleryView } from "@/components/home/gallery-view";
 import { MainView } from "@/components/home/main-view";
 import { PageHeader } from "@/components/home/page-header";
+import { useNavigation } from "@/hooks/use-navigation";
+import { useContentGeneration } from "@/hooks/use-content-generation";
+import { useWebSocketGeneration } from "@/hooks/use-websocket-generation";
+import { useWidgetHandlers } from "@/hooks/use-widget-handlers";
 import { useWidgetStore, useUIStore, useNetworkStore } from "@/store";
-import type { UIDescriptor, Session, View } from "@/types/widget-types";
+import type { UIDescriptor, Session, View, QACheckpointStatus } from "@/types/widget-types";
 import { API_CONFIG, INTERACTION_CONFIG } from "@/constants/widget-constants";
 import { generateSafePosition } from "@/services/position-service";
 
@@ -93,6 +97,13 @@ export default function HomePage() {
   // Local widgets array (for non-island mode and MobileBubbleLayer)
   const [widgets, setWidgets] = useState<UIDescriptor[]>([]);
 
+  // EXTRACTED: Content generation logic
+  // See: /hooks/use-content-generation.ts
+  const { generateContent } = useContentGeneration({
+    setLoading,
+    setWidgets,
+  });
+
   // ============================================================================
   // REMOVED: Centralized widget state (widgetStates, islandPositions)
   // Now handled by IsolatedWidget with State Colocation Pattern
@@ -133,7 +144,7 @@ export default function HomePage() {
   // ============================================================================
   // QA PROGRESS: Now using Network Store
   // ============================================================================
-  type QACheckpointStatus = "running" | "passed" | "failed";
+  // EXTRACTED: QACheckpointStatus type to /types/widget-types.ts
 
   // Update QA checkpoint - now uses store action
   const updateQACheckpoint = useCallback((checkpoint: string, status: QACheckpointStatus, details: Record<string, unknown> = {}) => {
@@ -186,14 +197,15 @@ export default function HomePage() {
   }, [sidebarOpen]);
 
   // Handle incoming widget message - now uses Zustand store
-  const handleWidgetMessage = useCallback((data: { id: string; type: string; title?: string; content?: string; metadata?: Record<string, unknown> }) => {
-    const widgetId = data.id || `widget-${Date.now()}`;
+  const handleWidgetMessage = useCallback((data: unknown) => {
+    const widgetData = data as { id: string; type: string; title?: string; content?: string; metadata?: Record<string, unknown> };
+    const widgetId = widgetData.id || `widget-${Date.now()}`;
     const widget: UIDescriptor = {
       descriptor_id: widgetId,
-      descriptor_type: data.type as any,
-      title: data.title,
-      content: data.content,
-      metadata: data.metadata,
+      descriptor_type: widgetData.type as any,
+      title: widgetData.title,
+      content: widgetData.content,
+      metadata: widgetData.metadata,
       dismissible: true,
     };
 
@@ -220,46 +232,23 @@ export default function HomePage() {
   // Complete message handler
   const [generationComplete, setGenerationComplete] = useState(false);
 
-  const handleCompleteMessage = useCallback((data: Record<string, unknown>) => {
+  const handleCompleteMessage = useCallback((data: unknown) => {
     console.log("🎯 Generation complete:", data);
     setGenerationComplete(true);
     setLoading(false);
   }, []);
 
-  // Message router - dispatches to appropriate handler
-  const setupWebSocketHandlers = useCallback((ws: WebSocket) => {
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-
-        switch (data.type) {
-          case "qa_progress":
-            updateQACheckpoint(data.data.checkpoint, data.data.status as QACheckpointStatus, data.data.details);
-            break;
-
-          case "widget":
-            handleWidgetMessage(data.data);
-            break;
-
-          case "complete":
-            handleCompleteMessage(data.data);
-            ws.close();
-            break;
-
-          case "error":
-            console.error("🔴 Error:", data.message);
-            setLoading(false);
-            ws.close();
-            break;
-
-          default:
-            console.warn("Unknown message type:", data);
-        }
-      } catch (e) {
-        console.error("Failed to parse WebSocket message:", e);
-      }
-    };
-  }, [updateQACheckpoint, handleWidgetMessage, handleCompleteMessage]);
+  // EXTRACTED: WebSocket generation logic
+  // See: /hooks/use-websocket-generation.ts
+  const { setupWebSocketHandlers, connectWebSocket, generateContentWithWebSocket } = useWebSocketGeneration({
+    updateQACheckpoint,
+    handleWidgetMessage,
+    handleCompleteMessage,
+    setLoading,
+    setWsConnection,
+    handleResetQAProgress,
+    setGenerationComplete,
+  });
 
   // Pre-compute safe positions for all widgets with collision detection
   // NOTE: For island mode with Zustand, positions are handled by the store
@@ -331,112 +320,11 @@ export default function HomePage() {
       .catch(() => setSessions([]));
   }, [API_CONFIG.URL]);
 
-  const generateContent = async (prompt: string, widgetType?: string) => {
-    if (!prompt.trim()) return;
+  // EXTRACTED: generateContent (was lines 343-406)
+  // See: /hooks/use-content-generation.ts
 
-    console.log("🟢 generateContent called:", { prompt, widgetType });
-    setLoading(true);
-    try {
-      console.log("🟢 Fetching from:", `${API_CONFIG.URL}/api/v1/generate-widget`);
-      const res = await fetch(`${API_CONFIG.URL}/api/v1/generate-widget`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          widget_type: widgetType,
-        }),
-      });
-
-      console.log("🟢 Response status:", res.status, res.statusText);
-      const data = await res.json();
-      console.log("🟢 Response data:", data);
-      console.log("🟢 data.widgets:", data.widgets);
-      console.log("🟢 data.widgets length:", data.widgets?.length);
-
-      // API now returns { widgets: [...], tools_used: [...], reasoning: "..." }
-      // Map each widget from backend response to frontend format
-      const newWidgets: UIDescriptor[] = (data.widgets || []).map((w: any) => {
-        console.log("🟢 Mapping widget:", w);
-        return {
-          descriptor_id: w.id,
-          descriptor_type: w.type,
-          title: w.title,
-          content: w.content,
-          dismissible: w.dismissible ?? true,
-          ...(w.metadata && { metadata: w.metadata }),
-          ...(w.metadata?.fields && { fields: w.metadata.fields }),
-          ...(w.metadata?.submit_label && { submit_button_text: w.metadata.submit_label }),
-          ...(w.metadata?.status_text && { status_text: w.metadata.status_text }),
-          ...(w.metadata?.value !== undefined && { progress_percent: w.metadata.value * 100 }),
-          ...(w.metadata?.button_text && { button_text: w.metadata.button_text }),
-          ...(w.metadata?.action_id && { action_id: w.metadata.action_id }),
-          ...(w.metadata?.confirm_label && { confirm_label: w.metadata.confirm_label }),
-          ...(w.metadata?.cancel_label && { cancel_label: w.metadata.cancel_label }),
-        };
-      });
-
-      // Add all new widgets to the state (ReAct may have generated multiple)
-      console.log("🟢 Adding widgets to state:", newWidgets);
-      setWidgets((prev) => {
-        const updated = [...newWidgets, ...prev];
-        console.log("🟢 Updated widgets state:", updated);
-        console.log("🟢 Total widgets after update:", updated.length);
-        return updated;
-      });
-
-      if (data.reasoning) {
-        console.log("🟢 ReAct reasoning:", data.reasoning);
-      }
-      if (data.tools_used) {
-        console.log("🟢 Tools used:", data.tools_used);
-      }
-    } catch (error) {
-      console.error("🔴 Failed to generate content:", error);
-    }
-    setLoading(false);
-  };
-
-  // Connect to WebSocket
-  const connectWebSocket = useCallback(() => {
-    const ws = new WebSocket(`${API_CONFIG.URL.replace("http", "ws")}/api/v1/ws/generate-widget`);
-
-    ws.onopen = () => {
-      console.log("🔌 WebSocket connected");
-      setWsConnection(ws);
-    };
-
-    ws.onerror = (error) => {
-      console.error("🔴 WebSocket error:", error);
-    };
-
-    ws.onclose = () => {
-      console.log("🔌 WebSocket closed");
-      setWsConnection(null);
-    };
-
-    return ws;
-  }, [API_CONFIG.URL]);
-
-  // Main generation function using WebSocket
-  const generateContentWithWebSocket = useCallback(async (prompt: string) => {
-    if (!prompt.trim()) return;
-
-    setLoading(true);
-    handleResetQAProgress();
-    setGenerationComplete(false);
-
-    const ws = connectWebSocket();
-    setupWebSocketHandlers(ws);
-
-    // Send query once connected
-    ws.onopen = () => {
-      console.log("🔌 WebSocket connected, sending query");
-      ws.send(JSON.stringify({
-        query: prompt,
-        device_context: "desktop",
-      }));
-    };
-  }, [connectWebSocket, handleResetQAProgress, setupWebSocketHandlers]);
+  // EXTRACTED: connectWebSocket, generateContentWithWebSocket (was lines 324-364)
+  // See: /hooks/use-websocket-generation.ts
 
   const handleSendMessage = useCallback((message: string) => {
     generateContentWithWebSocket(message);
@@ -465,115 +353,14 @@ export default function HomePage() {
     }
   }, []);
 
-  // Toggle widget collapse - memoized to prevent re-renders
-  const toggleWidgetCollapse = useCallback((id: string) => {
-    setWidgets((prev) =>
-      prev.map((w) =>
-        w.descriptor_id === id ? { ...w, collapsed: !w.collapsed } : w
-      )
-    );
-  }, []);
-
-  // Handle drag end - MUST be before getWidgetHandlers (which depends on this)
-  // x, y are OFFSETS from the current position (not absolute positions)
-  // NOTE: Simplified - islandPositions removed, only updates widgets array for traditional mode
-  const handleIslandDragEnd = useCallback((id: string, x: number, y: number) => {
-    console.log(`🖱️ [DRAG END] ${id} → offset x: ${x.toFixed(1)}, y: ${y.toFixed(1)}`);
-    console.trace("Drag end call stack:");
-
-    // NOTE: setIslandPositions removed - IsolatedWidget handles its own position state
-
-    setWidgets((prev) => {
-      const currentWidget = prev.find((w) => w.descriptor_id === id);
-      const currentX = currentWidget?.x ?? window.innerWidth / 2;
-      const currentY = currentWidget?.y ?? window.innerHeight / 2;
-      const newX = currentX + x;
-      const newY = currentY + y;
-
-      // Boundary checking - keep widget on screen
-      const islandDiameter = 56;
-      const padding = 20;
-      const boundedX = Math.max(padding, Math.min(window.innerWidth - islandDiameter - padding, newX));
-      const boundedY = Math.max(padding, Math.min(window.innerHeight - islandDiameter - padding, newY));
-
-      const updated = prev.map((w) =>
-        w.descriptor_id === id ? { ...w, x: boundedX, y: boundedY } : w
-      );
-      console.log(`🖱️ [DRAG END] Updated widget ${id} x/y in widgets array`);
-      return updated;
-    });
-  }, []);
-
-  // Create stable handlers for each widget - FIXED: Use cache to prevent re-renders
-  const getWidgetHandlers = useCallback((id: string) => {
-    // Return cached handlers if available
-    if (handlersCacheRef.current[id]) {
-      return handlersCacheRef.current[id];
-    }
-
-    // Create new handlers and cache them
-    const handleDragStart = (_: any, info: PanInfo) => {
-      dragStateRef.current[id] = {
-        startPos: { x: info.point.x, y: info.point.y },
-        hasMoved: false,
-        moveDistance: 0,
-      };
-    };
-
-    const handleDrag = (_: any, info: PanInfo) => {
-      const state = dragStateRef.current[id];
-      if (!state) return;
-      const distance = Math.hypot(
-        info.point.x - state.startPos.x,
-        info.point.y - state.startPos.y
-      );
-      dragStateRef.current[id] = { ...state, hasMoved: distance > INTERACTION_CONFIG.CLICK_THRESHOLD, moveDistance: distance };
-    };
-
-    const handleDragEnd = (_: any, info: PanInfo) => {
-      const state = dragStateRef.current[id];
-      const isClick = state && state.moveDistance < INTERACTION_CONFIG.CLICK_THRESHOLD;
-
-      if (!isClick) {
-        handleIslandDragEnd(id, info.offset.x, info.offset.y);
-      }
-
-      delete dragStateRef.current[id];
-    };
-
-    const onDragEndCompat = (x: number, y: number) => {
-      const state = dragStateRef.current[id];
-      const isClick = state && state.moveDistance < INTERACTION_CONFIG.CLICK_THRESHOLD;
-
-      if (!isClick) {
-        handleIslandDragEnd(id, x, y);
-      }
-
-      delete dragStateRef.current[id];
-    };
-
-    const handlers = {
-      onDismiss: () => dismissWidget(id),
-      onDragStart: handleDragStart,
-      onDrag: handleDrag,
-      onDragEnd: handleDragEnd,
-      onDragEndCompat,
-      onClick: (e: React.MouseEvent) => {
-        const state = dragStateRef.current[id];
-        const isClick = !state || state.moveDistance < INTERACTION_CONFIG.CLICK_THRESHOLD;
-        if (isClick) {
-          toggleWidgetCollapse(id);
-        }
-      },
-      onToggleCollapse: () => toggleWidgetCollapse(id),
-    };
-
-    // Cache the handlers
-    handlersCacheRef.current[id] = handlers;
-    return handlers;
-    // Note: INTERACTION_CONFIG.CLICK_THRESHOLD is a constant, so we exclude it from deps to prevent unnecessary recreation
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dismissWidget, handleIslandDragEnd, toggleWidgetCollapse]);
+  // EXTRACTED: Widget handlers (toggleWidgetCollapse, handleIslandDragEnd, getWidgetHandlers)
+  // See: /hooks/use-widget-handlers.ts
+  const { toggleWidgetCollapse, handleIslandDragEnd, getWidgetHandlers } = useWidgetHandlers({
+    dismissWidget,
+    setWidgets,
+    dragStateRef,
+    handlersCacheRef,
+  });
 
   // ============================================================================
   // REMOVED: Old island mode handlers (cycleWidgetState, handlePanelClose,
@@ -581,14 +368,17 @@ export default function HomePage() {
   // Now handled by IsolatedWidget with State Colocation Pattern
   // ============================================================================
 
-  // Sidebar navigation handlers - memoized to prevent re-renders
-  const handleCloseSidebar = useCallback(() => setSidebarOpen(false), [setSidebarOpen]);
-  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
-  const handleToggleSidebar = useCallback(() => toggleSidebar(), [toggleSidebar]);
-  const handleNavMain = useCallback(() => { setCurrentView("main"); setSidebarOpen(false); }, [setCurrentView, setSidebarOpen]);
-  const handleNavGallery = useCallback(() => { setCurrentView("gallery"); setSidebarOpen(false); }, [setCurrentView, setSidebarOpen]);
-  const handleNavSessions = useCallback(() => { setCurrentView("sessions"); setSidebarOpen(false); }, [setCurrentView, setSidebarOpen]);
-  const handleNavConnectors = useCallback(() => { setCurrentView("connectors"); setSidebarOpen(false); }, [setCurrentView, setSidebarOpen]);
+  // EXTRACTED: Navigation handlers (was lines 585-592)
+  // See: /hooks/use-navigation.ts
+  const navigation = useNavigation();
+  const {
+    handleCloseSidebar,
+    handleToggleSidebar,
+    handleNavMain,
+    handleNavGallery,
+    handleNavSessions,
+    handleNavConnectors,
+  } = navigation;
 
   // Sidebar component reference (uses handlers defined above)
   // EXTRACTED: Sidebar (was lines 664-717)

@@ -105,3 +105,9 @@ export interface Position {
   x: number;
   y: number;
 }
+
+/**
+ * QA checkpoint status for tracking generation progress
+ */
+export type QACheckpointStatus = "running" | "passed" | "failed";
+
