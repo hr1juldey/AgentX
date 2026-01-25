@@ -83,17 +83,16 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
   onExpand,
   onDismiss,
 }: MobileBubbleLayerProps) {
-  // CRITICAL: Subscribe to widgets object from Zustand store
-  // Using the full object reference ensures we only re-render when widgets are added/removed
-  // NOT when parent re-renders or when individual widget data changes
-  const widgetsRecord = useWidgetStore((s) => s.widgets);
+  // Subscribe to widgetIds array - uses atomic state pattern for stable reference
+  const widgetIds = useWidgetStore((s) => s.widgetIds);
 
-  // Derive widget values from the record (this is fine - it's a local computation)
-  // The widgetsRecord reference only changes when widgets are added/removed
-  const widgets = useMemo(
-    () => Object.values(widgetsRecord),
-    [widgetsRecord]
-  );
+  // Derive widgets array from widgetIds
+  const widgets = useMemo(() => {
+    return widgetIds.map(id => {
+      const dataKey = `widget_${id}_data`;
+      return useWidgetStore.getState()[dataKey] as UIDescriptor;
+    });
+  }, [widgetIds]);
 
   const [bubblePositions, setBubblePositions] = useState<Record<string, { x: number; y: number }>>({});
 
@@ -185,6 +184,13 @@ export const MobileBubbleLayer = memo(function MobileBubbleLayer({
 
           const position = bubblePositions[widget.descriptor_id] || defaultPosition;
           const handlers = widgetHandlers[widget.descriptor_id];
+
+          // DIAGNOSTIC: Log bubble positions on render (outside effect, in render)
+          // This helps track if bubbles are shifting due to index changes
+          if (process.env.NODE_ENV === 'development') {
+            const hasSavedPosition = bubblePositions[widget.descriptor_id] !== undefined;
+            console.log(`[Bubble ${widget.descriptor_id}] idx=${index} pos=(${position.x.toFixed(0)}, ${position.y.toFixed(0)}) ${hasSavedPosition ? '(saved)' : '(default-index-based)'}`);
+          }
 
           return (
             <motion.div

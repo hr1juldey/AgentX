@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useRef, useEffect } from "react";
+import { memo, useCallback, useRef, useEffect, useSyncExternalStore } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { X, Minimize2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -21,31 +21,84 @@ interface IsolatedWidgetProps {
 /**
  * IsolatedWidget - A self-contained widget component using Zustand for state management.
  *
- * KEY DESIGN PRINCIPLE (Jira/Linear style isolation):
- * - Uses plain objects in Zustand store (not Maps) for granular change tracking
- * - Selector (s) => s.widgets[descriptorId] ONLY triggers re-render when THIS widget changes
- * - When other widgets are added/deleted, THIS widget's selector returns the same reference
- * - Zustand's shallow equality check (Object.is) sees the reference hasn't changed
- * - Result: NO re-render for unrelated widget changes
+ * ATOMIC STATE PATTERN (Fixes cascade re-render issue):
  *
- * This is how production card-based UIs handle hundreds of items efficiently:
- * - Jira tickets: Each ticket component subscribes to its own ticket data
- * - Linear issues: Each issue subscribes to its own issue data
- * - Asana tasks: Each task subscribes to its own task data
+ * PROBLEM: Storing widgets as Record<string, UIDescriptor> causes ALL widgets to re-render
+ * when ANY widget is added/deleted, because Immer creates a new parent object reference.
  *
- * The secret: Plain objects + property access = isolated subscriptions
- * Maps DON'T work because Zustand can't track which key you accessed
+ * SOLUTION: Store each widget's data as separate top-level state slices:
+ *   - widget_{id}_data: UIDescriptor
+ *   - widget_{id}_viewState: ViewState
+ *   - widget_{id}_position: Position
+ *
+ * When widget A is deleted, only widget A's slices are deleted - widget B's slices remain
+ * with the same object reference. Zustand sees widget B's data hasn't changed and doesn't
+ * notify widget B's subscribers.
+ *
+ * This is how Jira/Linear/Asana achieve efficient card-based UIs with hundreds of items.
  */
-export const IsolatedWidget = memo(function IsolatedWidget({
+// Custom hook to subscribe to a single widget's atomic slice
+// This prevents cascade re-renders when OTHER widgets change
+function useWidgetSlice<T>(key: string): T | undefined {
+  // Extract widget ID from key for logging (e.g., "widget_mock-card-001_data" -> "mock-card-001")
+  const widgetIdMatch = key.match(/widget_([^_]+)_/);
+  const widgetId = widgetIdMatch ? widgetIdMatch[1] : key;
+
+  return useSyncExternalStore(
+    (callback) => {
+      // Subscribe only to changes in this specific slice
+      const unsubscribe = useWidgetStore.subscribe((state, prevState) => {
+        const currentValue = state[key] as T;
+        const previousValue = prevState[key] as T;
+
+        // DIAGNOSTIC: Log every subscription notification for this widget
+        console.log(`[useWidgetSlice ${widgetId}] Key="${key}"`, {
+          'current === previous': currentValue === previousValue,
+          'current': currentValue,
+          'previous': previousValue,
+          'willCallback': currentValue !== previousValue
+        });
+
+        // Only trigger callback if THIS slice changed
+        if (currentValue !== previousValue) {
+          callback();
+        }
+      });
+      return unsubscribe;
+    },
+    () => useWidgetStore.getState()[key] as T,
+    () => useWidgetStore.getState()[key] as T
+  );
+}
+
+// Comparison function - must be defined before component usage
+function areIsolatedWidgetPropsEqual(
+  prevProps: Readonly<IsolatedWidgetProps>,
+  nextProps: Readonly<IsolatedWidgetProps>
+): boolean {
+  const isEqual = prevProps.descriptorId === nextProps.descriptorId;
+  // DIAGNOSTIC: Log when React compares props for IsolatedWidget
+  console.log(`[IsolatedWidget ${nextProps.descriptorId}] Memo comparison:`, {
+    'prevId': prevProps.descriptorId,
+    'nextId': nextProps.descriptorId,
+    'isEqual': isEqual,
+    'willSkipRender': isEqual
+  });
+  return isEqual;
+}
+
+function IsolatedWidgetComponent({
   descriptorId,
 }: IsolatedWidgetProps) {
-  // CRITICAL: These selectors create isolated subscriptions
-  // They ONLY re-render when the specific value for descriptorId changes
-  // When other widgets are added/deleted, these specific values don't change
-  // So Zustand's shallow equality (Object.is) returns true → no re-render
-  const widget = useWidgetStore((s) => s.widgets[descriptorId]);
-  const viewState = useWidgetStore((s) => s.viewStates[descriptorId]) as ViewState | undefined;
-  const position = useWidgetStore((s) => s.positions[descriptorId]);
+  // CRITICAL: Subscribe to THIS WIDGET'S atomic slices ONLY
+  // useWidgetSlice only triggers re-render when THIS SPECIFIC slice changes
+  const widgetDataKey = `widget_${descriptorId}_data`;
+  const viewStateKey = `widget_${descriptorId}_viewState`;
+  const positionKey = `widget_${descriptorId}_position`;
+
+  const widget = useWidgetSlice<UIDescriptor>(widgetDataKey);
+  const viewState = useWidgetSlice<ViewState>(viewStateKey);
+  const position = useWidgetSlice<Position>(positionKey);
 
   // Actions from store - stable references, never recreated
   const cycleState = useWidgetStore((s) => s.cycleViewState);
@@ -379,8 +432,7 @@ export const IsolatedWidget = memo(function IsolatedWidget({
       )}
     </AnimatePresence>
   );
-});
+}
 
-// Export with memo - Zustand's object-based selectors prevent cascade re-renders
-// Each widget only re-renders when its own data changes
-export default IsolatedWidget;
+// Export with memo and custom comparison function
+export const IsolatedWidget = memo(IsolatedWidgetComponent, areIsolatedWidgetPropsEqual);

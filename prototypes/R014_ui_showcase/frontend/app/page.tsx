@@ -842,10 +842,26 @@ export default function HomePage() {
   }, [widgets, generateSafePosition]);
 
   // Get widget IDs from Zustand store for island mode rendering
-  // NOTE: We use useMemo to compute IDs from the widgets object to avoid infinite re-renders
-  // (accessing s.widgets directly gives us a stable object reference)
-  const storeWidgets = useWidgetStore((s) => s.widgets);
-  const storeWidgetIds = useMemo(() => Object.keys(storeWidgets), [storeWidgets]);
+  // With atomic state pattern, we use the widgetIds array directly
+  // This array only changes when widgets are added/removed, not when individual widget data changes
+  const storeWidgetIds = useWidgetStore((s) => s.widgetIds);
+
+  // DIAGNOSTIC: Track parent (HomePage) renders
+  const prevStoreWidgetIdsRef = useRef<string[] | undefined>(undefined);
+  const parentRenderCountRef = useRef(0);
+
+  useEffect(() => {
+    parentRenderCountRef.current += 1;
+    const idsChanged = prevStoreWidgetIdsRef.current?.join(',') !== storeWidgetIds.join(',');
+
+    console.log(`[HomePage] Render #${parentRenderCountRef.current}`, {
+      widgetCount: storeWidgetIds.length,
+      idsChanged,
+      widgetIds: storeWidgetIds,
+    });
+
+    prevStoreWidgetIdsRef.current = storeWidgetIds;
+  });
 
   // Feature flag for island UI
   const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";

@@ -36,22 +36,33 @@ export interface UIDescriptor {
   id?: string
 }
 
-// State interface
-// Using plain objects instead of Maps for proper Zustand change tracking
-// Maps cause all components to re-render on any change because Zustand
-// cannot track which specific key was accessed
-interface WidgetState {
-  // Objects for granular change tracking - only components accessing
-  // specific widget IDs will re-render when that widget changes
-  widgets: Record<string, UIDescriptor>
-  viewStates: Record<string, ViewState>
-  positions: Record<string, Position>
+// ATOMIC STATE PATTERN (Fixes cascade re-render issue)
+//
+// PROBLEM: Storing widgets as Record<string, UIDescriptor> causes ALL widgets to re-render
+// when ANY widget is added/deleted, because Immer creates a new parent object reference.
+//
+// SOLUTION: Store each widget's data as separate top-level state slices.
+// When widget A is deleted, only widget A's slices are deleted - widget B's slices remain
+// with the same object reference, so Zustand doesn't notify widget B's subscribers.
+//
+// State structure:
+//   widget_{id}_data: UIDescriptor
+//   widget_{id}_viewState: ViewState
+//   widget_{id}_position: Position
+//
+// This is how Jira/Linear/Asana achieve efficient card-based UIs with hundreds of items.
+
+// Helper to create widget slice keys
+const widgetKeys = {
+  data: (id: string) => `widget_${id}_data` as const,
+  viewState: (id: string) => `widget_${id}_viewState` as const,
+  position: (id: string) => `widget_${id}_position` as const,
 }
 
-// Options for adding widgets
-interface AddWidgetOptions {
-  position?: Position
-  sidebarOpen?: boolean  // Pass true if sidebar is open to avoid spawning under it
+// Base state interface - extends with widget slices dynamically
+interface WidgetState {
+  // Registry of all widget IDs (for iteration)
+  widgetIds: string[]
 }
 
 // Actions interface
@@ -73,8 +84,17 @@ interface WidgetActions {
   clearAll: () => void
 }
 
-// Combined store type
-type WidgetStore = WidgetState & WidgetActions
+// Options for adding widgets
+interface AddWidgetOptions {
+  position?: Position
+  sidebarOpen?: boolean  // Pass true if sidebar is open to avoid spawning under it
+}
+
+// Combined store type - dynamic slices added via index signature
+// Use a more flexible index signature that works with function types
+type WidgetStore = WidgetState & WidgetActions & {
+  [key: string]: unknown
+}
 
 // Position generation helper
 // Generates safe positions avoiding:
@@ -83,7 +103,8 @@ type WidgetStore = WidgetState & WidgetActions
 // - Other widgets
 function generateSafePosition(
   id: string,
-  existingPositions: Record<string, Position>,
+  existingWidgetIds: string[],
+  getPosition: (id: string) => Position | undefined,
   sidebarOpen = false
 ): Position {
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1200
@@ -115,6 +136,13 @@ function generateSafePosition(
 
   // Helper function to clamp value to range
   const clamp = (val: number, min: number, max: number) => Math.min(Math.max(val, min), max)
+
+  // Build existing positions map
+  const existingPositions: Record<string, Position> = {}
+  existingWidgetIds.forEach(id => {
+    const pos = getPosition(id)
+    if (pos) existingPositions[id] = pos
+  })
 
   // Try up to 50 positions to find a safe spot
   for (let attempt = 0; attempt < 50; attempt++) {
@@ -152,65 +180,128 @@ function generateSafePosition(
   }
 }
 
+// Helper to get widget data from atomic state slices
+export function getWidgetData(state: WidgetStore, id: string): {
+  data: UIDescriptor | undefined
+  viewState: ViewState | undefined
+  position: Position | undefined
+} {
+  const dataKey = widgetKeys.data(id)
+  const viewStateKey = widgetKeys.viewState(id)
+  const positionKey = widgetKeys.position(id)
+
+  return {
+    data: state[dataKey] as UIDescriptor | undefined,
+    viewState: state[viewStateKey] as ViewState | undefined,
+    position: state[positionKey] as Position | undefined,
+  }
+}
+
+// Helper to get all widgets as an array (for iteration)
+// This returns a stable reference when widgetIds doesn't change
+export function getWidgetsArray(state: WidgetStore): UIDescriptor[] {
+  return state.widgetIds.map(id => state[widgetKeys.data(id)] as UIDescriptor)
+}
+
 // Create store with Immer middleware
 export const useWidgetStore = create<WidgetStore>()(
   immer((set, get) => ({
-    // Initial state - using plain objects for granular Zustand tracking
-    widgets: {},
-    viewStates: {},
-    positions: {},
+    // Initial state
+    widgetIds: [],
 
     // Add single widget
     addWidget: (descriptor, options) =>
       set((state) => {
         const safePosition = options?.position || generateSafePosition(
           descriptor.descriptor_id,
-          state.positions,
+          state.widgetIds,
+          (id) => state[widgetKeys.position(id)] as Position | undefined,
           options?.sidebarOpen || false
         )
-        state.widgets[descriptor.descriptor_id] = descriptor
-        state.viewStates[descriptor.descriptor_id] = 'island'
-        state.positions[descriptor.descriptor_id] = safePosition
+
+        // Create atomic slices for this widget
+        state[widgetKeys.data(descriptor.descriptor_id)] = descriptor
+        state[widgetKeys.viewState(descriptor.descriptor_id)] = 'island'
+        state[widgetKeys.position(descriptor.descriptor_id)] = safePosition
+
+        // Add to registry if not already present
+        if (!state.widgetIds.includes(descriptor.descriptor_id)) {
+          state.widgetIds.push(descriptor.descriptor_id)
+        }
       }),
 
-    // Remove widget
+    // Remove widget - ONLY deletes this widget's slices, leaving others untouched
     removeWidget: (id) =>
       set((state) => {
-        delete state.widgets[id]
-        delete state.viewStates[id]
-        delete state.positions[id]
+        // DIAGNOSTIC: Log widget removal to trace reference changes
+        console.log(`[WidgetStore.removeWidget] Removing widget: ${id}`);
+        console.log(`[WidgetStore.removeWidget] Before deletion, widgetIds:`, state.widgetIds);
+
+        // Capture references to all widget data BEFORE deletion
+        const beforeSnapshot: Record<string, unknown> = {};
+        state.widgetIds.forEach(wid => {
+          beforeSnapshot[`widget_${wid}_data`] = state[widgetKeys.data(wid)];
+        });
+        console.log(`[WidgetStore.removeWidget] Widget data references BEFORE:`, beforeSnapshot);
+
+        // Delete only this widget's atomic slices
+        delete state[widgetKeys.data(id)]
+        delete state[widgetKeys.viewState(id)]
+        delete state[widgetKeys.position(id)]
+
+        // Remove from registry
+        state.widgetIds = state.widgetIds.filter(widgetId => widgetId !== id)
+
+        // Capture references to all widget data AFTER deletion
+        const afterSnapshot: Record<string, unknown> = {};
+        state.widgetIds.forEach(wid => {
+          afterSnapshot[`widget_${wid}_data`] = state[widgetKeys.data(wid)];
+        });
+        console.log(`[WidgetStore.removeWidget] Widget data references AFTER:`, afterSnapshot);
+
+        // Compare to see which references changed
+        const changedIds: string[] = [];
+        state.widgetIds.forEach(wid => {
+          const before = beforeSnapshot[`widget_${wid}_data`];
+          const after = afterSnapshot[`widget_${wid}_data`];
+          if (before !== after) {
+            changedIds.push(wid);
+          }
+        });
+        console.log(`[WidgetStore.removeWidget] Widget IDs with changed references:`, changedIds);
+        console.log(`[WidgetStore.removeWidget] After deletion, widgetIds:`, state.widgetIds);
       }),
 
     // Set view state directly
     setViewState: (id, viewState) =>
       set((state) => {
-        state.viewStates[id] = viewState
+        state[widgetKeys.viewState(id)] = viewState
       }),
 
     // Cycle view state (island → card → full → island)
     cycleViewState: (id) =>
       set((state) => {
-        const current = state.viewStates[id] || 'island'
+        const current = state[widgetKeys.viewState(id)] as ViewState || 'island'
         const cycle: Record<string, ViewState> = {
           island: 'card',
           card: 'full',
           full: 'island',
         }
-        state.viewStates[id] = cycle[current]
+        state[widgetKeys.viewState(id)] = cycle[current]
       }),
 
     // Update position to absolute coordinates
     updatePosition: (id, position) =>
       set((state) => {
-        state.positions[id] = position
+        state[widgetKeys.position(id)] = position
       }),
 
     // Update position by delta (relative movement)
     updatePositionDelta: (id, dx, dy) =>
       set((state) => {
-        const current = state.positions[id]
+        const current = state[widgetKeys.position(id)] as Position | undefined
         if (current) {
-          state.positions[id] = { x: current.x + dx, y: current.y + dy }
+          state[widgetKeys.position(id)] = { x: current.x + dx, y: current.y + dy }
         }
       }),
 
@@ -219,19 +310,33 @@ export const useWidgetStore = create<WidgetStore>()(
       set((state) => {
         const sidebarOpen = options?.sidebarOpen || false
         descriptors.forEach((d) => {
-          const safePosition = generateSafePosition(d.descriptor_id, state.positions, sidebarOpen)
-          state.widgets[d.descriptor_id] = d
-          state.viewStates[d.descriptor_id] = 'island'
-          state.positions[d.descriptor_id] = safePosition
+          const safePosition = generateSafePosition(
+            d.descriptor_id,
+            state.widgetIds,
+            (id) => state[widgetKeys.position(id)] as Position | undefined,
+            sidebarOpen
+          )
+
+          state[widgetKeys.data(d.descriptor_id)] = d
+          state[widgetKeys.viewState(d.descriptor_id)] = 'island'
+          state[widgetKeys.position(d.descriptor_id)] = safePosition
+
+          if (!state.widgetIds.includes(d.descriptor_id)) {
+            state.widgetIds.push(d.descriptor_id)
+          }
         })
       }),
 
     // Clear all widgets
     clearAll: () =>
       set((state) => {
-        state.widgets = {}
-        state.viewStates = {}
-        state.positions = {}
+        // Delete all widget slices
+        state.widgetIds.forEach(id => {
+          delete state[widgetKeys.data(id)]
+          delete state[widgetKeys.viewState(id)]
+          delete state[widgetKeys.position(id)]
+        })
+        state.widgetIds = []
       }),
   }))
 )
