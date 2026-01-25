@@ -1,9 +1,5 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import { enableMapSet } from 'immer'
-
-// Enable Immer MapSet plugin for Map/Set support
-enableMapSet()
 
 // Types
 export type ViewState = 'island' | 'card' | 'full'
@@ -41,11 +37,15 @@ export interface UIDescriptor {
 }
 
 // State interface
+// Using plain objects instead of Maps for proper Zustand change tracking
+// Maps cause all components to re-render on any change because Zustand
+// cannot track which specific key was accessed
 interface WidgetState {
-  // Maps for O(1) lookups by ID
-  widgets: Map<string, UIDescriptor>
-  viewStates: Map<string, ViewState>
-  positions: Map<string, Position>
+  // Objects for granular change tracking - only components accessing
+  // specific widget IDs will re-render when that widget changes
+  widgets: Record<string, UIDescriptor>
+  viewStates: Record<string, ViewState>
+  positions: Record<string, Position>
 }
 
 // Options for adding widgets
@@ -83,7 +83,7 @@ type WidgetStore = WidgetState & WidgetActions
 // - Other widgets
 function generateSafePosition(
   id: string,
-  existingPositions: Map<string, Position>,
+  existingPositions: Record<string, Position>,
   sidebarOpen = false
 ): Position {
   const vw = typeof window !== 'undefined' ? window.innerWidth : 1200
@@ -135,7 +135,7 @@ function generateSafePosition(
     )
 
     // Check collision with existing widgets
-    const hasCollision = Array.from(existingPositions.values()).some(
+    const hasCollision = Object.values(existingPositions).some(
       pos => Math.abs(pos.x - testX) < (widgetWidth + padding) &&
              Math.abs(pos.y - testY) < (widgetHeight + padding)
     )
@@ -155,10 +155,10 @@ function generateSafePosition(
 // Create store with Immer middleware
 export const useWidgetStore = create<WidgetStore>()(
   immer((set, get) => ({
-    // Initial state
-    widgets: new Map(),
-    viewStates: new Map(),
-    positions: new Map(),
+    // Initial state - using plain objects for granular Zustand tracking
+    widgets: {},
+    viewStates: {},
+    positions: {},
 
     // Add single widget
     addWidget: (descriptor, options) =>
@@ -168,49 +168,49 @@ export const useWidgetStore = create<WidgetStore>()(
           state.positions,
           options?.sidebarOpen || false
         )
-        state.widgets.set(descriptor.descriptor_id, descriptor)
-        state.viewStates.set(descriptor.descriptor_id, 'island')
-        state.positions.set(descriptor.descriptor_id, safePosition)
+        state.widgets[descriptor.descriptor_id] = descriptor
+        state.viewStates[descriptor.descriptor_id] = 'island'
+        state.positions[descriptor.descriptor_id] = safePosition
       }),
 
     // Remove widget
     removeWidget: (id) =>
       set((state) => {
-        state.widgets.delete(id)
-        state.viewStates.delete(id)
-        state.positions.delete(id)
+        delete state.widgets[id]
+        delete state.viewStates[id]
+        delete state.positions[id]
       }),
 
     // Set view state directly
     setViewState: (id, viewState) =>
       set((state) => {
-        state.viewStates.set(id, viewState)
+        state.viewStates[id] = viewState
       }),
 
     // Cycle view state (island → card → full → island)
     cycleViewState: (id) =>
       set((state) => {
-        const current = state.viewStates.get(id) || 'island'
+        const current = state.viewStates[id] || 'island'
         const cycle: Record<string, ViewState> = {
           island: 'card',
           card: 'full',
           full: 'island',
         }
-        state.viewStates.set(id, cycle[current])
+        state.viewStates[id] = cycle[current]
       }),
 
     // Update position to absolute coordinates
     updatePosition: (id, position) =>
       set((state) => {
-        state.positions.set(id, position)
+        state.positions[id] = position
       }),
 
     // Update position by delta (relative movement)
     updatePositionDelta: (id, dx, dy) =>
       set((state) => {
-        const current = state.positions.get(id)
+        const current = state.positions[id]
         if (current) {
-          state.positions.set(id, { x: current.x + dx, y: current.y + dy })
+          state.positions[id] = { x: current.x + dx, y: current.y + dy }
         }
       }),
 
@@ -220,18 +220,18 @@ export const useWidgetStore = create<WidgetStore>()(
         const sidebarOpen = options?.sidebarOpen || false
         descriptors.forEach((d) => {
           const safePosition = generateSafePosition(d.descriptor_id, state.positions, sidebarOpen)
-          state.widgets.set(d.descriptor_id, d)
-          state.viewStates.set(d.descriptor_id, 'island')
-          state.positions.set(d.descriptor_id, safePosition)
+          state.widgets[d.descriptor_id] = d
+          state.viewStates[d.descriptor_id] = 'island'
+          state.positions[d.descriptor_id] = safePosition
         })
       }),
 
     // Clear all widgets
     clearAll: () =>
       set((state) => {
-        state.widgets.clear()
-        state.viewStates.clear()
-        state.positions.clear()
+        state.widgets = {}
+        state.viewStates = {}
+        state.positions = {}
       }),
   }))
 )

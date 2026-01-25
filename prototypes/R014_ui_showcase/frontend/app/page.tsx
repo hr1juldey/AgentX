@@ -823,10 +823,10 @@ export default function HomePage() {
   }, [widgets, generateSafePosition]);
 
   // Get widget IDs from Zustand store for island mode rendering
-  // NOTE: We use useMemo to compute IDs from the widgets Map to avoid infinite re-renders
-  // (accessing s.widgets directly gives us a stable Map reference)
+  // NOTE: We use useMemo to compute IDs from the widgets object to avoid infinite re-renders
+  // (accessing s.widgets directly gives us a stable object reference)
   const storeWidgets = useWidgetStore((s) => s.widgets);
-  const storeWidgetIds = useMemo(() => Array.from(storeWidgets.keys()), [storeWidgets]);
+  const storeWidgetIds = useMemo(() => Object.keys(storeWidgets), [storeWidgets]);
 
   // Feature flag for island UI
   const enableIslands = process.env.NEXT_PUBLIC_ENABLE_ISLANDS === "true";

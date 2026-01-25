@@ -21,25 +21,31 @@ interface IsolatedWidgetProps {
 /**
  * IsolatedWidget - A self-contained widget component using Zustand for state management.
  *
- * This component implements external state management with Zustand:
- * - Reads state from Zustand store (not internal useState)
- * - Only re-renders when ITS specific data changes in the store
- * - Does NOT re-render when other widgets change
+ * KEY DESIGN PRINCIPLE (Jira/Linear style isolation):
+ * - Uses plain objects in Zustand store (not Maps) for granular change tracking
+ * - Selector (s) => s.widgets[descriptorId] ONLY triggers re-render when THIS widget changes
+ * - When other widgets are added/deleted, THIS widget's selector returns the same reference
+ * - Zustand's shallow equality check (Object.is) sees the reference hasn't changed
+ * - Result: NO re-render for unrelated widget changes
  *
- * Key benefits:
- * - Eliminates cascade re-renders completely
- * - State survives parent re-renders
- * - Simpler props (just descriptorId)
- * - No callback props needed (onDelete, onPositionChange)
+ * This is how production card-based UIs handle hundreds of items efficiently:
+ * - Jira tickets: Each ticket component subscribes to its own ticket data
+ * - Linear issues: Each issue subscribes to its own issue data
+ * - Asana tasks: Each task subscribes to its own task data
+ *
+ * The secret: Plain objects + property access = isolated subscriptions
+ * Maps DON'T work because Zustand can't track which key you accessed
  */
 export const IsolatedWidget = memo(function IsolatedWidget({
   descriptorId,
 }: IsolatedWidgetProps) {
-  // Selector-based subscriptions - each creates independent subscription
-  // These will ONLY trigger re-render when THIS widget's specific data changes
-  const widget = useWidgetStore((s) => s.widgets.get(descriptorId));
-  const viewState = useWidgetStore((s) => s.viewStates.get(descriptorId)) as ViewState | undefined;
-  const position = useWidgetStore((s) => s.positions.get(descriptorId));
+  // CRITICAL: These selectors create isolated subscriptions
+  // They ONLY re-render when the specific value for descriptorId changes
+  // When other widgets are added/deleted, these specific values don't change
+  // So Zustand's shallow equality (Object.is) returns true → no re-render
+  const widget = useWidgetStore((s) => s.widgets[descriptorId]);
+  const viewState = useWidgetStore((s) => s.viewStates[descriptorId]) as ViewState | undefined;
+  const position = useWidgetStore((s) => s.positions[descriptorId]);
 
   // Actions from store - stable references, never recreated
   const cycleState = useWidgetStore((s) => s.cycleViewState);
@@ -352,7 +358,6 @@ export const IsolatedWidget = memo(function IsolatedWidget({
   );
 });
 
-// Note: We still use memo, but the custom comparison is no longer needed
-// because Zustand's selector-based subscriptions already prevent unnecessary re-renders
-// Each widget only subscribes to its own data, so sibling changes don't trigger re-renders
+// Export with memo - Zustand's object-based selectors prevent cascade re-renders
+// Each widget only re-renders when its own data changes
 export default IsolatedWidget;
