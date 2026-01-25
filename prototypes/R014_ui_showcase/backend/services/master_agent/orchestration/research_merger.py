@@ -6,6 +6,9 @@
 
 from typing import Any, List
 
+from services.master_agent.orchestration.data_tracking import (
+    track_research_merge,
+)
 from services.pipeline.presenter_modules.result_builder import (
     PresenterResultBuilder,
 )
@@ -114,5 +117,7 @@ def merge_research_results(
     merged["structured_report"] = first_result.get(
         "structured_report", ""
     ) or additional_result.get("structured_report", "")
+
+    track_research_merge(first_result, additional_result, merged)
 
     return merged

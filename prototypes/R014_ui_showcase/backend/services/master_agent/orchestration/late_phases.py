@@ -7,6 +7,9 @@
 import logging
 from typing import TYPE_CHECKING, Any
 
+from services.master_agent.orchestration.data_tracking import (
+    track_presenter_input,
+)
 from services.master_agent.orchestration.logging import (
     log_design_result,
     log_widget_selection,
@@ -134,6 +137,7 @@ class LatePhases:
             Presentation ready dict
         """
         logger.info("  [PRESENTER] Final polish...")
+        track_presenter_input(researched_data)
         result = self.executor.execute_phase(
             "presentation_qa",
             lambda: presenter(  # type: ignore[arg-type]

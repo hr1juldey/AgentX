@@ -7,6 +7,9 @@
 import logging
 from typing import TYPE_CHECKING, Any
 
+from services.master_agent.orchestration.data_tracking import (
+    track_contextualizer_output,
+)
 from services.master_agent.orchestration.logging import (
     log_analysis_result,
     log_judgment_result,
@@ -76,7 +79,9 @@ class EarlyPhases:
         if search_terms:
             logger.info(f"  [RESEARCHER] Search terms: {search_terms[:5]}")
         else:
-            search_query = analysis_result.get("goal", analysis_result.get("query", ""))
+            search_query = (
+                analysis_result.get("goal") or analysis_result.get("query") or ""
+            )
             logger.info(
                 f"  [RESEARCHER] No search terms, using: '{search_query[:80]}...'"
             )
@@ -107,6 +112,7 @@ class EarlyPhases:
             "contextualization_qa",
             lambda: data_contextualizer(research_data=research_result),  # type: ignore[arg-type]
         )
+        track_contextualizer_output(result)
         return result
 
     def run_analyst_judgment_phase(
