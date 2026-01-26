@@ -13,7 +13,7 @@ backend_dir = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(backend_dir))
 
 # Configure DSPy with Ollama BEFORE importing modules
-import dspy
+import dspy  # noqa
 
 lm = dspy.LM(
     "ollama_chat/qwen3:8b",
@@ -22,8 +22,8 @@ lm = dspy.LM(
 )
 dspy.configure(lm=lm)
 
-from services.tools.researcher.multihop_reader import MultiHopReader
-from services.tools.researcher.web_fetcher import fetch_page, truncate_content
+from services.tools.researcher.multihop_reader import MultiHopReader  # noqa
+from services.tools.researcher.web_fetcher import fetch_page, truncate_content  # noqa
 
 
 def test_truncate_content():
