@@ -53,6 +53,7 @@ class FormHydrator(dspy.Module):
 
         # Prepare data for hydration
         hydration_input = {
+            "query": presentation_ready.get("query", ""),
             "insights": insights,
             "researched_data": {
                 "key_facts": beautiful_data.get("key_facts", []),

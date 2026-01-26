@@ -16,6 +16,7 @@ def build_researcher_result(
     structured_data: dict,
     citations: list,
     analysis: dict,
+    url_list: list = [],
 ) -> dict:
     """Build the final researcher result dictionary.
 
@@ -30,7 +31,8 @@ def build_researcher_result(
         Complete researcher result dictionary
     """
     domain = analysis.get("domain", "general")
-    query_for_log = analysis.get("query", "")
+    query_for_log = analysis.get("query") or analysis.get("goal") or ""
+    search_terms = analysis.get("search_terms", [])
 
     return {
         "raw_data": raw_data,
@@ -57,4 +59,6 @@ def build_researcher_result(
             analysis, beautiful_data if isinstance(beautiful_data, dict) else {}
         ),
         "query": query_for_log,
+        "search_terms": search_terms,
+        "url_list": url_list,
     }

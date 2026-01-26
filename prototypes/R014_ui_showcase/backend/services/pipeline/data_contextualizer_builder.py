@@ -49,7 +49,7 @@ def build_contextualized_return(
         else "Medium",
         "beautiful_data": {
             **beautiful_data,
-            "key_facts": top_facts,
+            "top_facts": top_facts,
         },
         # Preserve original research data for hydrators
         "structured_report": research_data.get("structured_report", ""),

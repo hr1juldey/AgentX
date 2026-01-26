@@ -59,9 +59,10 @@ class ResearcherAgent(dspy.Module):
         """
         # Use search_terms if available, otherwise fall back to goal/query
         search_terms = analysis.get("search_terms", [])
+        url_list = []
         if search_terms:
             # Multiple search terms - search with each and combine results
-            all_results, query_for_display = execute_multi_term_search(
+            all_results, query_for_display, url_list = execute_multi_term_search(
                 self.searcher, search_terms
             )
             sorted_results = sort_and_deduplicate(all_results)
@@ -71,8 +72,10 @@ class ResearcherAgent(dspy.Module):
             )
         else:
             # Fall back to single query
-            query = analysis.get("query", analysis.get("goal", ""))
-            raw_results, query_for_display = execute_single_search(self.searcher, query)
+            query = analysis.get("query") or analysis.get("goal") or ""
+            raw_results, query_for_display, url_list = execute_single_search(
+                self.searcher, query
+            )
             sorted_results = sort_and_deduplicate(raw_results)
             raw_data_for_beautify = filter_and_log_results(
                 sorted_results, source_description="results from single query"
@@ -93,4 +96,5 @@ class ResearcherAgent(dspy.Module):
             structured_data=structured_data,
             citations=citations,
             analysis=analysis,
+            url_list=url_list,
         )
