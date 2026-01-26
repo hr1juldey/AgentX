@@ -114,6 +114,34 @@ class SearXNGSearchModule(dspy.Module):
                         seen_urls.add(url)
                         aggregated.append(item)
 
+        # Prioritize authoritative sources (.gov, .edu, .org, research domains)
+        def get_domain_priority(url: str) -> int:
+            """Higher priority = better source (0=low, 3=high)."""
+            if not url:
+                return 0
+            url_lower = url.lower()
+
+            # High priority: Government, education, major research institutions
+            if any(d in url_lower for d in [".gov", ".edu", ".org"]):
+                return 3
+            # Medium priority: News, research, academic
+            if any(
+                d in url_lower for d in ["research", "academic", "news", "analysis"]
+            ):
+                return 2
+            # Low priority: Forums, social media, Q&A sites
+            if any(
+                d in url_lower for d in ["forum", "reddit", "quora", "stackexchange"]
+            ):
+                return 0
+            # Default priority
+            return 1
+
+        # Sort by domain priority (higher priority first)
+        aggregated.sort(
+            key=lambda item: get_domain_priority(item.get("url", "")), reverse=True
+        )
+
         logger.info(f"[SearXNG] Total aggregated results: {len(aggregated)}")
         return aggregated
 

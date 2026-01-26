@@ -93,12 +93,14 @@ class ChartHydratorModule(dspy.Module):
 
         try:
             # Step 1: Select chart type
-            data_sample = str(extracted_numbers[:5])  # First 5 for pattern analysis
+            # Build structured data sample showing patterns (labels, units, years)
+            data_sample = self._build_data_sample(extracted_numbers)
             type_result = self.type_selector(data_sample=data_sample, query=query)
             chart_type = getattr(type_result, "chart_type", "bar")
 
             # Step 2: Generate title
-            data_context = f"Data with {len(extracted_numbers)} numerical values"
+            # Build semantic context with actual data themes, not just count
+            data_context = self._build_data_context(extracted_numbers)
             title_result = self.title_generator(query=query, data_context=data_context)
             title = getattr(title_result, "title", "Chart")
 
@@ -146,6 +148,62 @@ class ChartHydratorModule(dspy.Module):
         except Exception as e:
             logger.error(f"Chart hydrator error: {e}")
             return self._empty_chart()
+
+    def _build_data_sample(self, extracted_numbers: list) -> str:
+        """Build structured data sample showing patterns."""
+        if not extracted_numbers:
+            return "No data available"
+
+        # Group by context/theme
+        contexts = {}
+        for num in extracted_numbers[:20]:  # First 20 for pattern analysis
+            ctx = num.get("context", "unknown")
+            if ctx not in contexts:
+                contexts[ctx] = []
+            contexts[ctx].append(num)
+
+        # Build summary
+        themes = list(contexts.keys())[:5]
+        sample = f"Data themes: {', '.join(themes)}\n"
+
+        # Add representative samples
+        for theme in themes[:3]:
+            sample += f"\n{theme}:\n"
+            for num in contexts[theme][:3]:
+                label = num.get("label", "N/A")
+                value = num.get("value", "N/A")
+                unit = num.get("unit", "")
+                year = num.get("year", "")
+                sample += f"  - {label}: {value} {unit} {year}\n"
+
+        return sample
+
+    def _build_data_context(self, extracted_numbers: list) -> str:
+        """Build semantic context for title generation."""
+        if not extracted_numbers:
+            return "No data available"
+
+        # Analyze what data represents
+        contexts = [num.get("context", "") for num in extracted_numbers[:30]]
+        unique_contexts = list(set([c for c in contexts if c]))[:5]
+
+        # Check for temporal data
+        has_years = any(num.get("year") for num in extracted_numbers)
+
+        # Check for units
+        units = list(
+            set([num.get("unit", "") for num in extracted_numbers if num.get("unit")])
+        )
+
+        context_desc = f"Dataset with {len(extracted_numbers)} data points"
+        if unique_contexts:
+            context_desc += f" covering: {', '.join(unique_contexts[:3])}"
+        if has_years:
+            context_desc += ", includes temporal data"
+        if units:
+            context_desc += f", units: {', '.join(units[:3])}"
+
+        return context_desc
 
     def _empty_chart(self) -> dict:
         """Return empty chart when no data available."""

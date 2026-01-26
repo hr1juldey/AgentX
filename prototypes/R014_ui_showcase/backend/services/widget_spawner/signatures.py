@@ -11,17 +11,25 @@ class SelectWidgetSignature(dspy.Signature):
     """Select the appropriate UI widget type based on user query intent.
 
     Widget types:
-    - markdown: Reports, articles, documents, explanations
+    - markdown: Reports, articles, documents, explanations, analysis, research findings
     - card: Key facts, metrics, highlights, summaries
-    - chart: Visualizations, graphs, data comparisons
-    - form: Data COLLECTION (collecting user input, NOT presenting data)
+    - chart: Visualizations, graphs, data comparisons, numerical data presentation
+    - form: Data COLLECTION ONLY (collecting user input, surveys, feedback)
     - progress: Status tracking, loading states
     - action: Buttons, operations, user actions
     - confirmation: Yes/no prompts, confirmations
     - image/gallery: Visual content display
 
-    IMPORTANT: Use 'form' ONLY when collecting user input.
-    When presenting research/analysis, use markdown/card/chart.
+    CRITICAL: Use 'form' ONLY when collecting user input.
+    DO NOT use 'form' when presenting research, analysis, or findings.
+    For presenting research/analysis, use markdown/card/chart.
+
+    Examples:
+    - "Explain economic trends" → markdown or chart
+    - "Show key statistics" → card or chart
+    - "Create a survey" → form
+    - "Analyze the data" → markdown, card, or chart
+    - "Economic Impact of Major Wars" → chart, markdown, or card (NOT form)
     """
 
     user_query: str = dspy.InputField(desc="User's query or request")

@@ -10,14 +10,24 @@ import dspy
 
 
 class ExtractDocumentNumbers(dspy.Signature):
-    """Extract all numerical data points from document text for chart/table visualization.
+    """Extract query-relevant numerical data points from document text.
 
-    Each extracted number must have a numeric value (int or float).
-    Skip non-numeric entries like 'N/A', 'unknown', or text labels.
-    Include units (%, $, billion, million) and temporal context (year) when available.
-    Return only numbers explicitly found in the text.
+    Focus on numbers that directly address the research query.
+    Skip generic index data unless it relates to the query topic.
+
+    For war economic impact queries, prioritize:
+    - GDP changes (pre-war vs post-war)
+    - Sanctions costs and economic penalties
+    - Reconstruction spending
+    - Casualty counts and refugee numbers
+    - Trade volume changes
+    - Currency devaluation
+    - Defense spending increases
+
+    Skip generic commodity prices unless they show war-related changes.
     """
 
+    query = dspy.InputField(desc="Research query for context")
     document_text = dspy.InputField(desc="Document content to extract numbers from")
     document_title = dspy.InputField(desc="Document title for context")
 

@@ -8,14 +8,18 @@ import dspy
 
 
 class ExtractSearchTerms(dspy.Signature):
-    """Extract short search phrases for traditional search engines like SearXNG.
+    """Extract specific search terms with temporal and domain qualifiers.
 
-    Traditional search engines work best with 2-4 word keyword phrases rather
-    than full natural language sentences.
+    For queries about historical events, include:
+    - Specific event names (not generic terms)
+    - Year ranges or time periods
+    - Domain-specific keywords (GDP, sanctions, reconstruction, etc.)
+    - Authoritative source types (reports, studies, analysis)
 
     Examples:
-        Query: "Explain labor force migration and remittance economics"
-        Terms: "labor force migration, remittance economics, workforce data"
+    - "Economic Impact of Major Wars Since 2000"
+      → ["iraq war economic impact 2003-2011", "afghanistan war cost analysis",
+         "ukraine war gdp decline 2022", "syrian civil war economic damage"]
     """
 
     query: str = dspy.InputField(desc="User's original question")
@@ -23,8 +27,9 @@ class ExtractSearchTerms(dspy.Signature):
     insights: str = dspy.InputField(desc="Context from query analysis")
 
     search_terms: str = dspy.OutputField(
-        desc="3-5 short search phrases (2-4 words each), comma-separated. "
-        "Example: 'labor force migration, remittance economics, workforce data'"
+        desc="3-5 specific search phrases with temporal/domain qualifiers, comma-separated. "
+        "Include specific names, years, and domain keywords. "
+        "Example: 'iraq war economic impact 2003-2011, afghanistan war cost analysis'"
     )
 
 

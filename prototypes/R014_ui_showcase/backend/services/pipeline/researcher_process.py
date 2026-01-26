@@ -105,7 +105,10 @@ def process_research_data(
     enriched_raw_data = enrich_raw_data_with_content(raw_data, max_fetch=10)
 
     number_extractor = NumberExtractorModule()
-    number_data = cast(dict[str, Any], number_extractor(raw_data=enriched_raw_data))
+    number_data = cast(
+        dict[str, Any],
+        number_extractor(raw_data=enriched_raw_data, query=query_display),
+    )
     extracted_numbers = number_data.get("extracted_numbers", [])
 
     # Add extracted numbers to beautiful_data

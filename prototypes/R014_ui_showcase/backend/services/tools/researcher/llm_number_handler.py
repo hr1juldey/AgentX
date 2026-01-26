@@ -31,6 +31,7 @@ def extract_numbers_from_document(
     title: str,
     url: str,
     doc_index: int,
+    query: str = "",
 ) -> list:
     """Extract numbers from document using LLM.
 
@@ -40,6 +41,7 @@ def extract_numbers_from_document(
         title: Document title for LLM context
         url: Document URL for citation metadata
         doc_index: Document index for logging
+        query: Research query for context (optional)
 
     Returns:
         List of extracted number dicts with source metadata added.
@@ -63,7 +65,7 @@ def extract_numbers_from_document(
         )
 
         # Call LLM
-        result = extractor(document_text=content, document_title=title)
+        result = extractor(query=query, document_text=content, document_title=title)
 
         # Log raw response
         logger.info(f"[LLM_RAW] Doc {doc_index} result type: {type(result)}")

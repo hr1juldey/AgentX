@@ -26,11 +26,12 @@ class NumberExtractorModule(dspy.Module):
         self.extractor = dspy.ChainOfThought(ExtractDocumentNumbers)
         self.max_documents = max_documents
 
-    def forward(self, raw_data: list) -> dict[str, Any]:
+    def forward(self, raw_data: list, query: str = "") -> dict[str, Any]:
         """Extract numbers from research documents.
 
         Args:
             raw_data: List of document dicts with title, content, url
+            query: Research query for context (optional)
 
         Returns:
             Dict with extracted_numbers array and metadata
@@ -66,6 +67,7 @@ class NumberExtractorModule(dspy.Module):
                 title=title,
                 url=url,
                 doc_index=index,
+                query=query,
             )
 
             if numbers:
