@@ -30,16 +30,18 @@ class ChartHydratorModule(dspy.Module):
         # Extract domain for color selection
         domain = design.get("domain", "general")
 
+        # Extract structured numbers for chart generation
+        extracted_numbers = data.get("extracted_numbers", [])
+
         try:
             result = self.generate_chart(
+                extracted_numbers=extracted_numbers,
                 query=query,
-                data=str(data),
-                design=str(design),
             )
 
             # Extract structured output from DSPy result
-            # Use new field names matching signature: data_points, y_axis_key
-            chart_title = getattr(result, "chart_title", "Chart")
+            # Updated signature: title instead of chart_title
+            title = getattr(result, "title", "Chart")
             chart_type = getattr(result, "chart_type", "bar")
             data_points_str = getattr(result, "data_points", "[]")
             x_axis_key = getattr(result, "x_axis_key", "label")
@@ -59,13 +61,11 @@ class ChartHydratorModule(dspy.Module):
                 logger.warning(f"Failed to parse data_points: {data_points_str}")
                 chart_data = []
 
-            # y_axis_key is now singular - convert to list for multi-series support
-            # Also check for multiple value fields in the data
+            # y_axis_key is singular - convert to list for multi-series support
             y_axis_keys = [y_axis_key]
             if chart_data and isinstance(chart_data, list) and len(chart_data) > 0:
                 first_point = chart_data[0]
                 if isinstance(first_point, dict):
-                    # Find all keys that aren't the x_axis
                     value_keys = [k for k in first_point.keys() if k != x_axis_key]
                     if len(value_keys) > 1:
                         y_axis_keys = value_keys
@@ -75,7 +75,7 @@ class ChartHydratorModule(dspy.Module):
 
             # Build structured content with colors
             content = {
-                "title": chart_title,
+                "title": title,
                 "type": chart_type,
                 "data": chart_data,
                 "x_axis": x_axis_key,
@@ -101,7 +101,6 @@ class ChartHydratorModule(dspy.Module):
 
         except Exception as e:
             logger.error(f"Chart hydrator error: {e}")
-            # Return fallback structure with default colors
             default_colors = get_chart_colors(domain="general", count=1)
             return {
                 "descriptor_type": "chart",

@@ -9,24 +9,64 @@
 import dspy
 
 
+class ExtractDocumentNumbers(dspy.Signature):
+    """Extract structured numbers from document text.
+
+    For use in chart/table generation. Extracts all numerical data
+    with labels, units, and temporal context.
+    """
+
+    document_text = dspy.InputField(desc="Document content to extract numbers from")
+    document_title = dspy.InputField(desc="Document title for context")
+
+    structured_numbers = dspy.OutputField(
+        desc="JSON array of extracted numbers. Each entry must have: "
+        "label (entity name), value (number), unit (%, $, etc.), "
+        "context (what the number represents), year (if available). "
+        "Example: [{'label': 'US', 'value': 3.7, 'unit': '%', 'context': 'inflation rate', 'year': '2023'}]. "
+        "Return ONLY numbers explicitly found in text. Do not make up values."
+    )
+
+
 class ChartData(dspy.Signature):
-    """Generate chart widget data only - no bundled content."""
+    """Generate chart widget data from extracted numbers.
 
-    query = dspy.InputField(desc="User query topic")
-    data = dspy.InputField(desc="Research data with key_facts, trends, comparisons")
-    design = dspy.InputField(desc="Color scheme and styling preferences")
+    Analyzes extracted_numbers structure to determine the appropriate
+    chart type (bar/line/area/pie/radar/radial) and format data.
+    """
 
-    chart_title = dspy.OutputField(desc="Title for the chart")
-    chart_type = dspy.OutputField(desc="Type: bar, line, pie, area, timeline")
-    # Match natural LLM output - use data_points instead of chart_data
+    extracted_numbers = dspy.InputField(
+        desc="Structured numbers from NumberExtractorModule. "
+        "Each entry has: label, value, unit, context, year, source_title, url."
+    )
+    query = dspy.InputField(desc="User query for context")
+
+    chart_type = dspy.OutputField(
+        desc="Chart type based on data pattern analysis. "
+        "Options: bar (categories comparison), line (time series trends), "
+        "area (filled time series), pie (parts of whole percentages), "
+        "radar (multi-dimensional comparison), radial (cyclic data). "
+        "Examples: "
+        "- 5 countries with inflation rates → bar "
+        "- Stock prices over months → line "
+        "- Temperature over days → area "
+        "- Market share percentages → pie "
+        "- Skills across dimensions → radar "
+        "- Hourly temperature pattern → radial"
+    )
     data_points = dspy.OutputField(
-        desc="Array of data points as JSON. Each point: label (x-axis), value(s) for y-axis. Example: [{'Year': '2020', 'US': 1.5, 'EU': 1.2}]"
+        desc="JSON array of data points. Each point has label, value, and optional metadata. "
+        "Must be REAL values from extracted_numbers. Do not hallucinate."
     )
-    x_axis_key = dspy.OutputField(desc="Field name for x-axis (e.g., 'Year', 'Date')")
-    # Use singular to match natural LLM output
+    x_axis_key = dspy.OutputField(
+        desc="Field name for x-axis (e.g., 'Country', 'Year', 'Date'). "
+        "Use the most appropriate label from extracted_numbers."
+    )
     y_axis_key = dspy.OutputField(
-        desc="Field name for primary y-axis (e.g., 'Inflation Rate (%)', 'Sales')"
+        desc="Field name for primary y-axis (e.g., 'Inflation Rate', 'Price'). "
+        "Use the context from extracted_numbers."
     )
+    title = dspy.OutputField(desc="Chart title derived from query and data context")
 
 
 class CardData(dspy.Signature):
