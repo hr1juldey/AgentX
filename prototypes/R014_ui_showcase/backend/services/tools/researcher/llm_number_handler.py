@@ -91,13 +91,30 @@ def extract_numbers_from_document(
             )
             return []
 
-        # Inject source metadata
+        # Validate and filter out entries with non-numeric values
+        validated_numbers = []
         for num in numbers:
-            num["source_doc"] = doc_index
-            num["source_title"] = title
-            num["url"] = url
+            value = num.get("value")
+            # Skip if value is not numeric (int, float, or numeric string)
+            try:
+                float(value)
+                # Value is numeric, accept it
+                num["source_doc"] = doc_index
+                num["source_title"] = title
+                num["url"] = url
+                validated_numbers.append(num)
+            except (ValueError, TypeError):
+                # Value is non-numeric (e.g., "1970s_level", "N/A", None)
+                logger.warning(
+                    f"[LLM_VALIDATE] Doc {doc_index} Skipped non-numeric value: {value!r}"
+                )
 
-        return numbers
+        if len(validated_numbers) < len(numbers):
+            logger.info(
+                f"[LLM_VALIDATE] Doc {doc_index} Filtered {len(validated_numbers)}/{len(numbers)} entries (removed non-numeric values)"
+            )
+
+        return validated_numbers
 
     except json.JSONDecodeError as e:
         logger.warning(f"[LLM_FAIL] Doc {doc_index} JSON decode error: {e}")

@@ -21,10 +21,12 @@ class ExtractDocumentNumbers(dspy.Signature):
 
     structured_numbers = dspy.OutputField(
         desc="JSON array of extracted numbers. Each entry must have: "
-        "label (entity name), value (number), unit (%, $, etc.), "
-        "context (what the number represents), year (if available). "
+        "label (entity name), value (MUST be numeric float/int, not text), "
+        "unit (%, $, billion, million, etc.), context (what the number represents), "
+        "year (if available, string like '2023'). "
+        "CRITICAL: value field MUST be a number. Skip entries like '1970s_level', 'N/A', 'unknown'. "
         "Example: [{'label': 'US', 'value': 3.7, 'unit': '%', 'context': 'inflation rate', 'year': '2023'}]. "
-        "Return ONLY numbers explicitly found in text. Do not make up values."
+        "Return ONLY numeric values explicitly found in text. Do not make up values."
     )
 
 

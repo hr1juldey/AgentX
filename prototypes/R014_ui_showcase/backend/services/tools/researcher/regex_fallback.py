@@ -42,14 +42,14 @@ def extract_numbers_with_regex(
             # Parse based on pattern
             if groups[0] and groups[0][0].isdigit():  # Number comes first
                 value_str = groups[0]
-                unit = groups[1] if len(groups) > 1 else ""
-                label = groups[3] if len(groups) > 3 else ""
+                unit = groups[1] if len(groups) > 1 and groups[1] else ""
+                label = groups[3] if len(groups) > 3 and groups[3] else ""
                 year = groups[2] if len(groups) > 2 and groups[2] else None
             else:  # Label comes first
                 label = groups[0]
                 value_str = groups[1]
-                unit = groups[2] if len(groups) > 2 else ""
-                year = groups[3] if len(groups) > 3 else None
+                unit = groups[2] if len(groups) > 2 and groups[2] else ""
+                year = groups[3] if len(groups) > 3 and groups[3] else None
 
             try:
                 value = float(value_str.replace(",", ""))
@@ -58,9 +58,9 @@ def extract_numbers_with_regex(
 
             numbers.append(
                 {
-                    "label": label.strip(),
+                    "label": label.strip() if label else "",
                     "value": value,
-                    "unit": unit.strip(),
+                    "unit": unit.strip() if unit else "",
                     "context": "extracted",
                     "year": year,
                     "source_doc": doc_index,
