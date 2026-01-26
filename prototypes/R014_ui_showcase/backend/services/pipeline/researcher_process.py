@@ -49,6 +49,6 @@ def process_research_data(
     # Build citations with structured report as writing parameter
     structured_report = structured_data.get("structured_report", "")
     citations_raw = citer(raw_data=raw_data, writing=structured_report)
-    citations = citations_raw if hasattr(citations_raw, "get") else []
+    citations = citations_raw if isinstance(citations_raw, list) else []
 
     return beautiful_data, structured_data, citations

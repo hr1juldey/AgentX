@@ -61,6 +61,7 @@ class ChartHydrator(dspy.Module):
                 "key_facts": beautiful_data.get("key_facts", []),
                 "trends": beautiful_data.get("trends", {}),
                 "comparisons": beautiful_data.get("comparisons", []),
+                "extracted_numbers": beautiful_data.get("extracted_numbers", []),
                 "structured_data": researched_data.get("structured_data", {}),
             },
             "design": {

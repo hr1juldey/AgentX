@@ -40,24 +40,42 @@ class NumberExtractorModule(dspy.Module):
         extracted_numbers = []
         processed_docs = raw_data[: self.max_documents]
 
+        logger.info(
+            f"[NUMBER_EXTRACTOR] Processing {len(raw_data)} documents (max: {self.max_documents})"
+        )
+
         for index, doc in enumerate(processed_docs):
             content = doc.get("content", "")[:2000]
             title = doc.get("title", "")
             url = doc.get("url", "")
 
             if not content or len(content) < 50:
+                logger.warning(
+                    f"[NUMBER_EXTRACTOR] Skipped doc {index}: content_len={len(content)}, title='{title[:50]}'"
+                )
                 continue
 
             result = self._extract_with_llm(content, title, url, index)
 
             if result:
+                logger.info(
+                    f"[NUMBER_EXTRACTOR] LLM extracted {len(result)} numbers from '{title[:50]}'"
+                )
                 extracted_numbers.extend(result)
             else:
-                extracted_numbers.extend(
-                    extract_numbers_with_regex(content, title, url, index)
+                regex_result = extract_numbers_with_regex(content, title, url, index)
+                logger.info(
+                    f"[NUMBER_EXTRACTOR] Regex extracted {len(regex_result)} numbers from '{title[:50]}'"
                 )
+                extracted_numbers.extend(regex_result)
 
+        logger.info(
+            f"[NUMBER_EXTRACTOR] Total numbers before dedup: {len(extracted_numbers)}"
+        )
         extracted_numbers = self._deduplicate(extracted_numbers)
+        logger.info(
+            f"[NUMBER_EXTRACTOR] Total numbers after dedup: {len(extracted_numbers)}"
+        )
 
         return {
             "extracted_numbers": extracted_numbers,
@@ -86,12 +104,32 @@ class NumberExtractorModule(dspy.Module):
         try:
             result = self.extractor(document_text=content, document_title=title)
 
+            # Log raw LLM response for debugging
+            logger.debug(f"[LLM_RAW] Doc {doc_index} result type: {type(result)}")
+            logger.debug(f"[LLM_RAW] Doc {doc_index} result attributes: {dir(result)}")
+
             numbers_str = getattr(result, "structured_numbers", "")
+            logger.debug(
+                f"[LLM_RAW] Doc {doc_index} structured_numbers type: {type(numbers_str)}"
+            )
+            logger.debug(
+                f"[LLM_RAW] Doc {doc_index} structured_numbers value: {numbers_str!r}"
+            )
+
             if isinstance(numbers_str, str):
                 numbers = json.loads(numbers_str)
+                logger.info(
+                    f"[LLM_PARSED] Doc {doc_index} Parsed {len(numbers)} numbers from JSON string"
+                )
             elif isinstance(numbers_str, list):
                 numbers = numbers_str
+                logger.info(
+                    f"[LLM_PARSED] Doc {doc_index} Got {len(numbers)} numbers as list"
+                )
             else:
+                logger.warning(
+                    f"[LLM_FAIL] Doc {doc_index} Unexpected type: {type(numbers_str)}, returning empty"
+                )
                 return []
 
             for num in numbers:
@@ -101,8 +139,15 @@ class NumberExtractorModule(dspy.Module):
 
             return numbers
 
-        except (json.JSONDecodeError, TypeError, AttributeError) as e:
-            logger.warning(f"LLM extraction failed: {e}")
+        except json.JSONDecodeError as e:
+            logger.warning(f"[LLM_FAIL] Doc {doc_index} JSON decode error: {e}")
+            logger.warning(
+                f"[LLM_FAIL] Doc {doc_index} Raw string was: {numbers_str!r}"
+            )
+            return []
+        except (TypeError, AttributeError) as e:
+            logger.warning(f"[LLM_FAIL] Doc {doc_index} Error: {e}")
+            logger.warning(f"[LLM_FAIL] Doc {doc_index} Result was: {result!r}")
             return []
 
     def _deduplicate(self, numbers: list) -> list:

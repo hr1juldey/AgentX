@@ -21,15 +21,31 @@ class CardData(dspy.Signature):
     )
 
 
-class FormData(dspy.Signature):
-    """Generate form widget data with structured field objects."""
+class FormFieldNames(dspy.Signature):
+    """Extract field names for a data collection form."""
 
     query = dspy.InputField(desc="User query topic")
     data = dspy.InputField(desc="Research data with collection methodology")
     insights = dspy.InputField(desc="Insights about what data to collect")
 
-    form_fields = dspy.OutputField(
-        desc="Array of field objects. Each field: label (string), type (text|textarea|number|select|checkbox), description (string help text), required (boolean), options (array if select). Return as JSON array."
+    field_names = dspy.OutputField(
+        desc="Array of field names as strings. Each name should be concise (2-5 words). Return as JSON array of strings."
+    )
+
+
+class FormFieldDetails(dspy.Signature):
+    """Determine field type, description, and options for a single form field."""
+
+    field_name = dspy.InputField(desc="Name of the field")
+    query = dspy.InputField(desc="User query topic")
+    data = dspy.InputField(desc="Research data for context")
+
+    field_type = dspy.OutputField(
+        desc="Type of input: text, textarea, number, select, or checkbox"
+    )
+    description = dspy.OutputField(desc="Help text explaining what to enter")
+    options = dspy.OutputField(
+        desc="For select type: JSON array of option strings. For other types: empty JSON array []"
     )
 
 

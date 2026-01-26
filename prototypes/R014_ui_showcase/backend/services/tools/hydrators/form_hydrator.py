@@ -8,7 +8,10 @@ import dspy
 import json
 import logging
 
-from services.tools.hydrators.widget_signatures import FormData
+from services.tools.hydrators.widget_signatures import (
+    FormFieldDetails,
+    FormFieldNames,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -18,54 +21,80 @@ class FormHydratorModule(dspy.Module):
 
     def __init__(self):
         super().__init__()
-        self.generate_form = dspy.Predict(FormData)
+        self.get_field_names = dspy.Predict(FormFieldNames)
+        self.get_field_details = dspy.Predict(FormFieldDetails)
 
     def forward(self, presentation_ready: dict) -> dict:
-        """Generate form configuration with structured output."""
+        """Generate form configuration using split signatures."""
         data = presentation_ready.get("researched_data", {})
         insights = presentation_ready.get("insights", [])
         query = presentation_ready.get("query", "")
 
+        validated_fields = []
+
         try:
-            result = self.generate_form(
-                query=query,
-                data=str(data),
-                insights=str(insights),
+            # Step 1: Get field names (simple task)
+            names_result = self.get_field_names(
+                query=query, data=str(data), insights=str(insights)
             )
+            field_names_str = getattr(names_result, "field_names", "[]")
 
-            # Extract structured output
-            fields_str = getattr(result, "form_fields", "[]")
-
-            # Parse fields
+            # Parse field names (JSON array of strings)
             try:
-                if isinstance(fields_str, str):
-                    fields = json.loads(fields_str)
-                elif isinstance(fields_str, list):
-                    fields = fields_str
+                if isinstance(field_names_str, str):
+                    field_names = json.loads(field_names_str)
+                elif isinstance(field_names_str, list):
+                    field_names = field_names_str
                 else:
-                    fields = []
+                    field_names = []
             except (json.JSONDecodeError, TypeError):
-                logger.warning(f"Failed to parse form_fields: {fields_str}")
-                fields = []
+                logger.warning(f"Failed to parse field_names: {field_names_str}")
+                field_names = []
 
-            # Validate field structure (match frontend FormWidget interface)
-            validated_fields = []
-            for field in fields if isinstance(fields, list) else []:
-                if isinstance(field, dict):
-                    label = field.get("label", "Field")
+            logger.info(f"[FORM HYDRATOR] Got {len(field_names)} field names")
+
+            # Step 2: Get details for each field (focused task)
+            for field_name in field_names:
+                if not isinstance(field_name, str):
+                    continue
+
+                try:
+                    details_result = self.get_field_details(
+                        field_name=field_name, query=query, data=str(data)
+                    )
+
+                    field_type = getattr(details_result, "field_type", "text")
+                    description = getattr(details_result, "description", "")
+                    options_str = getattr(details_result, "options", "[]")
+
+                    # Parse options (JSON array of strings)
+                    try:
+                        if isinstance(options_str, str):
+                            options = json.loads(options_str)
+                        elif isinstance(options_str, list):
+                            options = options_str
+                        else:
+                            options = []
+                    except (json.JSONDecodeError, TypeError):
+                        logger.warning(f"Failed to parse options for '{field_name}': {options_str}")
+                        options = []
+
                     # Generate name from label (snake_case for form submission)
-                    name = label.lower().replace(" ", "_").replace("-", "_")
+                    name = field_name.lower().replace(" ", "_").replace("-", "_")
+
                     validated_fields.append(
                         {
                             "name": name,
-                            "type": field.get("type", "text"),
-                            "label": label,
-                            "placeholder": field.get(
-                                "description", ""
-                            ),  # Map description→placeholder
-                            "options": field.get("options", []),
+                            "type": field_type if field_type in ["text", "textarea", "number", "select", "checkbox"] else "text",
+                            "label": field_name,
+                            "placeholder": description,
+                            "options": options if isinstance(options, list) else [],
                         }
                     )
+
+                except Exception as e:
+                    logger.warning(f"Failed to get details for field '{field_name}': {e}")
+                    continue
 
             return {
                 "descriptor_type": "form",

@@ -37,7 +37,9 @@ def track_contextualizer_output(result: dict) -> None:
 
     # Log beautiful_data arrays
     _log_list_counts(
-        "beautiful_data", beautiful, ["key_facts", "trends", "comparisons"]
+        "beautiful_data",
+        beautiful,
+        ["key_facts", "trends", "comparisons", "extracted_numbers"],
     )
 
     # Log other key fields
@@ -105,7 +107,9 @@ def track_presenter_input(researched_data: dict) -> None:
 
     # Log beautiful_data (used by all hydrators)
     _log_list_counts(
-        "beautiful_data", beautiful, ["key_facts", "trends", "comparisons"]
+        "beautiful_data",
+        beautiful,
+        ["key_facts", "trends", "comparisons", "extracted_numbers"],
     )
 
     # Log other fields
