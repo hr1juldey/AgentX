@@ -10,26 +10,26 @@ import dspy
 
 
 class CardData(dspy.Signature):
-    """Generate card widget data with structured card objects."""
+    """Generate card widget data displaying key metrics and information."""
 
     query = dspy.InputField(desc="User query topic")
     data = dspy.InputField(desc="Research data with key_facts, trends")
     design = dspy.InputField(desc="Color scheme and styling preferences")
 
     cards = dspy.OutputField(
-        desc="Array of card objects. Each card: title (string), value (string metric), description (string explanation), icon (emoji), color (tailwind color). Return as JSON array."
+        desc="JSON array of card objects with title, value, description, icon, and color"
     )
 
 
 class FormFieldNames(dspy.Signature):
-    """Extract field names for a data collection form."""
+    """Extract field names for a data collection form based on research insights."""
 
     query = dspy.InputField(desc="User query topic")
     data = dspy.InputField(desc="Research data with collection methodology")
     insights = dspy.InputField(desc="Insights about what data to collect")
 
     field_names = dspy.OutputField(
-        desc="Array of field names as strings. Each name should be concise (2-5 words). Return as JSON array of strings."
+        desc="JSON array of field name strings (2-5 words each)"
     )
 
 
@@ -41,16 +41,16 @@ class FormFieldDetails(dspy.Signature):
     data = dspy.InputField(desc="Research data for context")
 
     field_type = dspy.OutputField(
-        desc="Type of input: text, textarea, number, select, or checkbox"
+        desc="Input type: text, textarea, number, select, or checkbox"
     )
     description = dspy.OutputField(desc="Help text explaining what to enter")
     options = dspy.OutputField(
-        desc="For select type: JSON array of option strings. For other types: empty JSON array []"
+        desc="For select: JSON array of options. For other types: empty JSON array"
     )
 
 
 class MarkdownContent(dspy.Signature):
-    """Generate markdown content from research data."""
+    """Generate markdown content from research data with proper formatting."""
 
     query = dspy.InputField(desc="User query topic")
     data = dspy.InputField(desc="Research data with beautiful_data, structured_report")
@@ -58,28 +58,28 @@ class MarkdownContent(dspy.Signature):
     citations = dspy.InputField(desc="Citations to include")
 
     markdown_content = dspy.OutputField(
-        desc="Markdown formatted content with headings, bullet points, numbered lists. Use ## for main sections, ### for subsections. Include key findings, trends, comparisons."
+        desc="Markdown formatted content with headings, bullet points, and numbered lists"
     )
 
 
 class POVGeneration(dspy.Signature):
-    """Generate multiple balanced points of view."""
+    """Generate multiple balanced points of view from research data."""
 
     query = dspy.InputField(desc="User query topic")
     research_data = dspy.InputField(desc="Research data to analyze")
 
     points_of_view = dspy.OutputField(
-        desc='Array of 3-5 perspectives. Each must be a distinct viewpoint: bullish/optimistic, bearish/cautious, neutral/objective, alternative/skeptical. Return as JSON array of strings: ["bullish: ...", "bearish: ...", "neutral: ..."].'
+        desc="JSON array of 3-5 perspectives (bullish, bearish, neutral, alternative, skeptical)"
     )
 
 
 class WidgetInsights(dspy.Signature):
-    """Generate insights specific to widget types."""
+    """Generate insights specific to widget types from research data."""
 
     query = dspy.InputField(desc="User query topic")
     data = dspy.InputField(desc="Research data")
     widget_type = dspy.InputField(desc="Type of widget: card, form, chart, markdown")
 
     insights = dspy.OutputField(
-        desc="Array of 3-5 insights specific to the widget type. For cards: key metrics. For forms: data collection points. For charts: trends. For markdown: narrative themes. Return as JSON array."
+        desc="JSON array of 3-5 insights specific to the widget type"
     )

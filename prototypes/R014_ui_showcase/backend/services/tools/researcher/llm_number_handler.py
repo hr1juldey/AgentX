@@ -94,11 +94,15 @@ def extract_numbers_from_document(
         # Validate and filter out entries with non-numeric values
         validated_numbers = []
         for num in numbers:
-            value = num.get("value")
+            # LLM may return either 'value' or 'numeric_value' key
+            value = num.get("value") or num.get("numeric_value")
             # Skip if value is not numeric (int, float, or numeric string)
             try:
                 float(value)
                 # Value is numeric, accept it
+                # Ensure 'value' key exists for downstream consistency
+                if "value" not in num and "numeric_value" in num:
+                    num["value"] = num["numeric_value"]
                 num["source_doc"] = doc_index
                 num["source_title"] = title
                 num["url"] = url

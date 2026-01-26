@@ -8,35 +8,27 @@ import dspy
 
 
 class SelectWidgetSignature(dspy.Signature):
-    """Select the appropriate UI widget for displaying content based on user query.
+    """Select the appropriate UI widget type based on user query intent.
 
-    Widget Selection Guide:
-    - "markdown": User asks for reports, documents, text, articles, guides, explanations, summaries
-    - "card": User asks for highlights, key points, facts, notifications, simple information
-    - "form": ONLY when user explicitly asks for: input forms, surveys, data collection, user feedback, signup forms, questionnaires. DO NOT use forms for: information display, explanations, reports, comparisons, or data visualization. Use forms ONLY when the query contains keywords like: create form, build form, signup, submit, collect data, survey, questionnaire
-    - "progress": User asks for status, progress, loading state, completion percentage
-    - "chart": User asks for graphs, plots, visualizations, data viz, statistics, trends (bar/line/pie/area)
-    - "action": User asks for buttons, actions, triggers, execute operations
-    - "confirmation": User asks for confirm dialogs, yes/no prompts, approve/reject
-    - "image": User asks for pictures, photos, graphics, visual content
-    - "gallery": User asks for multiple images, image collection, photo gallery
+    Widget types:
+    - markdown: Reports, articles, documents, explanations
+    - card: Key facts, metrics, highlights, summaries
+    - chart: Visualizations, graphs, data comparisons
+    - form: Data COLLECTION (collecting user input, NOT presenting data)
+    - progress: Status tracking, loading states
+    - action: Buttons, operations, user actions
+    - confirmation: Yes/no prompts, confirmations
+    - image/gallery: Visual content display
 
-    Examples:
-    - "write a report about X" → markdown
-    - "show me the key points" → card
-    - "create a signup form" → form
-    - "track the download progress" → progress
-    - "display sales data" → chart
-    - "add a submit button" → action
-    - "confirm deletion" → confirmation
-    - "show me a picture" → image
-    - "display photos" → gallery
+    IMPORTANT: Use 'form' ONLY when collecting user input.
+    When presenting research/analysis, use markdown/card/chart.
     """
 
     user_query: str = dspy.InputField(desc="User's query or request")
     available_widgets: list[str] = dspy.InputField(
         desc="List of available widget types: markdown, card, form, progress, chart, action, confirmation, image, gallery"
     )
+
     selected_widget: str = dspy.OutputField(
         desc="Selected widget type (must be one of: markdown, card, form, progress, chart, action, confirmation, image, gallery)"
     )
@@ -79,15 +71,14 @@ class GenerateProgressSignature(dspy.Signature):
 
 
 class GenerateChartSignature(dspy.Signature):
-    """Generate chart data and configuration.
+    """Generate chart data and configuration for visualization.
 
-    IMPORTANT: Output MUST be valid JSON only, no markdown formatting.
-    Example: [{"year": 2023, "sales": 80000}, {"year": 2024, "sales": 120000}]
+    Output MUST be valid JSON only, no markdown formatting.
     """
 
     user_query: str = dspy.InputField(desc="User's query or request")
     chart_type: str = dspy.OutputField(desc="Chart type: bar, line, pie, or area")
     chart_title: str = dspy.OutputField(desc="Chart title")
     chart_data_json: str = dspy.OutputField(
-        desc='JSON array of chart data points. MUST be valid JSON only, no markdown code blocks. Example: [{"year": 2023, "sales": 80000}]'
+        desc="Valid JSON array of chart data points (no markdown code blocks)"
     )

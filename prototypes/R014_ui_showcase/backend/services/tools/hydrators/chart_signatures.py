@@ -10,23 +10,19 @@ import dspy
 
 
 class ExtractDocumentNumbers(dspy.Signature):
-    """Extract structured numbers from document text.
+    """Extract all numerical data points from document text for chart/table visualization.
 
-    For use in chart/table generation. Extracts all numerical data
-    with labels, units, and temporal context.
+    Each extracted number must have a numeric value (int or float).
+    Skip non-numeric entries like 'N/A', 'unknown', or text labels.
+    Include units (%, $, billion, million) and temporal context (year) when available.
+    Return only numbers explicitly found in the text.
     """
 
     document_text = dspy.InputField(desc="Document content to extract numbers from")
     document_title = dspy.InputField(desc="Document title for context")
 
     structured_numbers = dspy.OutputField(
-        desc="JSON array of extracted numbers. Each entry must have: "
-        "label (entity name), value (MUST be numeric float/int, not text), "
-        "unit (%, $, billion, million, etc.), context (what the number represents), "
-        "year (if available, string like '2023'). "
-        "CRITICAL: value field MUST be a number. Skip entries like '1970s_level', 'N/A', 'unknown'. "
-        "Example: [{'label': 'US', 'value': 3.7, 'unit': '%', 'context': 'inflation rate', 'year': '2023'}]. "
-        "Return ONLY numeric values explicitly found in text. Do not make up values."
+        desc="JSON array of extracted numbers with label, numeric value, unit, context, and year"
     )
 
 
@@ -63,27 +59,18 @@ class AxisLabelSelector(dspy.Signature):
 
 
 class TableData(dspy.Signature):
-    """Generate table widget data from extracted numbers.
-
-    Creates structured table for displaying extracted numbers
-    when chart visualization is not appropriate.
-    """
+    """Generate table widget data from extracted numbers for structured display."""
 
     extracted_numbers = dspy.InputField(
-        desc="Structured numbers from NumberExtractorModule. "
-        "Each entry has: label, value, unit, context, year, source_title, url."
+        desc="Structured numbers with label, value, unit, context, year"
     )
     query = dspy.InputField(desc="User query for context")
 
     columns = dspy.OutputField(
-        desc="JSON array of column definitions. "
-        "Each column: {key: string, header: string}. "
-        "Example: [{'key': 'country', 'header': 'Country'}, {'key': 'value', 'header': 'Value'}]"
+        desc="JSON array of column definitions with key and header"
     )
     rows = dspy.OutputField(
-        desc="JSON array of row objects. "
-        "Each row must have keys matching column keys. "
-        "Example: [{'country': 'US', 'value': '3.7'}, {'country': 'Brazil', 'value': '5.8'}]"
+        desc="JSON array of row objects with values matching column keys"
     )
     title = dspy.OutputField(desc="Table title")
 
