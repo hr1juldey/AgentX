@@ -11,6 +11,7 @@ import logging
 
 import dspy
 from services.tools.hydrators.chart_signatures import ExtractDocumentNumbers
+from services.tools.researcher.number_extractor_utils import strip_markdown_wrapper
 from services.tools.researcher.regex_fallback import extract_numbers_with_regex
 
 logger = logging.getLogger(__name__)
@@ -101,20 +102,27 @@ class NumberExtractorModule(dspy.Module):
         Returns:
             List of extracted number dicts
         """
+        result = None
+        numbers_str = ""
         try:
+            # Log input content for debugging
+            logger.info(
+                f"[LLM_INPUT] Doc {doc_index} content_len={len(content)}, "
+                f"preview={content[:200]!r}"
+            )
+
             result = self.extractor(document_text=content, document_title=title)
 
             # Log raw LLM response for debugging
-            logger.debug(f"[LLM_RAW] Doc {doc_index} result type: {type(result)}")
-            logger.debug(f"[LLM_RAW] Doc {doc_index} result attributes: {dir(result)}")
+            logger.info(f"[LLM_RAW] Doc {doc_index} result type: {type(result)}")
 
             numbers_str = getattr(result, "structured_numbers", "")
-            logger.debug(
-                f"[LLM_RAW] Doc {doc_index} structured_numbers type: {type(numbers_str)}"
+            logger.info(
+                f"[LLM_RAW] Doc {doc_index} structured_numbers: {numbers_str!r}"
             )
-            logger.debug(
-                f"[LLM_RAW] Doc {doc_index} structured_numbers value: {numbers_str!r}"
-            )
+
+            # Strip markdown code block wrapper (14B coder models)
+            numbers_str = strip_markdown_wrapper(numbers_str)
 
             if isinstance(numbers_str, str):
                 numbers = json.loads(numbers_str)

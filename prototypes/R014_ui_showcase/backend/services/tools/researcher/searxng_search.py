@@ -27,18 +27,30 @@ class SearXNGSearchModule(dspy.Module):
         super().__init__()
         self.searxng_url = searxng_url
         self.search_general = dspy.Predict("query -> search_results")
+        # Engine groups to try in parallel (some may be blocked/rate-limited)
+        self.engine_groups = [
+            # Reliable engines that usually work
+            ["bing", "mojeek", "yahoo", "ask"],
+            # Google (may have rate limits)
+            ["google"],
+            # Alternative engines
+            ["brave", "startpage"],
+            # DuckDuckGo often shows CAPTCHA but worth trying
+            ["duckduckgo"],
+        ]
 
-    async def _search_searxng(
+    async def _search_with_engines(
         self,
         query: str,
+        engines: list[str],
         categories: Optional[list[str]] = None,
-        engines: Optional[list[str]] = None,
         image_search: bool = False,
     ) -> list[dict]:
-        """Execute SearXNG search with fresh async client per request."""
+        """Execute SearXNG search with specific engine list."""
         params = {
             "q": query,
             "format": "json",
+            "engines": ",".join(engines),
         }
 
         # Image search uses category_images=1, NOT categories=images
@@ -47,24 +59,63 @@ class SearXNGSearchModule(dspy.Module):
         elif categories:
             params["categories"] = ",".join(categories)
 
-        if engines:
-            params["engines"] = ",".join(engines)
-
         try:
-            logger.info(f"[SearXNG] Searching: {query[:60]}...")
+            url = f"{self.searxng_url}/search"
+            logger.info(f"[SearXNG] Trying engines: {engines}")
             async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.get(
-                    f"{self.searxng_url}/search",
-                    params=params,
-                )
+                response = await client.get(url, params=params)
                 response.raise_for_status()
                 data = response.json()
                 results = data.get("results", [])
-                logger.info(f"[SearXNG] Got {len(results)} results")
+                logger.info(f"[SearXNG] Engines {engines[0]}: {len(results)} results")
                 return results
         except Exception as e:
-            logger.error(f"[SearXNG] Search error for '{query[:40]}...': {e}")
+            logger.warning(f"[SearXNG] Engines {engines[0]} failed: {e}")
             return []
+
+    async def _search_searxng(
+        self,
+        query: str,
+        categories: Optional[list[str]] = None,
+        engines: Optional[list[str]] = None,
+        image_search: bool = False,
+    ) -> list[dict]:
+        """Execute SearXNG search with parallel engine groups.
+
+        Tries multiple engine groups in parallel and aggregates results.
+        This handles engines that may be blocked or rate-limited.
+        """
+        # If specific engines requested, use only those
+        if engines:
+            return await self._search_with_engines(
+                query, engines, categories, image_search
+            )
+
+        # Otherwise, try all engine groups in parallel
+        tasks = [
+            self._search_with_engines(query, group, categories, image_search)
+            for group in self.engine_groups
+        ]
+
+        # Run all searches in parallel and wait for all to complete
+        all_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Aggregate results from all successful searches
+        aggregated = []
+        seen_urls = set()  # Deduplicate by URL
+
+        for result in all_results:
+            if isinstance(result, Exception):
+                continue
+            if isinstance(result, list):
+                for item in result:
+                    url = item.get("url", "")
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        aggregated.append(item)
+
+        logger.info(f"[SearXNG] Total aggregated results: {len(aggregated)}")
+        return aggregated
 
     def forward(self, query: str, search_type: str = "general") -> dict:
         """Execute search based on type.

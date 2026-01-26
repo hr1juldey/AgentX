@@ -9,6 +9,7 @@ import json
 import logging
 
 from services.tools.hydrators.widget_signatures import CardData
+from services.tools.researcher.number_extractor_utils import strip_markdown_wrapper
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,8 @@ class CardHydratorModule(dspy.Module):
             # Parse cards - LLM may return JSON array
             try:
                 if isinstance(cards_str, str):
+                    # Strip markdown code block wrapper (14B coder models)
+                    cards_str = strip_markdown_wrapper(cards_str)
                     cards = json.loads(cards_str)
                 elif isinstance(cards_str, list):
                     cards = cards_str

@@ -12,6 +12,7 @@ from services.tools.hydrators.widget_signatures import (
     FormFieldDetails,
     FormFieldNames,
 )
+from services.tools.researcher.number_extractor_utils import strip_markdown_wrapper
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,8 @@ class FormHydratorModule(dspy.Module):
             # Parse field names (JSON array of strings)
             try:
                 if isinstance(field_names_str, str):
+                    # Strip markdown code block wrapper (14B coder models)
+                    field_names_str = strip_markdown_wrapper(field_names_str)
                     field_names = json.loads(field_names_str)
                 elif isinstance(field_names_str, list):
                     field_names = field_names_str
@@ -70,13 +73,17 @@ class FormHydratorModule(dspy.Module):
                     # Parse options (JSON array of strings)
                     try:
                         if isinstance(options_str, str):
+                            # Strip markdown code block wrapper (14B coder models)
+                            options_str = strip_markdown_wrapper(options_str)
                             options = json.loads(options_str)
                         elif isinstance(options_str, list):
                             options = options_str
                         else:
                             options = []
                     except (json.JSONDecodeError, TypeError):
-                        logger.warning(f"Failed to parse options for '{field_name}': {options_str}")
+                        logger.warning(
+                            f"Failed to parse options for '{field_name}': {options_str}"
+                        )
                         options = []
 
                     # Generate name from label (snake_case for form submission)
@@ -85,7 +92,10 @@ class FormHydratorModule(dspy.Module):
                     validated_fields.append(
                         {
                             "name": name,
-                            "type": field_type if field_type in ["text", "textarea", "number", "select", "checkbox"] else "text",
+                            "type": field_type
+                            if field_type
+                            in ["text", "textarea", "number", "select", "checkbox"]
+                            else "text",
                             "label": field_name,
                             "placeholder": description,
                             "options": options if isinstance(options, list) else [],
@@ -93,7 +103,9 @@ class FormHydratorModule(dspy.Module):
                     )
 
                 except Exception as e:
-                    logger.warning(f"Failed to get details for field '{field_name}': {e}")
+                    logger.warning(
+                        f"Failed to get details for field '{field_name}': {e}"
+                    )
                     continue
 
             return {
