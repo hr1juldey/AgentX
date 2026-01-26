@@ -26,10 +26,7 @@ def strip_markdown_wrapper(text: str) -> str:
     if text.startswith("```"):
         lines = text.split("\n")
         # Remove lines that are just ``` or ```json
-        json_lines = [
-            line for line in lines
-            if not line.strip().startswith("```")
-        ]
+        json_lines = [line for line in lines if not line.strip().startswith("```")]
         return "\n".join(json_lines).strip()
 
     return text

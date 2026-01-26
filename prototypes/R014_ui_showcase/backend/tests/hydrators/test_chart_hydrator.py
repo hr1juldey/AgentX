@@ -94,14 +94,15 @@ def test_chart_hydrator_with_qwen():
     print("📊 Chart Data:")
     chart_data = content.get("data", [])
     for i, point in enumerate(chart_data[:10]):
-        print(f"   {i+1}. {point}")
+        print(f"   {i + 1}. {point}")
 
     if len(chart_data) > 10:
         print(f"   ... and {len(chart_data) - 10} more points")
 
     # Assertions
-    assert content.get("type") in ["bar", "line", "area", "pie", "radar", "radial"], \
+    assert content.get("type") in ["bar", "line", "area", "pie", "radar", "radial"], (
         f"Invalid chart type: {content.get('type')}"
+    )
     assert len(chart_data) > 0, "Chart data is empty!"
     assert content.get("title"), "Chart title is missing!"
 

@@ -5,29 +5,22 @@
 # =============================================================================
 
 import logging
-import time
 
 import dspy
-from services.pipeline.contextualizer_logging import (
-    log_contextualize_result,
-    log_filter_result,
-    log_rerank_result,
-)
 from services.pipeline.contextualizer_tracking_input import (
     track_input_data,
 )
 from services.pipeline.contextualizer_tracking_output import (
     track_build_return,
 )
-from services.pipeline.contextualizer_tracking_steps import (
-    track_contextualize_step,
-    track_filter_step,
-    track_rerank_step,
-)
 from services.pipeline.data_contextualizer_builder import (
     build_contextualized_return,
 )
-from services.pipeline.data_contextualizer_utils import extract_top_facts
+from services.pipeline.data_contextualizer_steps import (
+    execute_contextualize_step,
+    execute_filter_step,
+    execute_rerank_step,
+)
 from services.tools.contextualizer import (
     ContextualizerModule,
     FilterModule,
@@ -72,49 +65,16 @@ class DataContextualizerAgent(dspy.Module):
         beautiful_data = research_data.get("beautiful_data", {})
 
         # Step 1: Rerank by relevance
-        step_start = time.time()
-        logger.info(f"  [CONTEXTUALIZER] Reranking {len(raw_data)} documents...")
-        ranked_result_raw = self.reranker(query=query, results=raw_data)
-        ranked_result: dict = (
-            ranked_result_raw if hasattr(ranked_result_raw, "get") else {}  # type: ignore[bad-assignment]
-        )
-        step_time = time.time() - step_start
-        track_rerank_step(raw_data, ranked_result, step_time)
-        log_rerank_result(ranked_result, raw_data, step_time)
+        ranked_result, _ = execute_rerank_step(self.reranker, query, raw_data)
 
         # Step 2: Filter out noise
-        step_start = time.time()
-        logger.info("  [CONTEXTUALIZER] Filtering noise...")
-        filter_input = (
-            ranked_result.get("ranked_data") or raw_data
-            if hasattr(ranked_result, "get")
-            else raw_data
+        filtered_result, _ = execute_filter_step(
+            self.filter, query, ranked_result, raw_data
         )
-        filtered_result_raw = self.filter(query=query, results=filter_input)
-        filtered_result: dict = (
-            filtered_result_raw if hasattr(filtered_result_raw, "get") else {}  # type: ignore[bad-assignment]
-        )
-        step_time = time.time() - step_start
-        track_filter_step(filter_input, filtered_result, step_time)
-        log_filter_result(filtered_result, step_time)
 
         # Step 3: Add query context
-        step_start = time.time()
-        logger.info("  [CONTEXTUALIZER] Adding query context...")
-        contextualize_input = (
-            filtered_result.get("filtered_data") or []
-            if hasattr(filtered_result, "get")
-            else []
-        )
-        contextualized_result_raw = self.contextualizer(
-            query=query,
-            filtered_data=contextualize_input,
-            original_query=original_query,
-        )
-        contextualized_result: dict = (
-            contextualized_result_raw  # type: ignore[bad-assignment]
-            if hasattr(contextualized_result_raw, "get")
-            else {}
+        contextualized_result, top_facts, _ = execute_contextualize_step(
+            self.contextualizer, query, filtered_result, original_query
         )
 
         contextualized_data_final = (
@@ -122,15 +82,6 @@ class DataContextualizerAgent(dspy.Module):
             if hasattr(contextualized_result, "get")
             else []
         )
-        top_facts = extract_top_facts(contextualized_data_final)
-        step_time = time.time() - step_start
-        track_contextualize_step(
-            contextualize_input,
-            contextualized_result,
-            top_facts,
-            step_time,
-        )
-        log_contextualize_result(contextualized_result, top_facts, step_time)
 
         # Track final assembly
         track_build_return(

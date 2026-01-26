@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from services.master_agent.orchestration.early_phases import EarlyPhases
 from services.master_agent.orchestration.late_phases import LatePhases
+from services.master_agent.orchestration.pipeline_execution import execute_pipeline
 from services.master_agent.orchestration.phase_executor import PhaseExecutor
-from services.master_agent.orchestration.research_merger import merge_research_results
 from services.master_agent.qa_checkpoints import QACheckpointModule
 
 logger = logging.getLogger(__name__)
@@ -46,22 +46,6 @@ class PipelineOrchestrator:
         self.early = EarlyPhases(executor)
         self.late = LatePhases(executor)
 
-    def _merge_research_results(
-        self, first_result: dict, additional_result: dict
-    ) -> dict:
-        """Merge additional research results with first research results.
-
-        Delegates to research_merger module for actual merge logic.
-
-        Args:
-            first_result: First contextualized research result (primary)
-            additional_result: Additional contextualized research result
-
-        Returns:
-            Merged contextualized research result
-        """
-        return merge_research_results(first_result, additional_result)
-
     def execute_pipeline(
         self,
         analyst: "AnalystAgent",
@@ -90,83 +74,16 @@ class PipelineOrchestrator:
         Returns:
             Dict with sequence plan, design result, widget selection, etc.
         """
-        # Phase 1: ANALYST - Understand query and context
-        analysis_result = self.early.run_analyst_phase(
-            analyst,
-            user_query,
-            device_context,
+        return execute_pipeline(
+            early=self.early,
+            late=self.late,
+            analyst=analyst,
+            researcher=researcher,
+            data_contextualizer=data_contextualizer,
+            designer=designer,
+            widget_selector=widget_selector,
+            sequencer=sequencer,
+            presenter=presenter,
+            user_query=user_query,
+            device_context=device_context,
         )
-
-        # Phase 2: RESEARCHER - Fetch live data
-        research_result = self.early.run_researcher_phase(
-            researcher,
-            analysis_result,
-        )
-
-        # Phase 3: DATA CONTEXTUALIZER - Rerank, filter, contextualize
-        contextualized_result = self.early.run_contextualizer_phase(
-            data_contextualizer,
-            research_result,
-        )
-
-        # Phase 4: ANALYST (Pass 2) - Judge data quality
-        judgment_result = self.early.run_analyst_judgment_phase(
-            analyst,
-            user_query,
-            device_context,
-            contextualized_result,
-        )
-
-        # Check if more research is needed
-        if judgment_result.get("needs_more_research", False):
-            logger.info("  [RESEARCHER] Additional research needed...")
-            research_result = self.early.run_researcher_phase(
-                researcher,
-                judgment_result,
-            )
-            additional_context = self.early.run_contextualizer_phase(
-                data_contextualizer,
-                research_result,
-            )
-            # Merge additional research with first research instead of replacing
-            contextualized_result = self._merge_research_results(
-                contextualized_result, additional_context
-            )
-
-        # Phase 5: DESIGNER - Add POVs, color schemes
-        design_result = self.late.run_designer_phase(
-            designer,
-            contextualized_result,
-            analysis_result,
-        )
-
-        # Phase 6: WIDGET SELECTOR - Choose widgets
-        widget_selection = self.late.run_widget_selector_phase(
-            widget_selector,
-            design_result,
-            device_context,
-        )
-
-        # Phase 7: SEQUENCER - Plan delivery order
-        sequence_plan = self.late.run_sequencer_phase(
-            sequencer,
-            widget_selection,
-            user_query,
-        )
-
-        # Phase 8: PRESENTER - Final polish and QA
-        presentation_ready = self.late.run_presenter_phase(
-            presenter,
-            widget_selection,
-            sequence_plan,
-            design_result,
-            contextualized_result,  # Pass research data for hydrators
-        )
-
-        return {
-            "sequence_plan": sequence_plan,
-            "design_result": design_result,
-            "widget_selection": widget_selection,
-            "presentation_ready": presentation_ready,
-            "researched_data": contextualized_result,  # Include for hydrators
-        }

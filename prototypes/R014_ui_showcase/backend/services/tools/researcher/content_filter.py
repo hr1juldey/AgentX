@@ -6,6 +6,8 @@
 
 import dspy
 
+from services.tools.researcher.link_parser import parse_relevant_links
+
 
 class FilterRelevantContent(dspy.Signature):
     """Filter content to find only relevant parts for the research goal.
@@ -127,28 +129,5 @@ class ContentFilterModule(dspy.Module):
 
         relevant_urls = getattr(result, "relevant_urls", "")
 
-        # Parse results
-        relevant_links = []
-        for line in relevant_urls.split("\n"):
-            line = line.strip()
-            if not line or line.upper() == "NONE":
-                continue
-
-            # Parse "URL | reason" format
-            if "|" in line:
-                url_part = line.split("|")[0].strip()
-                reason = line.split("|", 1)[1].strip() if "|" in line else ""
-
-                # Find matching link from original list
-                for link in links:
-                    if link["url"] == url_part:
-                        relevant_links.append(
-                            {
-                                "url": link["url"],
-                                "text": link.get("text", ""),
-                                "reason": reason,
-                            }
-                        )
-                        break
-
-        return relevant_links[:3]  # Limit to 3 links per page
+        # Parse results using helper
+        return parse_relevant_links(relevant_urls, links)

@@ -11,6 +11,12 @@ from typing import Optional
 import dspy
 import httpx
 
+from services.tools.researcher.search_async_wrapper import run_async_in_sync_context
+from services.tools.researcher.search_domain_priority import (
+    aggregate_and_prioritize_results,
+)
+from services.tools.researcher.search_result_processor import extract_url_list
+
 logger = logging.getLogger(__name__)
 
 
@@ -100,47 +106,8 @@ class SearXNGSearchModule(dspy.Module):
         # Run all searches in parallel and wait for all to complete
         all_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Aggregate results from all successful searches
-        aggregated = []
-        seen_urls = set()  # Deduplicate by URL
-
-        for result in all_results:
-            if isinstance(result, Exception):
-                continue
-            if isinstance(result, list):
-                for item in result:
-                    url = item.get("url", "")
-                    if url and url not in seen_urls:
-                        seen_urls.add(url)
-                        aggregated.append(item)
-
-        # Prioritize authoritative sources (.gov, .edu, .org, research domains)
-        def get_domain_priority(url: str) -> int:
-            """Higher priority = better source (0=low, 3=high)."""
-            if not url:
-                return 0
-            url_lower = url.lower()
-
-            # High priority: Government, education, major research institutions
-            if any(d in url_lower for d in [".gov", ".edu", ".org"]):
-                return 3
-            # Medium priority: News, research, academic
-            if any(
-                d in url_lower for d in ["research", "academic", "news", "analysis"]
-            ):
-                return 2
-            # Low priority: Forums, social media, Q&A sites
-            if any(
-                d in url_lower for d in ["forum", "reddit", "quora", "stackexchange"]
-            ):
-                return 0
-            # Default priority
-            return 1
-
-        # Sort by domain priority (higher priority first)
-        aggregated.sort(
-            key=lambda item: get_domain_priority(item.get("url", "")), reverse=True
-        )
+        # Aggregate and prioritize results using helper
+        aggregated = aggregate_and_prioritize_results(all_results)
 
         logger.info(f"[SearXNG] Total aggregated results: {len(aggregated)}")
         return aggregated
@@ -165,42 +132,12 @@ class SearXNGSearchModule(dspy.Module):
             image_search = True
 
         # Run async search in sync context
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # Create new loop in thread
-            import concurrent.futures
-
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(
-                    asyncio.run,
-                    self._search_searxng(query, categories, image_search=image_search),
-                )
-                results = future.result()
-        else:
-            results = asyncio.run(
-                self._search_searxng(query, categories, image_search=image_search)
-            )
+        results = run_async_in_sync_context(
+            self._search_searxng(query, categories, image_search=image_search)
+        )
 
         # Extract URLs for OpenGraph rendering
-        url_list = []
-        for result in results:
-            # For image search, extract img_src (the actual image URL)
-            # For general/news, extract the page URL
-            if image_search:
-                url = result.get("img_src", "")
-            else:
-                url = result.get("url", "")
-
-            if url and url.startswith("http"):
-                url_list.append(
-                    {
-                        "url": url,
-                        "title": result.get("title", ""),
-                        "snippet": result.get("content", "")[:200],
-                        "source": result.get("source", ""),
-                        "engine": result.get("engine", ""),
-                    }
-                )
+        url_list = extract_url_list(results, image_search)
 
         return {
             "raw_data": results,
