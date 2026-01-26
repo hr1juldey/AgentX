@@ -79,6 +79,10 @@ def merge_research_results(
             first_beautiful.get("comparisons", []),
             additional_beautiful.get("comparisons", []),
         ),
+        "extracted_numbers": _merge_lists(
+            first_beautiful.get("extracted_numbers", []),
+            additional_beautiful.get("extracted_numbers", []),
+        ),
     }
 
     # Merge contextualized_data with URL deduplication
@@ -98,7 +102,7 @@ def merge_research_results(
     # Merge url_list with deduplication
     first_urls = first_result.get("url_list", [])
     additional_urls = additional_result.get("url_list", [])
-    merged["url_list"] = list(set(first_urls + additional_urls))
+    merged["url_list"] = first_urls + _deduplicate_by_url(first_urls, additional_urls)
 
     # Merge documents with URL deduplication
     first_documents = first_result.get("documents", [])

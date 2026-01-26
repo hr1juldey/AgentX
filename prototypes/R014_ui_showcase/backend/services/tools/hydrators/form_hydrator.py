@@ -8,7 +8,7 @@ import dspy
 import json
 import logging
 
-from services.tools.hydrators.signatures import FormData
+from services.tools.hydrators.widget_signatures import FormData
 
 logger = logging.getLogger(__name__)
 

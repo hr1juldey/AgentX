@@ -8,7 +8,7 @@ import dspy
 import json
 import logging
 
-from services.tools.hydrators.signatures import CardData
+from services.tools.hydrators.widget_signatures import CardData
 
 logger = logging.getLogger(__name__)
 

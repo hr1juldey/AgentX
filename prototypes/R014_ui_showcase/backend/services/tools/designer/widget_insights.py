@@ -8,7 +8,7 @@ import dspy
 import json
 import logging
 
-from services.tools.hydrators.signatures import WidgetInsights
+from services.tools.hydrators.widget_signatures import WidgetInsights
 
 logger = logging.getLogger(__name__)
 

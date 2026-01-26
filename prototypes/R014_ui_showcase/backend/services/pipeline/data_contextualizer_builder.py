@@ -58,4 +58,5 @@ def build_contextualized_return(
         "citations": research_data.get("citations", []),
         "url_list": research_data.get("url_list", []),
         "documents": research_data.get("documents", []),
+        "search_terms": research_data.get("search_terms", []),
     }

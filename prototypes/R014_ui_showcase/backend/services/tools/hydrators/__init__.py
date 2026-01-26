@@ -16,6 +16,9 @@ from services.tools.hydrators.form_hydrator import (
 from services.tools.hydrators.markdown_hydrator import (
     MarkdownHydratorModule,
 )
+from services.tools.hydrators.table_hydrator import (
+    TableHydratorModule,
+)
 from services.tools.hydrators.visual_hydrators import (
     GalleryHydratorModule,
     ImageHydratorModule,
@@ -26,6 +29,7 @@ __all__ = [
     "MarkdownHydratorModule",
     "CardHydratorModule",
     "FormHydratorModule",
+    "TableHydratorModule",
     "ImageHydratorModule",
     "GalleryHydratorModule",
 ]

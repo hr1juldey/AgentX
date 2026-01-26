@@ -6,7 +6,7 @@
  */
 export interface ChartContent {
   title?: string;
-  type?: "line" | "bar" | "pie" | "scatter";
+  type?: "line" | "bar" | "pie" | "area" | "radar" | "radial";
   data?: Array<Record<string, string | number>>;
   x_axis?: string;
   y_axis?: string[];

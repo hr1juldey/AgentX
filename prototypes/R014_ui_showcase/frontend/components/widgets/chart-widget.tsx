@@ -12,6 +12,13 @@ import {
   Pie,
   AreaChart,
   Area,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  RadialBarChart,
+  RadialBar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -25,7 +32,7 @@ import { detectXAxisKey, detectValueKeys } from "@/lib/chart-utils"
 interface ChartWidgetProps {
   title?: string
   content?: string
-  chartType?: "bar" | "line" | "pie" | "area"
+  chartType?: "bar" | "line" | "pie" | "area" | "radar" | "radial"
   data?: Array<Record<string, string | number>>
   dataKeys?: string[]
   colors?: string[]
@@ -210,6 +217,62 @@ export const ChartWidget = memo(function ChartWidget({
                 }}
               />
             </PieChart>
+          </ResponsiveContainer>
+        )
+
+      case "radar":
+        return (
+          <ResponsiveContainer width="100%" height={250}>
+            <RadarChart data={data}>
+              <PolarGrid />
+              <PolarAngleAxis dataKey={xAxisKey} className="text-xs" />
+              <PolarRadiusAxis className="text-xs" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "0.5rem",
+                }}
+              />
+              <Legend />
+              {effectiveDataKeys.map((key, index) => (
+                <Radar
+                  key={key}
+                  name={key}
+                  dataKey={key}
+                  stroke={colors[index % colors.length]}
+                  fill={colors[index % colors.length]}
+                  fillOpacity={0.6}
+                />
+              ))}
+            </RadarChart>
+          </ResponsiveContainer>
+        )
+
+      case "radial":
+        return (
+          <ResponsiveContainer width="100%" height={250}>
+            <RadialBarChart cx="50%" cy="50%" innerRadius="10%" outerRadius="80%" data={data}>
+              <PolarGrid />
+              <PolarAngleAxis dataKey={xAxisKey} className="text-xs" />
+              <PolarRadiusAxis className="text-xs" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "0.5rem",
+                }}
+              />
+              <Legend />
+              {effectiveDataKeys.slice(0, 1).map((key, index) => (
+                <RadialBar
+                  key={key}
+                  dataKey={key}
+                  cornerRadius={10}
+                  fill={colors[index % colors.length]}
+                />
+              ))}
+            </RadialBarChart>
           </ResponsiveContainer>
         )
 

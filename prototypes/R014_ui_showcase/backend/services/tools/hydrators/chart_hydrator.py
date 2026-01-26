@@ -1,85 +1,92 @@
 # =============================================================================
 # AGENTX Hydrators - Chart Hydrator Module
 # =============================================================================
-# Hydrates chart widgets with proper DSPy signature
+# Orchestrates multiple DSPy signatures to build chart widgets
 # =============================================================================
 
 import dspy
-import json
 import logging
 
 from services.tools.designer.color_palette import get_chart_colors
-from services.tools.hydrators.signatures import ChartData
+from services.tools.hydrators.chart_signatures import (
+    AxisLabelSelector,
+    ChartTitleGenerator,
+    ChartTypeSelector,
+    transform_extracted_numbers_to_chart_data,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class ChartHydratorModule(dspy.Module):
-    """Hydrates chart widgets with properly structured data."""
+    """Orchestrates chart type selection, title generation, and data transformation."""
 
     def __init__(self):
         super().__init__()
-        self.generate_chart = dspy.Predict(ChartData)
+        self.type_selector = dspy.Predict(ChartTypeSelector)
+        self.title_generator = dspy.Predict(ChartTitleGenerator)
+        self.label_selector = dspy.Predict(AxisLabelSelector)
 
     def forward(self, presentation_ready: dict) -> dict:
-        """Generate chart configuration with structured output."""
-        data = presentation_ready.get("researched_data", {})
+        """Generate chart configuration using orchestrated signatures.
+
+        Orchestrates:
+        1. ChartTypeSelector - chooses bar/line/pie/etc
+        2. ChartTitleGenerator - generates descriptive title
+        3. AxisLabelSelector - selects axis labels
+        4. Deterministic transform - converts extracted_numbers to chart data
+        """
         design = presentation_ready.get("design", {})
         query = presentation_ready.get("query", "")
 
-        # Extract domain for color selection
-        domain = design.get("domain", "general")
+        # Extract extracted_numbers from nested structure (e2e) or direct (unit test)
+        researched_data = presentation_ready.get("researched_data", {})
+        beautiful_data = researched_data.get("beautiful_data", {})
+        extracted_numbers = beautiful_data.get("extracted_numbers", [])
+        # Fallback to direct extracted_numbers for unit test compatibility
+        if not extracted_numbers:
+            extracted_numbers = researched_data.get("extracted_numbers", [])
 
-        # Extract structured numbers for chart generation
-        extracted_numbers = data.get("extracted_numbers", [])
+        if not extracted_numbers:
+            logger.warning("No extracted numbers available for chart generation")
+            return self._empty_chart()
 
         try:
-            result = self.generate_chart(
+            # Step 1: Select chart type
+            data_sample = str(extracted_numbers[:5])  # First 5 for pattern analysis
+            type_result = self.type_selector(data_sample=data_sample, query=query)
+            chart_type = getattr(type_result, "chart_type", "bar")
+
+            # Step 2: Generate title
+            data_context = f"Data with {len(extracted_numbers)} numerical values"
+            title_result = self.title_generator(query=query, data_context=data_context)
+            title = getattr(title_result, "title", "Chart")
+
+            # Step 3: Select axis labels
+            label_result = self.label_selector(
+                data_sample=data_sample, chart_type=chart_type
+            )
+            x_label = getattr(label_result, "x_label", "Category")
+            y_label = getattr(label_result, "y_label", "Value")
+
+            # Step 4: Deterministically transform data (no LLM)
+            chart_data = transform_extracted_numbers_to_chart_data(
                 extracted_numbers=extracted_numbers,
-                query=query,
+                x_label=x_label,
+                y_label=y_label,
             )
 
-            # Extract structured output from DSPy result
-            # Updated signature: title instead of chart_title
-            title = getattr(result, "title", "Chart")
-            chart_type = getattr(result, "chart_type", "bar")
-            data_points_str = getattr(result, "data_points", "[]")
-            x_axis_key = getattr(result, "x_axis_key", "label")
-            y_axis_key = getattr(result, "y_axis_key", "value")
+            # Get colors
+            domain = design.get("domain", "general")
+            colors = get_chart_colors(domain=domain, count=1)
 
-            # Parse data_points - LLM may return JSON array or Python list string
-            try:
-                if isinstance(data_points_str, str):
-                    chart_data = json.loads(data_points_str)
-                else:
-                    chart_data = (
-                        list(data_points_str)
-                        if hasattr(data_points_str, "__iter__")
-                        else []
-                    )
-            except (json.JSONDecodeError, TypeError):
-                logger.warning(f"Failed to parse data_points: {data_points_str}")
-                chart_data = []
-
-            # y_axis_key is singular - convert to list for multi-series support
-            y_axis_keys = [y_axis_key]
-            if chart_data and isinstance(chart_data, list) and len(chart_data) > 0:
-                first_point = chart_data[0]
-                if isinstance(first_point, dict):
-                    value_keys = [k for k in first_point.keys() if k != x_axis_key]
-                    if len(value_keys) > 1:
-                        y_axis_keys = value_keys
-
-            # Get domain-appropriate colors
-            colors = get_chart_colors(domain=domain, count=len(y_axis_keys))
-
-            # Build structured content with colors
+            # Build content
             content = {
                 "title": title,
                 "type": chart_type,
                 "data": chart_data,
-                "x_axis": x_axis_key,
-                "y_axis": y_axis_keys,
+                "x_axis": x_label,
+                "y_axis": [y_label],
                 "colors": colors,
                 "metadata": {
                     "data_points": len(chart_data),
@@ -93,25 +100,26 @@ class ChartHydratorModule(dspy.Module):
                 "metadata": {
                     "chart_type": chart_type,
                     "data_points": len(chart_data),
-                    "x_axis": x_axis_key,
-                    "y_axis": y_axis_keys,
-                    "colors": colors,
                 },
             }
 
         except Exception as e:
             logger.error(f"Chart hydrator error: {e}")
-            default_colors = get_chart_colors(domain="general", count=1)
-            return {
-                "descriptor_type": "chart",
-                "content": {
-                    "title": "Chart",
-                    "type": "bar",
-                    "data": [],
-                    "x_axis": "label",
-                    "y_axis": ["value"],
-                    "colors": default_colors,
-                    "metadata": {"error": str(e)},
-                },
-                "metadata": {"error": str(e)},
-            }
+            return self._empty_chart()
+
+    def _empty_chart(self) -> dict:
+        """Return empty chart when no data available."""
+        default_colors = get_chart_colors(domain="general", count=1)
+        return {
+            "descriptor_type": "chart",
+            "content": {
+                "title": "No Data Available",
+                "type": "bar",
+                "data": [],
+                "x_axis": "Category",
+                "y_axis": ["Value"],
+                "colors": default_colors,
+                "metadata": {"error": "No extracted numbers available"},
+            },
+            "metadata": {"error": "No extracted numbers available"},
+        }

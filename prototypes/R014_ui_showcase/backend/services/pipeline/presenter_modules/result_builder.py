@@ -78,6 +78,7 @@ class PresenterResultBuilder:
             },
             "query": researched_data.get("query", ""),
             "researched_data": researched_data,
+            "beautiful_data": researched_data.get("beautiful_data", {}),
         }
 
         # Add warnings if issues detected

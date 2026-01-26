@@ -51,37 +51,40 @@ class GalleryHydrator(dspy.Module):
 
         if len(url_list) > 1:
             # Multiple URLs → gallery of OpenGraph cards
+            items = [
+                {
+                    "url": item.get("url", ""),
+                    "title": item.get("title", "Unknown"),
+                    "description": (
+                        item.get("snippet", "")[:150] if item.get("snippet") else ""
+                    ),
+                }
+                for item in url_list[:8]
+            ]
             return {
                 "id": str(uuid.uuid4())[:8],
                 "type": "opengraph-gallery",
                 "timestamp": datetime.utcnow().isoformat(),
-                "metadata": {
-                    "images": [
-                        {
-                            "url": item["url"],
-                            "title": item["title"],
-                            "caption": item["snippet"][:150]
-                            if len(item["snippet"]) > 150
-                            else item["snippet"],
-                        }
-                        for item in url_list[:8]
-                    ],
-                    "item_count": min(len(url_list), 8),
-                },
+                "content": {"items": items},
+                "metadata": {"item_count": len(items)},
             }
 
         # Single URL → single OpenGraph card
         elif url_list:
+            item = url_list[0]
             return {
                 "id": str(uuid.uuid4())[:8],
                 "type": "opengraph-card",
                 "timestamp": datetime.utcnow().isoformat(),
-                "metadata": {
-                    "url": url_list[0]["url"],
-                    "title": url_list[0]["title"],
-                    "description": url_list[0]["snippet"][:150],
-                    "site_name": url_list[0]["source"],
+                "content": {
+                    "url": item.get("url", ""),
+                    "title": item.get("title", "Unknown"),
+                    "description": (
+                        item.get("snippet", "")[:150] if item.get("snippet") else ""
+                    ),
+                    "site_name": item.get("source", ""),
                 },
+                "metadata": {"item_count": 1},
             }
 
         # Fallback

@@ -47,6 +47,9 @@ def build_researcher_result(
             "comparisons": beautiful_data.get("comparisons", [])
             if hasattr(beautiful_data, "get")
             else [],
+            "extracted_numbers": beautiful_data.get("extracted_numbers", [])
+            if hasattr(beautiful_data, "get")
+            else [],
         },
         "structured_data": structured_data,
         "citations": citations,

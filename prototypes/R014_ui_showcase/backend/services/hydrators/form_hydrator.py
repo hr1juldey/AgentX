@@ -58,6 +58,9 @@ class FormHydrator(dspy.Module):
             "researched_data": {
                 "key_facts": beautiful_data.get("key_facts", []),
                 "trends": beautiful_data.get("trends", {}),
+                "comparisons": beautiful_data.get("comparisons", []),
+                "extracted_numbers": beautiful_data.get("extracted_numbers", []),
+                "url_list": researched_data.get("url_list", []),
             },
         }
 

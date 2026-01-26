@@ -10,7 +10,7 @@ import json
 import logging
 
 import dspy
-from services.tools.hydrators.signatures import ExtractDocumentNumbers
+from services.tools.hydrators.chart_signatures import ExtractDocumentNumbers
 from services.tools.researcher.regex_fallback import extract_numbers_with_regex
 
 logger = logging.getLogger(__name__)
