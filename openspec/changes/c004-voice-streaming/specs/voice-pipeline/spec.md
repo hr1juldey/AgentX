@@ -44,6 +44,9 @@ Define the streaming voice pipeline that orchestrates VAD filtering, STT transcr
 | FR-VOICE-006 | Pipeline MUST integrate with C003 ExecuteAgentQueryUseCase for LLM processing | Must |
 | FR-VOICE-007 | Pipeline MUST create and manage voice sessions with unique IDs | Must |
 | FR-VOICE-008 | Pipeline MUST support graceful disconnection and cleanup | Must |
+| FR-VOICE-009 | Pipeline MUST emit voice state UI updates via `push_ui_message()` | Must |
+| FR-VOICE-010 | Voice nucleus widget MUST use 2D SVG metaballs for visual feedback | Must |
+| FR-VOICE-011 | Interrupt button MUST be server-driven UI component | Should |
 
 ### Non-Functional Requirements
 
@@ -175,6 +178,11 @@ class VoiceSessionEntity:
 - [ ] 5 concurrent sessions work without degradation
 - [ ] Sessions auto-close after 5 minutes of inactivity
 - [ ] ExecuteAgentQueryUseCase integration works end-to-end
+- [ ] Voice state UI updates emitted via `push_ui_message()`
+- [ ] Voice nucleus widget displays with correct state (listening/processing/speaking)
+- [ ] Interrupt button displays during TTS and sends INTERRUPT message
+- [ ] Voice UI uses Shadow DOM for style isolation
+- [ ] Voice nucleus uses platform-aware blur (16px desktop, 12px mobile)
 
 ---
 
@@ -187,6 +195,67 @@ class VoiceSessionEntity:
 | **C003 ExecuteAgentQueryUseCase** | `execute(command: ExecuteAgentQueryCommand) -> ExecuteAgentQueryResponse` | Process transcript through LLM |
 | **TTSService** | `synthesize_stream(text: str) -> AsyncIterator[bytes]` | Stream audio chunks |
 | **WebSocketManager** (C002) | `send_message(session_id, type, data)` | Send WebSocket messages |
+
+---
+
+## 1.9 Voice UI Widget Integration (from C007 Frontend Architecture)
+
+### Voice State UI Updates
+
+Voice pipeline MUST emit UI messages for voice state changes via `push_ui_message()`:
+
+```python
+from langgraph.graph.ui import push_ui_message
+
+# Emit when voice state changes
+push_ui_message(
+    "voiceStatus",
+    {
+        "state": "listening",  # listening | processing | speaking
+        "icon": "mic",         # mic | brain | speaker
+        "pulse": True,         # Animate nucleus
+    },
+    message=None
+)
+```
+
+### Voice Nucleus Widget (from C008 Organic UI)
+
+Server-driven UI component for bio-inspired voice visual feedback:
+
+| Property | Desktop | Mobile | Notes |
+|----------|---------|--------|-------|
+| Nucleus size | 160px | 72px | Adjusts per platform |
+| Blur | 16px | 12px | Platform-aware |
+| Max blobs | Unlimited | 6 | Mobile optimization |
+| Colors | enzyme (#00D9FF) | enzyme (#00D9FF) | Cyan accent |
+
+### Interrupt Button Pattern (Google Assistant Reference)
+
+Server-driven UI button for voice interruption:
+
+```python
+# Emit interrupt button when speaking starts
+push_ui_message(
+    "interruptButton",
+    {
+        "label": "Stop",
+        "action": "interrupt_voice",
+        "variant": "destructive",  # Red outline
+    },
+    message=message
+)
+```
+
+### Component Registration
+
+```typescript
+// src/agent/ui.tsx (colocated with graph.py)
+export default {
+  voiceStatus: VoiceNucleusWidget,
+  interruptButton: ActionComponent,
+};
+```
 
 ---
 

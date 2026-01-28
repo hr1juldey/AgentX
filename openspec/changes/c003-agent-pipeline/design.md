@@ -93,7 +93,7 @@
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.2 Layer Structure (Clean Architecture)
+### 1.2 Layer Structure (Clean Architecture + LangGraph Server-Driven UI)
 
 ```
 agentx/
@@ -114,14 +114,25 @@ agentx/
 │   └── services/
 │       └── validation.py           # ValidationService
 │
-├── agent/                          # DSPy agents (domain + infrastructure)
+├── agent/                          # DSPy agents + LangGraph StateGraph
+│   ├── __init__.py                  # Package init
+│   ├── graph.py                     # LangGraph StateGraph with ui_message_reducer
+│   ├── state.py                     # AgentState TypedDict with UI tracking
+│   ├── ui.tsx                       # React components (colocated!)
+│   │                              # └── Export default {component, ...}
+│   ├── nodes/                       # LangGraph nodes
+│   │   ├── analyst.py               # Query understanding
+│   │   ├── designer.py              # UI widget selection (state aware!)
+│   │   ├── researcher.py            # Web search
+│   │   ├── contextualizer.py        # Rerank + filter
+│   │   └── writer.py                # Content generation
 │   ├── dspy_signatures/
-│   │   ├── main_signatures.py      # MainAgentSignature, ToolSelectionSignature, ConfidenceScoringSignature
-│   │   ├── ui_signatures.py        # SelectWidgetSignature, ConfigureFormSignature, etc.
+│   │   ├── main_signatures.py      # MainAgentSignature, ToolSelectionSignature
+│   │   ├── ui_signatures.py        # SelectWidgetSignature (from R014)
 │   │   └── rag_signatures.py       # RetrievalSignature, ContextInjectionSignature
 │   ├── tools/
-│   │   ├── main_tools.py           # safe_calculator, searxng_search, get_current_weather
-│   │   └── ui_tools.py             # render_markdown_block, render_card, etc.
+│   │   ├── main_tools.py           # safe_calculator, searxng_search
+│   │   └── ui_tools.py             # (Replaced by push_ui_message)
 │   ├── dspy_agents/
 │   │   ├── main_react_agent.py     # MainDSPyReActAgent (CEO orchestrator)
 │   │   ├── ui_agent.py             # UIDSPyAgent (UI specialist)
@@ -130,10 +141,12 @@ agentx/
 │       ├── backend_state_machine.py    # BackendLangGraphState, workflow
 │       └── frontend_state_machine.py   # FrontendLangGraphState, workflow
 │
+├── langgraph.json                  # Graph + UI component mapping
+│
 ├── application/                    # Use case orchestration
 │   ├── use_cases/
 │   │   ├── execute_agent_query.py  # ExecuteAgentQueryUseCase
-│   │   └── stream_ui_update.py     # StreamUIUpdateUseCase
+│   │   └── stream_ui_update.py     # (Replaced by LangGraph SDK)
 │   ├── services/
 │   │   ├── agent_orchestrator.py   # Coordinates state machines + agents
 │   │   └── ui_service.py           # Form interrupt/resume logic
@@ -149,14 +162,127 @@ agentx/
 │   │   └── qdrant_vector_store.py      # QdrantVectorStoreAdapter
 │   └── external/
 │       ├── mem0_memory.py          # Mem0MemoryAdapter
-│       └── websocket_manager.py    # WebSocketManager
+│       └── websocket_manager.py    # (Replaced by LangGraph server)
 │
 └── presentation/                   # FastAPI routes
     └── api/
         └── v1/
-            ├── agent_routes.py    # /api/v1/agent/query, /api/v1/agent/stream
+            ├── agent_routes.py    # /api/v1/agent/query (uses LangGraph SDK)
             └── session_routes.py  # /api/v1/session/*
 ```
+
+### 1.2.1 LangGraph Server-Driven UI Architecture (from C007)
+
+**AgentState with UI tracking**:
+```python
+from typing import TypedDict, Annotated, Sequence
+from langchain_core.messages import BaseMessage
+from langgraph.graph.ui import AnyUIMessage, ui_message_reducer
+
+class AgentState(TypedDict):
+    """Agent state with UI message tracking."""
+    messages: Annotated[Sequence[BaseMessage], add_messages]
+    ui: Annotated[Sequence[AnyUIMessage], ui_message_reducer]
+    # ^ ui_message_reducer automatically manages UI state
+    query: str
+    user_id: str
+    context: list[str]
+```
+
+**Component colocation**:
+```
+agent/
+├── graph.py         # StateGraph with ui_message_reducer
+├── state.py         # AgentState TypedDict
+├── ui.tsx           # React components (colocated!)
+└── nodes/
+    └── designer.py  # UI widget selection with state awareness
+```
+
+**Designer node with state awareness** (fixes R014 problem):
+```python
+from langgraph.graph.ui import push_ui_message
+from uuid import uuid4
+
+async def designer_node(state: AgentState):
+    """Designer node with state awareness (R014 fix)."""
+    # Check existing widgets (state awareness!)
+    existing_widgets = [msg.name for msg in state.ui]
+
+    # Select complementary widget (not repeat)
+    if "card" not in existing_widgets:
+        push_ui_message(
+            "card",
+            {
+                "title": "Analysis Complete",
+                "content": "Found 5 relevant results...",
+            },
+            message=state["messages"][-1]
+        )
+
+    return {"ui": state["ui"]}  # ui_message_reducer handles merge
+```
+
+**Streaming with merge pattern**:
+```python
+async def writer_node(state: AgentState):
+    """Stream content updates to same UI message."""
+    # Create initial UI message
+    ui_message = push_ui_message(
+        "writer",
+        {"title": "Generating response..."},
+        message=state["messages"][-1]
+    )
+    ui_message_id = ui_message["id"]
+
+    # Stream updates (merge props)
+    for chunk in content_stream:
+        push_ui_message(
+            "writer",
+            {"content": chunk.text},  # New content
+            id=ui_message_id,  # Same ID!
+            merge=True,  # Merge props!
+            message=state["messages"][-1],
+        )
+
+    return {"ui": state["ui"]}
+```
+
+**Component export (ui.tsx)**:
+```typescript
+export default {
+  markdown: MarkdownComponent,
+  card: CardComponent,
+  form: FormComponent,
+  progress: ProgressComponent,
+  action: ActionComponent,
+  confirmation: ConfirmationComponent,
+  image: ImageComponent,
+  gallery: GalleryComponent,
+  chart: ChartComponent,
+  searchResult: SearchResultComponent,
+  hopProgress: HopProgressComponent,
+  citationCard: CitationCardComponent,
+};
+```
+
+**langgraph.json mapping**:
+```json
+{
+  "graphs": {
+    "agent": "./agent/graph.py"
+  },
+  "ui": {
+    "agent": "./agent/ui.tsx"
+  }
+}
+```
+
+**Rationale** (from C007 exploration):
+- Designer agent gets state awareness (fixes R014's repeating widgets problem)
+- Components colocated with graph code (industry standard: LangSmith)
+- Shadow DOM for style isolation (guaranteed no conflicts)
+- Backend has full control (code + data delivery)
 
 ---
 
@@ -199,39 +325,87 @@ agentx/
                                               └──────────────┘
 ```
 
-### 2.2 Agent Query Flow (Streaming)
+### 2.2 Agent Query Flow (LangGraph Server-Driven UI)
 
 ```
-┌─────────┐    POST /api/v1/agent/stream   ┌──────────────┐
-│ Client  │────────────────────────────────▶│ FastAPI      │
-└────┬────┘                                   │ Route        │
-     │                                         └──────┬───────┘
-     │ WebSocket Upgrade                             │
-     │                                                │
-┌────▼─────────────────────────────────────────────▼─────────┐
-│                 WebSocket Connection Established           │
-└────┬───────────────────────────────────────────────┬───────┘
-     │                                               │
-     │         StreamUIUpdateUseCase.execute()      │
-     │                                               │
-     │  1. Warmup: agent.forward("warmup", ...)    │
-     │  2. Wrap: stream_agent = dspy.streamify()   │
-     │  3. Async iterate:                           │
-     │     ┌─→ TOKEN message (LLM token)            │
-     │     ├─→ REASONING_STEP message              │
-     │     ├─→ TOOL_CALL message                   │
-     │     └─→ DESCRIPTOR_CREATE message           │
-     │                                               │
-     │  4. Return final ExecuteAgentQueryResponse  │
-     │                                               │
-┌────▼─────────────────────────────────────────────▼─────────┐
-│                    Frontend Processes Stream                │
-│                                                              │
-│  • TOKEN → Append to chat message                           │
-│  • REASONING_STEP → Display in reasoning panel              │
-│  • TOOL_CALL → Display tool call status                     │
-│  • DESCRIPTOR_CREATE → Render UI component                  │
-└──────────────────────────────────────────────────────────────┘
+┌─────────┐    useStream() hook           ┌──────────────┐
+│ Client  │────────────────────────────────▶│ LangGraph    │
+│ (Next.js)│◀────────────────────────────────│ Server       │
+└─────────┘    (port 2024)                 │ (port 2024)  │
+                                              └──────┬───────┘
+                                                     │
+                     ┌───────────────────────────────▼────────────────────┐
+                     │            LangGraph StateGraph                      │
+                     │                                                       │
+                     │  1. analyst_node: Query understanding              │
+                     │  2. researcher_node: Web search (optional)          │
+                     │  3. contextualizer_node: Rerank + filter             │
+                     │  4. designer_node: UI widget selection              │
+                     │     └─→ push_ui_message("card", {...})               │
+                     │  5. writer_node: Content generation                 │
+                     │     └─→ push_ui_message("writer", {...})             │
+                     │     └─→ Streaming with merge=True                   │
+                     │                                                       │
+                     │  All nodes access state.ui for state awareness!      │
+                     └───────────────────────────────┬────────────────────┘
+                                                     │
+                                    onCustomEvent() │
+                                                     │
+┌────────────────────────────────────▼─────────────────────────────────┐
+│                    Frontend Processes UI Events                       │
+│                                                                      │
+│  • onCustomEvent callback receives AnyUIMessage                       │
+│  • uiMessageReducer(prev.ui, event) updates state                     │
+│  • LoadExternalComponent fetches and renders component               │
+│  • Component uses Shadow DOM for style isolation                     │
+│                                                                      │
+│  Example:                                                             │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │ {values.ui?.map((ui) => (                                     │   │
+│  │   <LoadExternalComponent                                     │   │
+│  │     key={ui.id}                                              │   │
+│  │     stream={thread}                                          │   │
+│  │     message={ui}                                              │   │
+│  │     fallback={<SkeletonWidget />}                             │   │
+│  │   />                                                         │   │
+│  │ ))}                                                         │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+│                                                                      │
+│  No WebSocket code needed - LangGraph SDK handles everything!        │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Changes from R014 Pattern**:
+- ❌ Old: WebSocket + descriptor-only + nested callbacks
+- ✅ New: LangGraph SDK + server-driven UI + state-based
+
+**Designer Agent State Awareness** (fixes R014 problem):
+```python
+# R014 problem: Designer sent same widgets repeatedly
+# Solution: state.ui tracks all shown widgets
+
+async def designer_node(state: AgentState):
+    existing_widgets = [msg.name for msg in state.ui]  # State awareness!
+
+    if "card" not in existing_widgets:
+        push_ui_message("card", {...})  # Emit card
+
+    return {"ui": state["ui"]}  # ui_message_reducer handles merge
+```
+
+**Streaming with Merge**:
+```python
+# Progressive updates to same UI message
+ui_message = push_ui_message("writer", {"title": "..."})
+ui_message_id = ui_message["id"]
+
+for chunk in content_stream:
+    push_ui_message(
+        "writer",
+        {"content": chunk.text},  # New content
+        id=ui_message_id,  # Same ID!
+        merge=True,  # Merge props!
+    )
 ```
 
 ### 2.3 Form Interrupt/Resume Flow
@@ -274,10 +448,67 @@ agentx/
 | **Tool Wrapping** | `dspy.Tool(func, name="...", desc="...")` required | Direct function passing | Prevents argument hallucination by LLM |
 | **Streaming Pattern** | `dspy.streamify()` with `StreamListener(allow_reuse=True)` | Manual iteration | Cleaner API; proven pattern from R013 |
 | **Sync Warmup** | Required before async streaming | Skip warmup | DSPy architecture requirement; prevents errors |
-| **State Management** | LangGraph TypedDict state machines | Manual state tracking | Declarative; visualizable; built-in error handling |
+| **State Management** | LangGraph TypedDict with `ui_message_reducer` | Manual state tracking | Declarative; visualizable; built-in error handling |
 | **RAG Approach** | Agentic (retrieve → score → decide → filter) | Simple context dump | Better context quality; avoids injection failures |
-| **Frontend Rendering** | Descriptor ID pattern (not HTML in agent) | Agent generates HTML | Separation of concerns; type-safe |
-| **File Organization** | Split agents (main, ui, rag) | Single large agent file | Keeps files under 150 lines; improves maintainability |
+| **UI Architecture** | **LangGraph server-driven UI** | R014 descriptor-only, React-only | **Backend has full control; state awareness; Shadow DOM (C007)** |
+| **Component Placement** | **Colocated with graph (ui.tsx)** | Separate frontend repo | **Industry standard (LangSmith); single source of truth (C007)** |
+| **State Tracking** | **ui_message_reducer** | Zustand atomic slices | **Automatic state tracking; Designer agent awareness (C007)** |
+| **Style Isolation** | **Shadow DOM** | Global CSS, CSS-in-JS | **Guaranteed isolation; no style conflicts (C007)** |
+| **Frontend Rendering** | `LoadExternalComponent` | Descriptor rendering | Server-driven UI; type-safe; automatic bundling |
+| **File Organization** | Split agents (main, ui, rag) + nodes/ | Single large agent file | Keeps files under 150 lines; improves maintainability |
+
+### 3.1 R014 Migration Strategy (from C007)
+
+**Architectural Shift: Callbacks → State**
+
+| Aspect | R014 Pattern | LangGraph Pattern |
+|--------|--------------|-------------------|
+| **State Management** | Zustand atomic slices (manual) | `ui_message_reducer` (automatic) |
+| **Widget Delivery** | WebSocket + UIDescriptor (data only) | `LoadExternalComponent` (code + data) |
+| **Callbacks** | Nested functions (hard to test) | State-based (testable, traceable) |
+| **Component Location** | Frontend only | Colocated with graph (`ui.tsx`) |
+| **Style Isolation** | Global CSS | Shadow DOM (guaranteed) |
+| **Designer Agent** | No state awareness (repeated widgets) | `state.ui` tracks all shown widgets |
+
+**Backend Pattern Migration**:
+```python
+# R014 Pattern (callback-based):
+use_case = get_master_agent_use_case()
+master_agent, delivery_plan_type = use_case.setup_master_agent_with_pipeline(
+    widget_callback=send_widget,  # Nested callback
+    qa_callback=send_qa_progress,
+)
+
+# LangGraph Pattern (state-based):
+class AgentState(TypedDict):
+    ui: Annotated[Sequence[AnyUIMessage], ui_message_reducer]
+
+async def designer_node(state: AgentState):
+    existing_widgets = [msg.name for msg in state.ui]  # State awareness!
+    push_ui_message("card", {...}, message=message)
+```
+
+**Frontend Pattern Migration**:
+```tsx
+// R014 Pattern (WebSocket + descriptor-based):
+<WebSocketComponent onMessage={(descriptor) => renderWidget(descriptor)} />
+
+// LangGraph Pattern (server-driven):
+const { thread, values } = useStream({
+  apiUrl: "http://localhost:2024",
+  assistantId: "agent",
+  onCustomEvent: (event, options) => {
+    options.mutate((prev) => {
+      const ui = uiMessageReducer(prev.ui ?? [], event);
+      return { ...prev, ui };
+    });
+  },
+});
+
+{values.ui?.map((ui) => (
+  <LoadExternalComponent key={ui.id} stream={thread} message={ui} />
+))}
+```
 
 ---
 
@@ -352,15 +583,17 @@ agentx/
 
 | Service | Port | Protocol | Purpose |
 |---------|------|----------|---------|
-| Main API | 8015 | HTTP | REST endpoints (/api/v1/agent/*, /api/v1/session/*) |
-| WebSocket | 8016 | WS | WebSocket streaming (/ws/agent/{session_id}) |
-| Health Check | 8017 | HTTP | Health monitoring (/health, /health/ready) |
+| **LangGraph Server** | **2024** | **HTTP/WS** | **Main agent server (LangGraph default)** |
+| Frontend Dev | 3000 | HTTP | Next.js dev server |
+| Voice API | 8015 | HTTP | Audio streaming (C004) |
+| Search API | 8016 | HTTP | Web search service (C005) |
 
 **Port Selection Rationale**:
-- Avoids 8000-8014 range (reserved for other services)
-- 8015 for API (easy to remember)
-- 8016 for WebSocket (API + 1)
-- 8017 for Health (API + 2)
+- **2024**: LangGraph default port (avoids 8000-8014 range per constraints)
+- **3000**: Next.js default dev server
+- **8015-8016**: Voice and search services (C004, C005)
+
+**Note**: LangGraph server handles both REST and WebSocket via SDK on port 2024.
 
 ### 5.3 Storage Schema
 

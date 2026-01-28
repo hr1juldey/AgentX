@@ -180,7 +180,10 @@ CREATED ──▶ LISTENING ──▶ PROCESSING ──▶ SPEAKING ──▶ LI
 | **Duplex Mode** | Full duplex (separate tasks) | Half-duplex (turn-based) | Required for interruption, natural feel |
 | **Memory Strategy** | Reload every 100 calls | Process isolation, Caching | Simple, effective, low overhead |
 | **Sample Rates** | 16kHz in, 24kHz out | All 16kHz, all 48kHz | Matches model requirements, good quality |
-| **Ports** | 8018-8020 | 8000-8014, 8080 | Avoids conflicts (C003 uses 8015-8017) |
+| **Ports** | 8018-8020 | 8000-8014, 8080 | Avoids conflicts (C003 uses port 2024) |
+| **Voice UI** | LangGraph server-driven UI | Custom WebSocket UI | Industry standard, state sync via ui_message_reducer |
+| **Voice Visual** | 2D SVG metaballs (nucleus) | 3D WebGL, Canvas | Cheap goo filters, platform-aware (16/12px blur) |
+| **Interrupt Button** | Server-driven UI component | Custom button | Google Assistant reference, Shadow DOM isolation |
 
 ---
 
@@ -245,11 +248,12 @@ CREATED ──▶ LISTENING ──▶ PROCESSING ──▶ SPEAKING ──▶ LI
 
 | Service | Port | Protocol | Purpose |
 |---------|------|----------|---------|
+| LangGraph Server (C003) | 2024 | HTTP | Server-driven UI, agent execution |
 | Voice API | 8018 | HTTP | REST endpoints (session management) |
 | Voice WebSocket | 8019 | WS | Full duplex audio streaming |
 | Voice Health | 8020 | HTTP | Health check endpoint |
 
-**Note**: Ports 8015-8017 reserved for C003-agent-pipeline.
+**Note**: C003-agent-pipeline uses LangGraph server on port 2024 (updated from 8015-8017).
 
 ### 5.3 Storage Schema
 
@@ -361,6 +365,172 @@ use_case = get_execute_agent_query_use_case()
 command = ExecuteAgentQueryCommand(session_id=session_id, query=transcript)
 response = await use_case.execute(command)
 llm_response = response.answer  # Pass to TTS
+```
+
+### 8.3 C007 Frontend Architecture (LangGraph Server-Driven UI)
+
+**Voice UI Integration with LangGraph**:
+
+Voice pipeline integrates with LangGraph server-driven UI architecture to provide visual feedback during voice interactions. Voice state changes emit UI messages via `push_ui_message()`.
+
+```python
+# File: application/use_cases/voice_pipeline_use_case.py
+from langgraph.graph.ui import push_ui_message, AnyUIMessage
+
+class VoicePipelineUseCase:
+    async def update_voice_state(self, session_id: UUID, state: VoiceSessionState):
+        """Emit voice state UI update via LangGraph."""
+        if state == VoiceSessionState.LISTENING:
+            push_ui_message(
+                "voiceStatus",
+                {
+                    "state": "listening",
+                    "icon": "mic",
+                    "pulse": True,  # Animate for voice nucleus
+                },
+                message=None  # Standalone UI update
+            )
+        elif state == VoiceSessionState.PROCESSING:
+            push_ui_message(
+                "voiceStatus",
+                {
+                    "state": "processing",
+                    "icon": "brain",
+                    "pulse": False,
+                },
+                message=None
+            )
+        elif state == VoiceSessionState.SPEAKING:
+            push_ui_message(
+                "voiceStatus",
+                {
+                    "state": "speaking",
+                    "icon": "speaker",
+                    "pulse": True,
+                },
+                message=None
+            )
+```
+
+**Voice Nucleus Widget** (from C008 Organic UI):
+
+The voice nucleus widget provides bio-inspired visual feedback during voice interactions.
+
+```typescript
+// File: src/agent/ui.tsx (colocated with graph.py)
+import { VoiceNucleusWidget } from "./widgets/VoiceNucleusWidget";
+
+export default {
+  // ... existing widget exports
+  voiceStatus: VoiceNucleusWidget,
+};
+```
+
+```typescript
+// File: src/agent/widgets/VoiceNucleusWidget.tsx
+interface VoiceStatusProps {
+  state: "listening" | "processing" | "speaking";
+  icon: string;
+  pulse: boolean;
+}
+
+export function VoiceNucleusWidget(props: VoiceStatusProps) {
+  const size = props.state === "speaking" ? "160px" : "72px"; // Desktop vs mobile
+
+  return (
+    <div className={`voice-nucleus ${props.state} ${props.pulse ? "pulse" : ""}`}>
+      <div className="nucleus-core" style={{ width: size, height: size }}>
+        <svg className={`icon-${props.icon}`}>
+          {/* Bio-inspired SVG icon */}
+        </svg>
+      </div>
+      {/* Metaball effects (2D SVG filters) */}
+    </div>
+  );
+}
+```
+
+**Interrupt Button Pattern** (Google Assistant reference):
+
+Voice interruption uses a server-driven UI button component.
+
+```python
+# Backend: Emit interrupt button when speaking starts
+push_ui_message(
+    "interruptButton",
+    {
+        "label": "Stop",
+        "action": "interrupt_voice",
+        "variant": "destructive",  // Red outline button
+    },
+    message=message
+)
+```
+
+```typescript
+// Frontend: LoadExternalComponent renders button
+// Click sends INTERRUPT message to WebSocket
+function onInterruptClick() {
+    websocket.send(JSON.stringify({
+        type: "INTERRUPT",
+        data: { interrupted: true }
+    }));
+}
+```
+
+**Design Tokens** (from C008 Organic UI):
+
+```typescript
+// File: frontend/design/tokens.ts
+export const voiceTokens = {
+  nucleus: {
+    sizeDesktop: 160,    // px
+    sizeMobile: 72,      // px
+    blurDesktop: 16,     // px
+    blurMobile: 12,      // px
+    maxBlobsMobile: 6,   // Mobile optimization
+  },
+  colors: {
+    void: '#0A0A0A',
+    membrane: '#141414',
+    enzyme: '#00D9FF',   // Cyan accent for voice
+  },
+};
+```
+
+**Frontend Integration Pattern**:
+
+```tsx
+// File: frontend/app/voice/page.tsx
+import { useStream } from "@langchain/langgraph-sdk/react";
+import { LoadExternalComponent } from "@langchain/langgraph-sdk/react-ui";
+
+function VoicePage() {
+  const { thread, values } = useStream({
+    apiUrl: "http://localhost:2024",
+    assistantId: "agent",
+    onCustomEvent: (event, options) => {
+      options.mutate((prev) => {
+        const ui = uiMessageReducer(prev.ui ?? [], event);
+        return { ...prev, ui };
+      });
+    },
+  });
+
+  return (
+    <div>
+      {/* Voice nucleus widget from server */}
+      {values.ui?.filter(u => u.name === "voiceStatus").map((ui) => (
+        <LoadExternalComponent
+          key={ui.id}
+          stream={thread}
+          message={ui}
+          fallback={<VoiceSkeleton />}
+        />
+      ))}
+    </div>
+  );
+}
 ```
 
 ---
