@@ -1,54 +1,35 @@
-# Function Postmortem: api/mock_handler.py
+# mock_handler.py - R014 Postmortem Extraction
 
-## Metadata
-- **File**: prototypes/R014_ui_showcase/backend/api/mock_handler.py
-- **Lines of Code**: 88
-- **Purpose**: Mock mode WebSocket handler for testing without LLM calls
-- **Dependencies**: json, pathlib, fastapi
+**File**: `/prototypes/R014_ui_showcase/backend/api/mock_handler.py`
+**Lines**: 88
+**Purpose**: Mock mode WebSocket handler - sends pre-defined widgets without LLM calls
 
 ---
 
-## Analysis
-
-**Status**: Working mock mode handler for development/testing
-
-**Purpose**: Sends pre-defined widgets from a JSON file when MOCK_MODE is enabled, allowing frontend testing without LLM calls.
-
-**Architecture**: Async WebSocket handler with JSON data source
-
----
-
-## Functions/Classes Extracted
-
-### MOCK_DATA_PATH (module constant)
-
-**Purpose**: Path to mock widget data JSON file
-
-**Lines**: 17-19
+## Complete Code
 
 ```python
+# =============================================================================
+# AGENTX R014 - Mock Mode WebSocket Handler
+# =============================================================================
+# Sends pre-defined widgets without LLM calls when MOCK_MODE is enabled
+# =============================================================================
+
+import asyncio
+import json
+import logging
+from datetime import datetime
+from pathlib import Path
+
+from fastapi import WebSocket
+
+logger = logging.getLogger(__name__)
+
 MOCK_DATA_PATH = (
     Path(__file__).parent.parent / "services" / "mock_data" / "widgets.json"
 )
-```
 
-**Behavioral Notes**:
-- Resolved relative to this file
-- Points to services/mock_data/widgets.json
-- Used for mock widget definitions
 
----
-
-### handle_mock_mode (async function)
-
-**Purpose**: Handle mock mode WebSocket connection
-
-**Signature**: `async def handle_mock_mode(websocket: WebSocket, session_id: str, query: str) -> None`
-
-**Lines**: 22-88
-
-**Key Code**:
-```python
 async def handle_mock_mode(websocket: WebSocket, session_id: str, query: str) -> None:
     """Handle mock mode - send pre-defined widgets without LLM calls.
 
@@ -117,57 +98,221 @@ async def handle_mock_mode(websocket: WebSocket, session_id: str, query: str) ->
             pass
 ```
 
-**What Works**:
-- Clean error handling with fallback
-- Auto-timestamp replacement
-- Delivery plan sent first
-- Fixed 0.5s delay between widgets
-- Good logging with emoji indicators
+---
 
-**Mistakes Found**:
-- Fixed 0.5s delay - should use delays from JSON
-- query parameter is unused (only for logging)
-- No validation of widget structure
-- Catches all exceptions broadly
+## Function Analysis
 
-**Behavioral Notes**:
-- Sends delivery plan first with all widgets
-- Then sends widgets one by one with delays
-- Finally sends completion message
-- Graceful error handling
+### `handle_mock_mode(websocket, session_id, query)`
 
-**Dependencies**:
-- WebSocket
-- json
-- pathlib
-- asyncio
-- datetime
+**Signature**:
+```python
+async def handle_mock_mode(websocket: WebSocket, session_id: str, query: str) -> None
+```
 
-**Reusability**: HIGH - Good pattern for mock mode handling
+**Purpose**: Send pre-defined widgets from JSON file to WebSocket without LLM calls.
+
+**Flow**:
+1. Check mock data file exists
+2. Load JSON data
+3. Prepare widgets with timestamps
+4. Send delivery plan
+5. Send widgets with delays
+6. Send completion message
+
+**Parameters**:
+- `websocket`: Active WebSocket connection
+- `session_id`: For logging (8-char truncated UUID)
+- `query`: User query (only used for logging, not actual processing)
+
+**Returns**: `None` (sends messages via WebSocket)
 
 ---
 
-## File Summary
+## Behavioral Analysis
 
-**Assessment**: Well-implemented mock mode handler. Good for development and testing without LLM dependency.
+### What Works
 
-**Key Learnings**:
-1. Mock mode is valuable for development/testing
-2. JSON file provides easy widget customization
-3. Auto-timestamp replacement is clever
-4. Delivery plan pattern mirrors real pipeline
-5. Graceful error handling prevents crashes
+- ✅ Good error handling (file not found, JSON errors)
+- ✅ Graceful degradation (sends error to WebSocket)
+- ✅ Clear logging with emoji indicators
+- ✅ Auto-timestamp generation for "auto" values
+- ✅ Respects delivery plan structure (delays, duration)
 
-**Mistakes to Avoid**:
-1. Don't ignore delays from config
-2. Don't leave unused parameters
-3. Don't catch exceptions too broadly
-4. Don't skip validation in mock mode
+### Issues
 
-**Recommendations**:
-1. Use delays from delivery_defaults
-2. Add widget structure validation
-3. Make delay configurable
-4. Add query to logs for context
+- ⚠️ **Hardcoded delay**: `await asyncio.sleep(0.5)` - not configurable
+- ⚠️ **Query parameter unused**: `query` only logged, not used for filtering
+- ⚠️ **Synchronous file I/O**: `with open(...)` blocks event loop
+- ⚠️ **No validation**: Widget structure not validated before sending
+- ⚠️ **Bare except**: `except Exception: pass` hides errors
+- ⚠️ **File path calculation**: `Path(__file__).parent.parent` brittle
 
-**Reusability Score**: HIGH - Excellent mock mode pattern
+### CLAUDE_POLICY.md Compliance
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| Absolute imports | ✅ Pass | All absolute paths |
+| File size | ✅ Pass | 88 lines (<150 limit) |
+| No relative imports | ✅ Pass | None used |
+| Error handling | ⚠️ Partial | Bare except at end |
+
+### DRY Violations
+
+None (single function).
+
+---
+
+## Edge Cases
+
+### File Not Found
+```python
+if not MOCK_DATA_PATH.exists():
+    await websocket.send_json({"type": "error", "message": "Mock data not found"})
+    return  # Early exit
+```
+
+### Invalid JSON
+```python
+with open(MOCK_DATA_PATH, "r") as f:
+    mock_data = json.load(f)  # May raise JSONDecodeError
+```
+Handled by outer `except Exception`.
+
+### WebSocket Disconnect
+```python
+try:
+    await websocket.send_json(...)
+except Exception:
+    pass  # Silently ignore disconnect during send
+```
+
+---
+
+## Performance Notes
+
+### Blocking Operations
+
+1. **File I/O**: Synchronous `open()` and `json.load()` block event loop
+2. **Sleep**: `asyncio.sleep(0.5)` is non-blocking (correct)
+3. **JSON parsing**: Could be large (not streamed)
+
+### Optimization Opportunities
+
+```python
+# Load mock data once at startup (caching)
+_MOCK_DATA_CACHE = None
+
+async def get_mock_data():
+    global _MOCK_DATA_CACHE
+    if _MOCK_DATA_CACHE is None:
+        _MOCK_DATA_CACHE = json.loads(Path(...).read_text())
+    return _MOCK_DATA_CACHE
+```
+
+---
+
+## Integration Points
+
+**Called By**:
+- `api/routes/master_agent.py:50` - When `settings.mock_mode` is True
+
+**Reads**:
+- `services/mock_data/widgets.json` - Mock widget definitions
+
+**Sends To**:
+- WebSocket client (frontend)
+
+---
+
+## Refactoring Needed
+
+### YES - Minor Improvements
+
+1. **Make delay configurable**:
+   ```python
+   async def handle_mock_mode(
+       websocket: WebSocket, 
+       session_id: str, 
+       query: str,
+       delay: float = 0.5,  # Configurable
+   ):
+   ```
+
+2. **Use async file I/O**:
+   ```python
+   import aiofiles
+   async with aiofiles.open(MOCK_DATA_PATH, "r") as f:
+       content = await f.read()
+   mock_data = json.loads(content)
+   ```
+
+3. **Add widget validation**:
+   ```python
+   for widget in widgets_to_send:
+       if not validate_widget(widget):
+           logger.warning(f"Invalid widget: {widget}")
+           continue
+   ```
+
+4. **Use query for filtering**:
+   ```python
+   # Filter widgets based on query keywords
+   if query:
+       widgets_to_send = [w for w in widgets if matches_query(w, query)]
+   ```
+
+### NO - Not Worth It
+
+- Converting to class (single function is fine)
+- Adding retry logic (mock mode is development-only)
+- Streaming JSON (file is small)
+
+---
+
+## Mock Data Format
+
+Expected structure in `widgets.json`:
+```json
+{
+  "widgets": {
+    "widget1": {
+      "id": "markdown-1",
+      "type": "markdown",
+      "timestamp": "auto",
+      "content": "# Hello World"
+    }
+  },
+  "delivery_defaults": {
+    "delays": [0.0, 0.5, 1.0],
+    "total_duration": 2.0
+  }
+}
+```
+
+---
+
+## Lessons Learned
+
+### What Works
+
+- Clean separation of mock mode from real pipeline
+- Good error messages sent to frontend
+- Useful for development/testing
+
+### What Doesn't Work
+
+- Hardcoded delays
+- Unused query parameter
+- Synchronous file I/O in async function
+
+### Should Copy
+
+- Mock mode pattern for development
+- Clear error handling
+- Logging with context (session_id)
+
+### Should Avoid
+
+- Bare `except: pass` (even for WebSocket errors)
+- Synchronous I/O in async functions
+- Unused function parameters

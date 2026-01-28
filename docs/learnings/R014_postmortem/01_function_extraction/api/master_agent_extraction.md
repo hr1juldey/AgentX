@@ -1,206 +1,426 @@
-# Function Postmortem: api/routes/master_agent.py
+# master_agent.py - R014 Postmortem Extraction
 
-## Metadata
-- **File**: api/routes/master_agent.py
-- **Lines of Code**: 146
-- **Purpose**: Master Agent WebSocket route - 10-phase generative UI pipeline
-- **Dependencies**: FastAPI, application layer, mock_handler, config
+**File**: `/prototypes/R014_ui_showcase/backend/api/routes/master_agent.py`
+**Lines**: 146
+**Purpose**: Master Agent WebSocket endpoint - main generative UI pipeline
 
 ---
 
-## Functions Extracted
+## Function Catalog
 
-### generate_widget_master_agent
+| Function | Lines | Purpose |
+|----------|-------|---------|
+| `generate_widget_master_agent` | 126 | Main WebSocket handler for widget generation |
+| `_serialize_delivery_plan` (nested) | 17 | Serialize delivery plan to dict |
+| `send_widget` (nested) | 17 | Send single widget to frontend |
+| `send_qa_progress` (nested) | 17 | Send QA checkpoint progress |
 
-**Purpose**: WebSocket endpoint for Master Agent widget generation with streaming (10 phases)
+---
 
-**Signature**:
-```python
-async def generate_widget_master_agent(websocket: WebSocket) -> None
-```
-
-**Lines**: 19-146
-
-**Complexity**: O(n) where n = number of pipeline phases (typically 8-10)
-
-**Code Structure**:
-- Lines 19-51: Connection setup, mock mode check
-- Lines 53-70: Nested helper: `_serialize_delivery_plan`
-- Lines 71-87: Nested helper: `send_widget`
-- Lines 89-106: Nested helper: `send_qa_progress`
-- Lines 108-128: Main pipeline execution
-- Lines 130-145: Error handling
-
-**Key Code Sections**:
+## Complete Code Structure
 
 ```python
-# Device Context Handling (lines 37-42)
-if isinstance(device_context_raw, str):
-    device_context = device_context_raw
-elif isinstance(device_context_raw, dict):
-    device_context = device_context_raw.get("type", "desktop")
-else:
-    device_context = "desktop"
+@router.websocket("/ws/generate-widget")
+async def generate_widget_master_agent(websocket: WebSocket) -> None:
+    """WebSocket endpoint for Master Agent widget generation with streaming.
 
-# Mock Mode Shortcut (lines 49-51)
-if settings.mock_mode:
-    await handle_mock_mode(websocket, session_id, user_query)
-    return
+    Implements the complete R014 Master-Agent pipeline with 10 phases.
+    """
+    await websocket.accept()
+    session_id = str(uuid.uuid4())[:8]
 
-# Connection State Tracking (line 29)
-connection_active = True
-# Used to stop callbacks after error (lines 73, 91)
+    # Track connection state to stop callbacks after error
+    connection_active = True
+
+    try:
+        # Receive and validate input
+        data = await websocket.receive_json()
+        user_query = data.get("query", "")
+        device_context_raw = data.get("device_context", "desktop")
+
+        # Normalize device_context
+        if isinstance(device_context_raw, str):
+            device_context = device_context_raw
+        elif isinstance(device_context_raw, dict):
+            device_context = device_context_raw.get("type", "desktop")
+        else:
+            device_context = "desktop"
+
+        logger.info(f"🎯 [{session_id}] {user_query[:100]}...")
+
+        # =============================================================================
+        # MOCK MODE - Send pre-defined widgets without LLM calls
+        # =============================================================================
+        if settings.mock_mode:
+            await handle_mock_mode(websocket, session_id, user_query)
+            return
+
+        # =============================================================================
+        # NESTED FUNCTION: Serialize delivery plan
+        # =============================================================================
+        def _serialize_delivery_plan(delivery_plan: Any) -> dict:
+            """Safely serialize DeliveryPlan to dict with error handling."""
+            try:
+                if hasattr(delivery_plan, "model_dump"):
+                    return delivery_plan.model_dump()
+                # Fallback: serialize widgets manually
+                return {
+                    "widgets": [
+                        w.model_dump() if hasattr(w, "model_dump") else w
+                        for w in getattr(delivery_plan, "widgets", [])
+                    ],
+                    "delays": getattr(delivery_plan, "delays", []),
+                    "total_duration": getattr(delivery_plan, "total_duration", 0),
+                }
+            except Exception:
+                # Ultimate fallback: return minimal dict
+                return {"widgets": [], "delays": [], "total_duration": 0}
+
+        # =============================================================================
+        # NESTED FUNCTION: Send widget to frontend
+        # =============================================================================
+        async def send_widget(widget: dict) -> None:
+            """Send a single widget to the frontend."""
+            if not connection_active:
+                return
+            try:
+                await websocket.send_json(
+                    {
+                        "type": "widget",
+                        "data": widget,
+                    }
+                )
+                widget_type = widget.get(
+                    "type", widget.get("descriptor_type", "unknown")
+                )
+                logger.info(f"  📦 {widget_type}")
+            except Exception:
+                pass  # WebSocket closed, stop sending
+
+        # =============================================================================
+        # NESTED FUNCTION: Send QA progress
+        # =============================================================================
+        async def send_qa_progress(checkpoint: str, status: str, data: dict) -> None:
+            """Send QA checkpoint progress to frontend."""
+            if not connection_active:
+                return
+            try:
+                await websocket.send_json(
+                    {
+                        "type": "qa_progress",
+                        "data": {
+                            "checkpoint": checkpoint,
+                            "status": status,
+                            "details": data,
+                        },
+                    }
+                )
+                logger.info(f"  ✓ [{checkpoint}] {status}")
+            except Exception:
+                pass  # WebSocket closed, stop sending
+
+        # =============================================================================
+        # EXECUTE: Create and run master agent
+        # =============================================================================
+        # Use application layer use case to create and configure master agent
+        use_case = get_master_agent_use_case()
+        master_agent, delivery_plan_type = use_case.setup_master_agent_with_pipeline(
+            widget_callback=send_widget,
+            qa_callback=send_qa_progress,
+        )
+
+        delivery_plan: Any = await master_agent.execute_with_streaming(
+            user_query=user_query,
+            device_context=device_context,
+        )
+
+        # Send completion
+        await websocket.send_json(
+            {
+                "type": "complete",
+                "data": {
+                    "delivery_plan": _serialize_delivery_plan(delivery_plan),
+                },
+            }
+        )
+
+        logger.info(f"✅ [{session_id}] Complete")
+
+    except WebSocketDisconnect:
+        connection_active = False
+    except Exception as e:
+        connection_active = False
+        logger.error(f"🔴 [{session_id}] {e}", exc_info=True)
+        try:
+            if websocket.client_state != "disconnected":
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": str(e),
+                    }
+                )
+        except Exception:
+            pass
 ```
 
 ---
 
-**Mistakes Found**:
-- ⚠️ **Line 15**: Uses `__import__("fastapi").APIRouter()` instead of direct import - unusual pattern (might be for circular import avoidance)
-- ⚠️ **Device context handling**: Accepts both string and dict but doesn't validate dict structure
-- ⚠️ **Nested functions**: 3 nested helper functions (`_serialize_delivery_plan`, `send_widget`, `send_qa_progress`) - could be extracted to module level
+## Analysis
+
+### Design Pattern: Callback Hell with Nested Functions
+
+**Structure**:
+- Outer: WebSocket handler
+- Middle: Mock mode check
+- Inner: 3 nested callback functions
+- Core: Master agent execution
 
 **What Works**:
-- ✅ **Connection state tracking**: `connection_active` flag prevents callbacks after error - elegant solution
-- ✅ **Progressive feedback**: QA progress sent after each phase - great UX
-- ✅ **Mock mode support**: Fast path for testing without LLM calls
-- ✅ **Session tracking**: First 8 chars of UUID for readable logs
-- ✅ **Graceful degradation**: Ultimate fallback in `_serialize_delivery_plan` returns minimal dict
-- ✅ **Silent exception handling**: WebSocket sends wrapped in try/except with pass
+- ✅ Clear flow from receive → process → send
+- ✅ Connection state tracking prevents errors after disconnect
+- ✅ Device context normalization handles multiple input formats
+- ✅ Comprehensive error handling
+- ✅ Mock mode bypass for development
 
-**Behavioral Notes**:
-- **Device Context Flexibility**: Accepts `"desktop"`, `"mobile"`, OR `{type: "desktop", ...}` - handles frontend inconsistency
-- **Mock Mode**: When enabled, bypasses entire pipeline (sends pre-defined widgets from JSON)
-- **Progress Events**: Sent as `{"type": "qa_progress", "data": {checkpoint, status, details}}`
-- **Widget Events**: Sent as `{"type": "widget", "data": {...}}`
-- **Complete Event**: Sent as `{"type": "complete", "data": {delivery_plan}}`
-- **Error Event**: Sent as `{"type": "error", "message": ...}` if not already disconnected
-- **Connection State**: Set to `False` on any error to stop further callback execution
+**Issues**:
+- ⚠️ **Nested functions** make code hard to test
+- ⚠️ **Bare except: pass** hides errors
+- ⚠️ **Connection state as closure** (non-obvious dependency)
+- ⚠️ **No input validation** beyond `.get()`
+- ⚠️ **Mixed concerns**: WebSocket + serialization + callbacks
 
-**Dependencies**:
-- **Imports**: `application.use_cases.master_agent`, `api.mock_handler`, `config.settings`
-- **Called by**: FastAPI router on WS /ws/generate-widget
-- **Calls**: `get_master_agent_use_case().setup_master_agent_with_pipeline()`
-- **Nested helpers**: `_serialize_delivery_plan`, `send_widget`, `send_qa_progress`
+### CLAUDE_POLICY.md Compliance
 
-**Refactoring Needed**:
-- **MAYBE** - Extract nested functions to module level if reused elsewhere (but they're tightly coupled to this endpoint's state)
-- **Consider**: Using dependency injection for device_context validation instead of isinstance checks
+| Check | Status | Notes |
+|-------|--------|-------|
+| Absolute imports | ⚠️ Partial | `__import__("fastapi").APIRouter()` obfuscated |
+| File size | ✅ Pass | 146 lines (<150 limit) |
+| Error handling | ⚠️ Partial | Multiple `except: pass` |
+| Logging | ✅ Pass | Good context logging |
 
-**WebSocket Patterns Discovered**:
-1. **Connection State Pattern**: Boolean flag to stop callbacks after disconnect/error
-2. **Mock Mode Pattern**: Fast path for testing without LLM (returns pre-canned responses)
-3. **Progressive Feedback Pattern**: Send events after each pipeline phase
-4. **Event Type Pattern**: All events have `{"type": ..., "data": ...}` structure
-5. **Graceful Degradation**: Nested try/except with silent failure for closed connections
+### SOLID Violations
+
+| Principle | Status | Analysis |
+|-----------|--------|----------|
+| Single Responsibility | ❌ Fail | WebSocket + serialization + callbacks + mock mode |
+| Open/Closed | ❌ Fail | Adding new callbacks requires modification |
+| Liskov Substitution | N/A | No inheritance |
+| Interface Segregation | N/A | Single endpoint |
+| Dependency Inversion | ❌ Fail | Directly imports use case, settings |
 
 ---
 
-## Nested Helpers
+## Behavioral Notes
 
-### _serialize_delivery_plan
+### LLM Interactions
 
-**Purpose**: Safely serialize DeliveryPlan to dict with error handling
+1. **Master Agent Execution**:
+   ```python
+   delivery_plan = await master_agent.execute_with_streaming(
+       user_query=user_query,
+       device_context=device_context,
+   )
+   ```
+   - Blocks until complete pipeline finishes
+   - Uses callbacks for streaming updates
+   - Returns delivery plan with widgets
 
-**Signature**:
+### Edge Cases
+
+1. **Device Context Variations**:
+   ```python
+   # Handles: "desktop", {"type": "mobile"}, etc.
+   if isinstance(device_context_raw, str):
+       device_context = device_context_raw
+   elif isinstance(device_context_raw, dict):
+       device_context = device_context_raw.get("type", "desktop")
+   ```
+
+2. **WebSocket Mid-Stream Disconnect**:
+   - `connection_active` flag checked before each send
+   - Callbacks return early if `False`
+   - Exception caught silently
+
+3. **Delivery Plan Serialization Failures**:
+   - Tries `model_dump()` first
+   - Falls back to manual serialization
+   - Ultimate fallback: empty dict
+
+---
+
+## Nested Functions Analysis
+
+### `_serialize_delivery_plan(delivery_plan)`
+
+**Purpose**: Convert Pydantic model to dict with fallbacks.
+
+**Issues**:
+- ❌ Nested function (can't test independently)
+- ❌ Triple fallback pattern suggests unclear data model
+- ❌ No error logging (silent failure)
+
+**Better**:
 ```python
-def _serialize_delivery_plan(delivery_plan: Any) -> dict
+def serialize_delivery_plan(delivery_plan: Any) -> dict:
+    """Serialize delivery plan to dict."""
+    if hasattr(delivery_plan, "model_dump"):
+        return delivery_plan.model_dump()
+    logger.warning("Using fallback serialization")
+    return {"widgets": [], "delays": [], "total_duration": 0}
 ```
 
-**Lines**: 53-70
+### `send_widget(widget)`
 
-**Why Nested**: Has access to `connection_active` closure (though not used)
+**Purpose**: Send widget to WebSocket with error suppression.
 
-**Mistakes Found**:
-- Uses `hasattr()` checks and `getattr()` with defaults - defensive but indicates unclear data contract
-- Ultimate fallback returns minimal dict - good for robustness but suggests data model uncertainty
+**Issues**:
+- ❌ Closes over `connection_active` and `websocket`
+- ❌ Silent error handling (`except: pass`)
+- ❌ Can't unit test without WebSocket
 
-**What Works**:
-- Three-tier fallback: model_dump() → manual serialization → minimal dict
-- Handles Pydantic models, objects with widgets attribute, and unknown types
-- Never raises exception - always returns serializable dict
-
-**Behavioral Notes**:
-- Tries Pydantic's `model_dump()` first (fastest if available)
-- Falls back to manual widget serialization if no model_dump
-- Final fallback returns empty structure - prevents WebSocket send failure
-
----
-
-### send_widget
-
-**Purpose**: Send a single widget to the frontend
-
-**Signature**:
+**Better**:
 ```python
-async def send_widget(widget: dict) -> None
+async def send_widget(
+    websocket: WebSocket, 
+    widget: dict, 
+    connection_active: bool
+) -> bool:
+    """Send widget to WebSocket. Returns success."""
+    if not connection_active:
+        return False
+    try:
+        await websocket.send_json({"type": "widget", "data": widget})
+        return True
+    except Exception as e:
+        logger.debug(f"Failed to send widget: {e}")
+        return False
 ```
 
-**Lines**: 71-87
+### `send_qa_progress(checkpoint, status, data)`
 
-**Why Nested**: Has access to `connection_active` and `websocket` closure
+**Purpose**: Send QA checkpoint progress.
 
-**What Works**:
-- Checks `connection_active` before sending (stops callbacks after error)
-- Extracts widget type with fallback: `widget.get("type", widget.get("descriptor_type", "unknown"))`
-- Silent exception handling - if WebSocket closed, just pass
-
-**Behavioral Notes**:
-- Logs each widget sent: `📦 {widget_type}`
-- Exception pass means stop sending but don't crash
-- Dual key check for widget type suggests data model evolution
+**Issues**:
+- Same as `send_widget` (closure, silent errors)
 
 ---
 
-### send_qa_progress
+## Refactoring Needed
 
-**Purpose**: Send QA checkpoint progress to frontend
+### YES - Extract to Class
 
-**Signature**:
 ```python
-async def send_qa_progress(checkpoint: str, status: str, data: dict) -> None
+class MasterAgentWebSocketHandler:
+    """Handle Master Agent WebSocket connections."""
+    
+    def __init__(self, websocket: WebSocket):
+        self.websocket = websocket
+        self.session_id = str(uuid.uuid4())[:8]
+        self.connection_active = True
+    
+    async def handle_connection(self) -> None:
+        """Main connection handler."""
+        data = await self.websocket.receive_json()
+        user_query = data.get("query", "")
+        device_context = self._normalize_device_context(data)
+        
+        if settings.mock_mode:
+            await self._handle_mock_mode(user_query)
+            return
+        
+        master_agent = await self._setup_master_agent()
+        delivery_plan = await self._execute_agent(master_agent, user_query, device_context)
+        await self._send_completion(delivery_plan)
+    
+    def _normalize_device_context(self, data: dict) -> str:
+        """Normalize device context from various formats."""
+        # ... implementation
+    
+    async def send_widget(self, widget: dict) -> bool:
+        """Send widget to WebSocket. Returns success."""
+        # ... implementation
+    
+    async def send_qa_progress(self, checkpoint: str, status: str, data: dict) -> bool:
+        """Send QA progress. Returns success."""
+        # ... implementation
+    
+    @staticmethod
+    def serialize_delivery_plan(delivery_plan: Any) -> dict:
+        """Serialize delivery plan to dict."""
+        # ... implementation
 ```
 
-**Lines**: 89-106
+### YES - Remove Bare Except
 
-**Why Nested**: Has access to `connection_active` and `websocket` closure
+```python
+except Exception as e:
+    logger.debug(f"WebSocket send failed: {e}")
+    return False  # Don't silently ignore
+```
 
-**What Works**:
-- Checks `connection_active` before sending
-- Logs checkpoint progress: `✓ [{checkpoint}] {status}`
-- Silent exception handling
+### NO - Don't Change
 
-**Behavioral Notes**:
-- Status values: "running", "passed", "failed"
-- Checkpoint names correspond to 10 pipeline phases
-- Exception pass means stop progress updates but don't crash
+- Mock mode bypass (useful for development)
+- Session ID truncation (reasonable length)
+- Device context normalization (good flexibility)
 
 ---
 
-## File Summary
+## Performance Notes
 
-**Total Functions**: 1 (with 3 nested helpers)
-**Total Classes**: 0
-**Lines of Code**: 146
+### Blocking Operations
 
-**Violations**:
-- ⚠️ Unusual import pattern: `__import__("fastapi")`
-- ⚠️ Nested functions (architectural preference, not functional issue)
+1. **`master_agent.execute_with_streaming()`**: Blocks until complete
+   - Could be slow (multiple LLM calls)
+   - Callbacks provide incremental updates
 
-**Success Patterns**:
-- ✅ Connection state tracking (prevents callback errors after disconnect)
-- ✅ Mock mode support (enables testing without LLM)
-- ✅ Progressive feedback (UX pattern for long operations)
-- ✅ Graceful degradation (three-tier serialization fallback)
-- ✅ Silent exception handling (WebSocket best practice)
-- ✅ Session tracking with truncated UUID
+2. **WebSocket sends**: Sequential (await each send)
+   - Could batch widget sends
+   - But streaming is intentional UX
 
-**Overall Assessment**: GOOD - Well-implemented WebSocket endpoint with excellent error handling. The connection state tracking pattern is particularly elegant and should be reused in Real AgentX.
+---
 
-**Key Learnings for Real AgentX**:
-1. ✅ **Connection State Pattern**: Use boolean flag to stop callbacks after error/disconnect
-2. ✅ **Mock Mode Pattern**: Fast path for testing without LLM dependency
-3. ✅ **Progressive Feedback**: Send events after each phase for better UX
-4. ✅ **Silent Exception Handling**: WebSocket sends wrapped in try/except with pass
-5. ✅ **Three-tier Fallback**: Try best serialization → manual → minimal
-6. ⚠️ **Data Model Clarity**: Use clear contracts instead of hasattr/getattr chains
-7. ⚠️ **Nested Functions**: Consider extracting to module level for testability
+## Integration Points
+
+**Route**: `@router.websocket("/ws/generate-widget")`
+
+**Calls**:
+- `handle_mock_mode()` - If `settings.mock_mode` is True
+- `get_master_agent_use_case()` - Application layer
+- `master_agent.execute_with_streaming()` - Core pipeline
+
+**Callbacks To**:
+- `send_widget()` - For each generated widget
+- `send_qa_progress()` - For each QA checkpoint
+
+---
+
+## Lessons Learned
+
+### What Works
+
+- Connection state tracking pattern
+- Device context normalization
+- Mock mode bypass for development
+- Comprehensive error handling
+
+### What Doesn't Work
+
+- Nested functions (testing impossible)
+- Bare except (hides errors)
+- Mixed concerns (should be class)
+- Serialization fallbacks (suggests unclear model)
+
+### Should Copy
+
+- Connection state flag pattern
+- Session ID for logging context
+- Device context normalization
+- Mock mode for development
+
+### Should Avoid
+
+- Nested callback functions
+- Bare `except: pass`
+- Too many concerns in one function
+- Silent failures
