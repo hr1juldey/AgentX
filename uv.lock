@@ -40,6 +40,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "diffusers" },
     { name = "dspy" },
+    { name = "dspy-qdrant" },
     { name = "email-validator" },
     { name = "fastapi" },
     { name = "fastapi-users" },
@@ -118,6 +119,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=43.0.0" },
     { name = "diffusers", specifier = ">=0.30.0" },
     { name = "dspy", specifier = ">=3.1.2" },
+    { name = "dspy-qdrant", specifier = ">=0.1.4" },
     { name = "email-validator", specifier = ">=2.1.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "fastapi-users", specifier = ">=15.0.3" },
@@ -1232,6 +1234,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/22/92/4eeed6796c48e799a41aa521bf206fabab3dbb2fbf0958655b476e43726e/dspy-3.1.2.tar.gz", hash = "sha256:6dfd8a4bbf74b1b432ff466468994a590c43fce0d45c2c0094313c9314aa3bb6", size = 261253, upload-time = "2026-01-19T14:21:47.424Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/91/18/1c93641f25f4e76772b4ffb52a4e289f1706d6bda4f3b59bb6f7c339df46/dspy-3.1.2-py3-none-any.whl", hash = "sha256:23b98bf5abeda260722c445d397d07ea27488c204b8c0ccd6d3e607c4b41bc6b", size = 312290, upload-time = "2026-01-19T14:21:45.776Z" },
+]
+
+[[package]]
+name = "dspy-qdrant"
+version = "0.1.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dspy" },
+    { name = "qdrant-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bd/15/404edb2da7922c811e7e2d5ad88840390222faad2e732681c98bbcd57eda/dspy_qdrant-0.1.4.tar.gz", hash = "sha256:677b12a62fe2bfe1a52e712d71d596134fbd2d93d39c7fa3ae9b5fd96067ded8", size = 120649, upload-time = "2025-12-19T04:44:13.691Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c6/45/d1fa3fda2a048ecd15661b3662c17ee0d431186a4504bbb0a8ce10ef484a/dspy_qdrant-0.1.4-py3-none-any.whl", hash = "sha256:929d43ee041ded1263d86d003e55c8ec24f4be15e60090319246422561b02bad", size = 12890, upload-time = "2025-12-19T04:44:11.912Z" },
 ]
 
 [[package]]

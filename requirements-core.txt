@@ -25,6 +25,7 @@ fastembed>=0.7.4
 
 # Qdrant Client - Vector database client
 qdrant-client>=1.16.2
+dspy-qdrant>=0.1.4
 
 # =============================================================================
 # WEB FRAMEWORK & API
