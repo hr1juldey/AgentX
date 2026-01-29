@@ -131,13 +131,13 @@ pytest tests/test_contract_alignment.py  # Should pass
 C002-data-contracts is **complete** when:
 
 - [x] All 7 backend descriptor classes created
-- [ ] All 15 WebSocket message types defined
-- [ ] All request/response DTOs created
-- [ ] Frontend Zod schemas match backend Pydantic
-- [ ] Zero field name mismatches (`descriptor_id` vs `id`)
-- [ ] Zero type value mismatches (`markdown_block` vs `markdown`)
-- [ ] Zero scattered `schemas.py` files
-- [ ] All quality checks pass (ruff, pyrefly, tsc)
+- [x] All 15 WebSocket message types defined (9 in websocket_messages.py, additional in DTOs)
+- [x] All request/response DTOs created
+- [x] Frontend Zod schemas match backend Pydantic
+- [x] Zero field name mismatches (`descriptor_id` vs `id`)
+- [x] Zero type value mismatches (`markdown_block` vs `markdown`)
+- [x] Zero scattered `schemas.py` files
+- [x] All quality checks pass (ruff, pyrefly, tsc)
 - [ ] Alignment tests pass
 
 ---
