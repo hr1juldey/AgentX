@@ -4,11 +4,11 @@ Orchestrates session management workflow (pause/resume/close).
 Following the use case pattern from mimicus.
 """
 
+from agentx.application.dtos.agent_dtos import SessionStatusDTO
 from agentx.application.dtos.session_dtos import (
     CloseSessionCommand,
     PauseSessionCommand,
     ResumeSessionCommand,
-    SessionResponseDTO,
 )
 from agentx.application.mappers.agent_session_mapper import AgentSessionMapper
 from agentx.core.dependencies import get_agent_session_repository
@@ -29,14 +29,14 @@ class ManageSessionUseCase:
         self._session_repository = get_agent_session_repository()
         self._session_mapper = AgentSessionMapper()
 
-    async def pause(self, command: PauseSessionCommand) -> SessionResponseDTO:
+    async def pause(self, command: PauseSessionCommand) -> SessionStatusDTO:
         """Pause an active session.
 
         Args:
             command: The pause session command DTO.
 
         Returns:
-            SessionResponseDTO: The updated session DTO.
+            SessionStatusDTO: The updated session DTO.
 
         Raises:
             ValueError: If session is not in ACTIVE state.
@@ -59,14 +59,14 @@ class ManageSessionUseCase:
         # Step 4: Map to response DTO
         return self._session_mapper.entity_to_dto(session)
 
-    async def resume(self, command: ResumeSessionCommand) -> SessionResponseDTO:
+    async def resume(self, command: ResumeSessionCommand) -> SessionStatusDTO:
         """Resume a paused session.
 
         Args:
             command: The resume session command DTO.
 
         Returns:
-            SessionResponseDTO: The updated session DTO.
+            SessionStatusDTO: The updated session DTO.
 
         Raises:
             ValueError: If session is not in PAUSED state.
@@ -89,14 +89,14 @@ class ManageSessionUseCase:
         # Step 4: Map to response DTO
         return self._session_mapper.entity_to_dto(session)
 
-    async def close(self, command: CloseSessionCommand) -> SessionResponseDTO:
+    async def close(self, command: CloseSessionCommand) -> SessionStatusDTO:
         """Close an active or paused session.
 
         Args:
             command: The close session command DTO.
 
         Returns:
-            SessionResponseDTO: The updated session DTO.
+            SessionStatusDTO: The updated session DTO.
 
         Raises:
             ValueError: If session is not in ACTIVE or PAUSED state.

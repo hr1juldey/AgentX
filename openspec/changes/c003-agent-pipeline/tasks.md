@@ -351,18 +351,18 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 ---
 
-## Phase 6: Application Layer (REQUIRED)
+## Phase 6: Application Layer (REQUIRED) ✓
 
 ### 6.1 Use Cases
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create ExecuteAgentQueryUseCase | `agentx/application/use_cases/execute_agent_query.py` | 100 | ⬜ | Non-streaming query execution |
-| Create StreamUIUpdateUseCase | `agentx/application/use_cases/stream_ui_update.py` | 80 | ⬜ | Streaming query execution |
-| Create CreateSessionUseCase | `agentx/application/use_cases/create_session.py` | 60 | ⬜ | Session creation |
-| Create ManageSessionUseCase | `agentx/application/use_cases/manage_session.py` | 80 | ⬜ | Pause/resume/close session |
+| Create ExecuteAgentQueryUseCase | `agentx/application/use_cases/execute_agent_query.py` | 100 | ✓ | Non-streaming query execution (existing) |
+| Create StreamUIUpdateUseCase | `agentx/application/use_cases/stream_ui_update.py` | 30 | ✓ | Streaming query execution |
+| Create CreateSessionUseCase | `agentx/application/use_cases/create_session.py` | 50 | ✓ | Session creation |
+| Create ManageSessionUseCase | `agentx/application/use_cases/manage_session.py` | 120 | ✓ | Pause/resume/close session |
 
-**Total**: 4 files, ~320 lines
+**Total**: 4 files, ~300 lines
 
 ---
 
@@ -370,11 +370,11 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create agent DTOs | `agentx/application/dtos/agent_dtos.py` | 100 | ⬜ | ExecuteAgentQueryCommand, ExecuteAgentQueryResponse |
-| Create streaming DTOs | `agentx/application/dtos/streaming_dtos.py` | 80 | ⬜ | StreamChunk, ReasoningStep, ToolCall |
-| Create session DTOs | `agentx/application/dtos/session_dtos.py` | 60 | ⬜ | Session-related DTOs |
+| Create agent DTOs | `agentx/application/dtos/agent_dtos.py` | 70 | ✓ | ExecuteAgentQueryRequest, ExecuteAgentQueryResponse (existing) |
+| Create streaming DTOs | `agentx/application/dtos/streaming_dtos.py` | 70 | ✓ | StreamChunk, ReasoningStep, ToolCall |
+| Create session DTOs | `agentx/application/dtos/session_dtos.py` | 65 | ✓ | Session-related DTOs |
 
-**Total**: 3 files, ~240 lines
+**Total**: 3 files, ~205 lines
 
 ---
 
@@ -382,11 +382,11 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create AgentOrchestrator | `agentx/application/services/agent_orchestrator.py` | 120 | ⬜ | Coordinates LangGraph + agents |
-| Create UIService | `agentx/application/services/ui_service.py` | 100 | ⬜ | UI state management |
-| Create MemoryService | `agentx/infrastructure/external/memory_service.py` | 180 | ⬜ | Memory consolidation (from C005) |
+| Create AgentOrchestrator | `agentx/application/services/agent_orchestrator.py` | 110 | ✓ | Coordinates LangGraph + agents |
+| Create UIService | `agentx/application/services/ui_service.py` | 75 | ✓ | UI state management |
+| Create MemoryService | `agentx/infrastructure/external/memory_service.py` | 130 | ✓ | Memory consolidation (from C005) |
 
-**Total**: 3 files, ~400 lines
+**Total**: 3 files, ~315 lines
 
 ---
 
@@ -439,10 +439,10 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 | Phase 3: UI Agent & Tools | 4 | ~330 | ✓ |
 | Phase 4: RAG Specialist Agent | 4 | ~270 | ✓ |
 | Phase 5: Calendar + Tools | 2 | ~180 | ✓ |
-| Phase 6: Application Layer | 10 | ~960 | ⬜ |
+| Phase 6: Application Layer | 10 | ~820 | ✓ |
 | Phase 7: API Layer | 4 | ~330 | ⬜ |
 | Phase 8: Frontend Types | 3 | ~330 | ⬜ |
-| **Total** | **91** | **~7,448** | ⬜ |
+| **Total** | **91** | **~7,308** | ⬜ |
 
 ---
 
@@ -495,8 +495,8 @@ C003-agent-pipeline is **complete** when:
 - [x] Type conversion utilities implemented (_to_float, _to_bool)
 - [x] Chunking infrastructure implemented (proven pattern)
 - [x] Safe DSPy extraction pattern used throughout
-- [ ] All use cases created (ExecuteAgentQuery, StreamUIUpdate) (Phase 6)
-- [ ] All DTOs created with Pydantic → Zod alignment (Phase 6)
+- [x] All use cases created (ExecuteAgentQuery, StreamUIUpdate, CreateSession, ManageSession) (Phase 6)
+- [x] All DTOs created with Pydantic → Zod alignment (Phase 6)
 - [ ] Frontend Zod schemas match backend Pydantic (Phase 8)
 - [x] Zero field name mismatches with R014
 - [x] Zero relative imports (absolute only)

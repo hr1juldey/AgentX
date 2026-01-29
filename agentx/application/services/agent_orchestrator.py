@@ -60,7 +60,7 @@ class AgentOrchestrator:
 
         # Step 2: Invoke LangGraph StateGraph
         # Note: In full implementation, would use astream() for streaming
-        final_state = await self._graph.ainvoke(initial_state)
+        final_state = await self._graph.ainvoke(initial_state)  # type: ignore[attr-defined]
 
         # Step 3: Extract results
         return {

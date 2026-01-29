@@ -8,6 +8,7 @@ from uuid import UUID
 from datetime import datetime
 
 from agentx.domain.entities.memory_consolidation import MemoryConsolidationEntity
+from agentx.domain.entities.enums import MemoryType
 from agentx.domain.repositories.memory_repository import MemoryRepository
 
 
@@ -50,8 +51,8 @@ class MemoryService:
             MemoryConsolidationEntity: Consolidation result with statistics.
         """
         # Step 1: Retrieve episodic memories
-        episodic_memories = await self._memory_repository.get_episodic_memories(
-            session_id, limit=100
+        episodic_memories = await self._memory_repository.get_session_history(
+            session_id
         )
 
         # Step 2: Extract semantic memories (facts, preferences)
@@ -71,7 +72,12 @@ class MemoryService:
 
         # Step 4: Store to long-term (Mem0AI)
         for memory in ranked_memories[:10]:  # Top 10 memories
-            await self._memory_repository.add_semantic_memory(user_id, memory)
+            await self._memory_repository.store(
+                memory_type=MemoryType.SEMANTIC,
+                content=memory["content"],
+                metadata={"timestamp": memory["timestamp"]},
+                session_id=session_id,
+            )
 
         # Step 5: Return consolidation result
         return MemoryConsolidationEntity(
