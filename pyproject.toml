@@ -89,3 +89,7 @@ project-includes = [
 project-excludes = [
     "prototypes/**",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["agentx/tests"]
+pythonpath = "."

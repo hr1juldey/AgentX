@@ -23,9 +23,9 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Port _to_float function | `agent/agent/tools/common/type_utils.py` | 50 | ⬜ | From R014: 3 fallbacks (direct, regex, keyword) |
-| Port _to_bool function | `agent/agent/tools/common/type_utils.py` | 30 | ⬜ | From R014: Boolean parsing with fallbacks |
-| Add unit tests | `tests/agent/tools/test_type_utils.py` | 80 | ⬜ | Test all fallback paths |
+| Port _to_float function | `agent/agent/tools/common/type_utils.py` | 50 | ✓ | From R014: 3 fallbacks (direct, regex, keyword) |
+| Port _to_bool function | `agent/agent/tools/common/type_utils.py` | 30 | ✓ | From R014: Boolean parsing with fallbacks |
+| Add unit tests | `tests/agent/tools/test_type_utils.py` | 80 | ✓ | Test all fallback paths (16 tests pass) |
 
 **R014 Source**: `services/tools/common/type_utils.py`
 
@@ -37,9 +37,9 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create chunking constants | `agent/agent/tools/common/chunking.py` | 30 | ⬜ | MAX_CHUNK_SIZE=500, OVERLAP=100, ITERATIONS=3 |
-| Create chunking helper | `agent/agent/tools/common/chunking.py` | 50 | ⬜ | split_into_chunks() function |
-| Add unit tests | `tests/agent/tools/test_chunking.py` | 60 | ⬜ | Test edge cases (empty, single chunk, multi-chunk) |
+| Create chunking constants | `agent/agent/tools/common/chunking.py` | 30 | ✓ | MAX_CHUNK_SIZE=500, OVERLAP=100, ITERATIONS=3 |
+| Create chunking helper | `agent/agent/tools/common/chunking.py` | 50 | ✓ | chunk_text() function |
+| Add unit tests | `tests/agent/tools/test_chunking.py` | 60 | ✓ | Test edge cases (empty, single chunk, multi-chunk) - 25 tests pass |
 
 **R014 Source**: `services/tools/analyst/insight_extractor.py`, `services/core/chunking.py`
 
@@ -51,9 +51,9 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create extraction helper | `agent/agent/tools/common/dspy_helpers.py` | 40 | ⬜ | safe_extract() with hasattr + .get() |
+| Create extraction helper | `agent/agent/tools/common/dspy_helpers.py` | 40 | ✓ | safe_extract() with hasattr + .get() |
 | Add to DSPy agent base | `agent/agent/agents/base.py` | 30 | ⬜ | Mixin or base class with safe_extract |
-| Add unit tests | `tests/agent/agents/test_base.py` | 50 | ⬜ | Test with DSPy Prediction objects |
+| Add unit tests | `tests/agent/tools/test_dspy_helpers.py` | 50 | ✓ | Test with DSPy Prediction objects (18 tests pass) |
 
 **R014 Source**: Multiple agent files (pattern documented in postmortem)
 
@@ -65,9 +65,9 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create AgentState | `agent/agent/state.py` | 50 | ⬜ | TypedDict with ui_message_reducer |
-| Create create_graph() | `agent/agent/graph.py` | 100 | ⬜ | StateGraph with 8 nodes (7-pipeline) |
-| Add nodes stub file | `agent/agent/nodes/__init__.py` | 20 | ⬜ | Placeholder imports |
+| Create AgentState | `agent/agent/state.py` | 50 | ✓ | TypedDict with ui_message_reducer |
+| Create create_graph() | `agent/agent/graph.py` | 100 | ✓ | StateGraph (3-node base, 8-node in Phase 2) |
+| Add nodes stub file | `agent/agent/nodes/__init__.py` | 20 | ✓ | Placeholder imports |
 
 **R014 Source**: `services/master_agent/master_agent.py` (callback pattern)
 

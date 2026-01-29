@@ -9,6 +9,7 @@ from dspy import Example
 
 from agentx.agent.dspy_signatures.main_signatures import MainAgentSignature
 from agentx.agent.tools.main_tools import AVAILABLE_TOOLS
+from agentx.core.dependencies import ensure_dspy_configured
 
 
 class MainDSPyReActAgent(dspy.ReAct):
@@ -145,6 +146,7 @@ def get_main_agent() -> MainDSPyReActAgent:
     Returns:
         MainDSPyReActAgent: The main agent instance.
     """
+    ensure_dspy_configured()
     global _main_agent
     if _main_agent is None:
         _main_agent = MainDSPyReActAgent()
@@ -157,6 +159,7 @@ def get_analyst_agent() -> AnalystAgent:
     Returns:
         AnalystAgent: The analyst agent instance.
     """
+    ensure_dspy_configured()
     global _analyst_agent
     if _analyst_agent is None:
         _analyst_agent = AnalystAgent()
@@ -169,6 +172,7 @@ def get_designer_agent() -> DesignerAgent:
     Returns:
         DesignerAgent: The designer agent instance.
     """
+    ensure_dspy_configured()
     global _designer_agent
     if _designer_agent is None:
         _designer_agent = DesignerAgent()
@@ -181,6 +185,7 @@ def get_memory_agent() -> MemoryAgent:
     Returns:
         MemoryAgent: The memory agent instance.
     """
+    ensure_dspy_configured()
     global _memory_agent
     if _memory_agent is None:
         _memory_agent = MemoryAgent()
