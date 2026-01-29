@@ -217,7 +217,7 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 ---
 
-## Phase 3: UI Agent & Tools (HIGH)
+## Phase 3: UI Agent & Tools (HIGH) ✓
 
 > **NOTE**: Phase 3 updated from R014 widget spawner to new LangGraph server-driven UI architecture.
 > **Old approach**: 32 files, ~920 lines (R014 callback pattern)
@@ -227,12 +227,12 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create UI signatures | `agent/agent/dspy_signatures/ui_signatures.py` | 80 | ⬜ | SelectWidget, ConfigureForm, ShowCard, RequestConfirmation, UpdateProgress (from LLD) |
-| Add UI generation signatures | `agent/agent/dspy_signatures/ui_signatures.py` | 60 | ⬜ | ConfigureForm, ShowCard, RequestConfirmation, UpdateProgress |
+| Create UI signatures | `agent/agent/dspy_signatures/ui_signatures.py` | 80 | ✓ | SelectWidget, ConfigureForm, ShowCard, RequestConfirmation, UpdateProgress (from LLD) |
+| Add UI generation signatures | `agent/agent/dspy_signatures/ui_signatures.py` | 60 | ✓ | ConfigureForm, ShowCard, RequestConfirmation, UpdateProgress |
 
 **R014 Source**: `services/widget_spawner/signatures.py` (simplified)
 
-**Note**: Widget selection signatures exist in `widgets/selection.py`, but UI generation signatures are missing.
+**Note**: Widget selection signatures exist in `widgets/selection.py`. UI generation signatures now added.
 
 ---
 
@@ -240,7 +240,7 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create UI agent | `agent/agent/dspy_agents/ui_agent.py` | 80 | ⬜ | UIDSPyAgent with 6 signatures (SelectWidget, ConfigureForm, ShowCard, RequestConfirmation, UpdateProgress) |
+| Create UI agent | `agent/agent/dspy_agents/ui_agent.py` | 80 | ✓ | UIDSPyAgent with 6 signatures (SelectWidget, ConfigureForm, ShowCard, RequestConfirmation, UpdateProgress) |
 
 **R014 Source**: `services/widget_spawner/agent.py` (simplified to single agent)
 
@@ -250,7 +250,7 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create UI tools | `agent/agent/tools/ui_tools.py` | 120 | ⬜ | render_markdown_block, render_card, request_confirmation, update_progress (return descriptor IDs) |
+| Create UI tools | `agent/agent/tools/ui_tools.py` | 120 | ✓ | render_markdown_block, render_card, request_confirmation, update_progress (return descriptor IDs) |
 
 **R014 Source**: `services/widget_spawner/builders/` (simplified from 3 files to 1)
 
@@ -260,7 +260,7 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create widget registry | `agent/agent/ui.tsx` | 50 | ⬜ | Export default {component, ...} for 12 widget types |
+| Create widget registry | `agent/agent/ui.tsx` | 50 | ✓ | Export default {component, ...} for 12 widget types (fixed absolute imports) |
 
 **R014 Source**: None (new LangGraph pattern)
 
@@ -417,7 +417,7 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 |-------|-------|--------------|--------|
 | Phase 1: Infrastructure | 12 | ~390 | ✓ |
 | Phase 2: 7-Pipeline Agents + Tests | 52 | ~4,658 | ✓ |
-| Phase 3: UI Agent & Tools | 4 | ~330 | ⬜ |
+| Phase 3: UI Agent & Tools | 4 | ~330 | ✓ |
 | Phase 4: Multi-Hop Search | 8 | ~620 | ⬜ |
 | Phase 5: Calendar + Tools | 10 | ~520 | ⬜ |
 | Phase 6: Application Layer | 10 | ~960 | ⬜ |
@@ -472,7 +472,7 @@ C003-agent-pipeline is **complete** when:
 - [x] 7-pipeline orchestration implemented (8 nodes in LangGraph)
 - [x] Designer agent has state awareness (fixes duplicate widgets)
 - [ ] Multi-hop search system ported (Phase 4)
-- [ ] UI Agent & Tools implemented (Phase 3 - LangGraph server-driven UI)
+- [x] UI Agent & Tools implemented (Phase 3 - LangGraph server-driven UI)
 - [x] Type conversion utilities implemented (_to_float, _to_bool)
 - [x] Chunking infrastructure implemented (proven pattern)
 - [x] Safe DSPy extraction pattern used throughout

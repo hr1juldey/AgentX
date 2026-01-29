@@ -8,19 +8,21 @@
  * @see c007-frontend-architecture/design.md
  */
 
-import MarkdownWidget from '../../../components/ui/widgets/MarkdownWidget';
-import CardWidget from '../../../components/ui/widgets/CardWidget';
-import FormWidget from '../../../components/ui/widgets/FormWidget';
-import ProgressWidget from '../../../components/ui/widgets/ProgressWidget';
-import ActionWidget from '../../../components/ui/widgets/ActionWidget';
-import ConfirmationWidget from '../../../components/ui/widgets/ConfirmationWidget';
-import VoiceWidget from '../../../components/ui/widgets/VoiceWidget';
-import ImageWidget from '../../../components/ui/widgets/ImageWidget';
-import GalleryWidget from '../../../components/ui/widgets/GalleryWidget';
-import ChartWidget from '../../../components/ui/widgets/ChartWidget';
-import SearchResultWidget from '../../../components/ui/widgets/SearchResultWidget';
-import HopProgressWidget from '../../../components/ui/widgets/HopProgressWidget';
-import CitationCardWidget from '../../../components/ui/widgets/CitationCardWidget';
+// NOTE: Using absolute imports (CLAUDE_POLICY.md requirement)
+// Update import paths based on your frontend structure
+import MarkdownWidget from '@components/ui/widgets/MarkdownWidget';
+import CardWidget from '@components/ui/widgets/CardWidget';
+import FormWidget from '@components/ui/widgets/FormWidget';
+import ProgressWidget from '@components/ui/widgets/ProgressWidget';
+import ActionWidget from '@components/ui/widgets/ActionWidget';
+import ConfirmationWidget from '@components/ui/widgets/ConfirmationWidget';
+import VoiceWidget from '@components/ui/widgets/VoiceWidget';
+import ImageWidget from '@components/ui/widgets/ImageWidget';
+import GalleryWidget from '@components/ui/widgets/GalleryWidget';
+import ChartWidget from '@components/ui/widgets/ChartWidget';
+import SearchResultWidget from '@components/ui/widgets/SearchResultWidget';
+import HopProgressWidget from '@components/ui/widgets/HopProgressWidget';
+import CitationCardWidget from '@components/ui/widgets/CitationCardWidget';
 
 /**
  * Widget registry for LangGraph server-driven UI.
