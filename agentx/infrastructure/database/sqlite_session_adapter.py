@@ -5,9 +5,7 @@ Provides backup/failover for Redis adapter.
 """
 
 import sqlite3
-import json
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -52,12 +50,8 @@ class SQLiteSessionAdapter(AgentSessionRepository):
             )
         """
         )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_user_id ON sessions(user_id)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_state ON sessions(state)"
-        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_user_id ON sessions(user_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_state ON sessions(state)")
         conn.commit()
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -159,9 +153,7 @@ class SQLiteSessionAdapter(AgentSessionRepository):
             list[AgentSessionEntity]: List of user sessions.
         """
         conn = self._get_connection()
-        cursor = conn.execute(
-            "SELECT * FROM sessions WHERE user_id = ?", (user_id,)
-        )
+        cursor = conn.execute("SELECT * FROM sessions WHERE user_id = ?", (user_id,))
         rows = cursor.fetchall()
 
         return [self._deserialize(row) for row in rows]
@@ -173,9 +165,7 @@ class SQLiteSessionAdapter(AgentSessionRepository):
             session_id: The session identifier.
         """
         conn = self._get_connection()
-        conn.execute(
-            "DELETE FROM sessions WHERE session_id = ?", (str(session_id),)
-        )
+        conn.execute("DELETE FROM sessions WHERE session_id = ?", (str(session_id),))
         conn.commit()
 
     async def find_active_sessions(self) -> list[AgentSessionEntity]:

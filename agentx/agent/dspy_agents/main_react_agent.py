@@ -47,7 +47,9 @@ class AnalystAgent(dspy.Module):
     def __init__(self) -> None:
         """Initialize the analyst agent."""
         super().__init__()
-        self.analyze = dspy.Predict("agentx/agent/dspy_signatures/main_signatures.py::AnalystSignature")
+        self.analyze = dspy.Predict(
+            "agentx/agent/dspy_signatures/main_signatures.py::AnalystSignature"
+        )
 
     def forward(self, query: str) -> dict:
         """Analyze user query to extract intent and entities.
@@ -76,7 +78,9 @@ class DesignerAgent(dspy.Module):
     def __init__(self) -> None:
         """Initialize the designer agent."""
         super().__init__()
-        self.design = dspy.Predict("agentx/agent/dspy_signatures/main_signatures.py::DesignerSignature")
+        self.design = dspy.Predict(
+            "agentx/agent/dspy_signatures/main_signatures.py::DesignerSignature"
+        )
 
     def forward(self, query: str, response: str, existing_widgets: list[str]) -> dict:
         """Select appropriate UI widget based on query and context.
@@ -107,7 +111,9 @@ class MemoryAgent(dspy.Module):
     def __init__(self) -> None:
         """Initialize the memory agent."""
         super().__init__()
-        self.retrieve = dspy.Predict("agentx/agent/dspy_signatures/main_signatures.py::MemorySignature")
+        self.retrieve = dspy.Predict(
+            "agentx/agent/dspy_signatures/main_signatures.py::MemorySignature"
+        )
 
     def forward(self, query: str, session_id: str) -> dict:
         """Retrieve relevant context from memory.

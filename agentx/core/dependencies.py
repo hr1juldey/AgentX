@@ -4,7 +4,6 @@ Provides singleton instances of core services following the getter pattern
 from mimicus. All dependencies are lazy-loaded.
 """
 
-from importlib import import_module
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

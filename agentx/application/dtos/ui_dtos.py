@@ -3,9 +3,7 @@
 Data Transfer Objects for UI-related API operations.
 """
 
-from datetime import datetime
 from typing import Any
-from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -31,7 +29,9 @@ class CardComponentDTO(UIComponentDTO):
 
     title: str = Field(..., description="Card title")
     content: str = Field(..., description="Card content")
-    actions: list[dict[str, Any]] = Field(default_factory=list, description="Action buttons")
+    actions: list[dict[str, Any]] = Field(
+        default_factory=list, description="Action buttons"
+    )
 
 
 class FormComponentDTO(UIComponentDTO):
@@ -71,7 +71,9 @@ class ConfirmationComponentDTO(UIComponentDTO):
 class VoiceComponentDTO(UIComponentDTO):
     """DTO for voice component."""
 
-    state: str = Field(..., description="Voice state (idle, listening, processing, speaking)")
+    state: str = Field(
+        ..., description="Voice state (idle, listening, processing, speaking)"
+    )
     transcript: str = Field("", description="Current transcript")
 
 

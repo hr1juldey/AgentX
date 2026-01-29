@@ -6,14 +6,11 @@ Following voice integration patterns from CLAUDE.md.
 
 import io
 import uuid
-from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import scipy.io.wavfile as wavfile
 import torch
-from torch import nn
 
 
 class VoiceConfig:
@@ -87,9 +84,7 @@ class STTService:
             if sr != VoiceConfig.STT_SAMPLE_RATE:
                 from torchaudio.transforms import Resample
 
-                audio_tensor = torch.from_numpy(
-                    audio_data.astype(np.float32) / 32768.0
-                )
+                audio_tensor = torch.from_numpy(audio_data.astype(np.float32) / 32768.0)
                 if audio_tensor.dim() == 1:
                     audio_tensor = audio_tensor.unsqueeze(0)
 
@@ -166,9 +161,7 @@ class TTSService:
 
         # Save to WAV
         audio_buffer = io.BytesIO()
-        wavfile.write(
-            audio_buffer, VoiceConfig.TTS_SAMPLE_RATE, audio.cpu().numpy()
-        )
+        wavfile.write(audio_buffer, VoiceConfig.TTS_SAMPLE_RATE, audio.cpu().numpy())
         audio_buffer.seek(0)
         return audio_buffer.read()
 

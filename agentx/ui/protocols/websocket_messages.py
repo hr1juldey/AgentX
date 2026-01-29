@@ -66,7 +66,9 @@ class WebSocketMessage:
         """
         return cls(
             message_id=UUID(data["message_id"]) if "message_id" in data else uuid4(),
-            message_type=MessageType(data.get("message_type", MessageType.STATUS.value)),
+            message_type=MessageType(
+                data.get("message_type", MessageType.STATUS.value)
+            ),
             session_id=UUID(data["session_id"]) if data.get("session_id") else None,
             timestamp=data.get("timestamp", __import__("time").time()),
             data=data.get("data", {}),

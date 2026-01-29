@@ -116,9 +116,7 @@ class ToolCallEntity:
     created_at: datetime = field(default_factory=datetime.now)
 
     @classmethod
-    def create(
-        cls, tool_name: str, arguments: dict[str, Any]
-    ) -> "ToolCallEntity":
+    def create(cls, tool_name: str, arguments: dict[str, Any]) -> "ToolCallEntity":
         """Create a new tool call.
 
         Args:

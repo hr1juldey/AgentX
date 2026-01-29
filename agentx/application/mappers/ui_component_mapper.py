@@ -13,8 +13,6 @@ from agentx.application.dtos.ui_dtos import (
 from agentx.domain.entities.ui_component import UIComponentEntity
 from agentx.ui.descriptors.base import (
     BaseUIDescriptor,
-    CardDescriptor,
-    MarkdownDescriptor,
 )
 
 
@@ -80,9 +78,7 @@ class UIComponentMapper:
         )
 
     @staticmethod
-    def descriptor_to_dto(
-        descriptor: BaseUIDescriptor
-    ) -> UIComponentDTO:
+    def descriptor_to_dto(descriptor: BaseUIDescriptor) -> UIComponentDTO:
         """Convert UI descriptor directly to DTO.
 
         Args:

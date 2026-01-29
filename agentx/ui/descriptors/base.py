@@ -68,8 +68,12 @@ class MarkdownDescriptor(BaseUIDescriptor):
     Renders formatted markdown text in the frontend.
     """
 
-    component_type: UIComponentType = field(default=UIComponentType.MARKDOWN, init=False)
-    props: dict[str, Any] = field(default_factory=lambda: {"content": "", "format": "markdown"})
+    component_type: UIComponentType = field(
+        default=UIComponentType.MARKDOWN, init=False
+    )
+    props: dict[str, Any] = field(
+        default_factory=lambda: {"content": "", "format": "markdown"}
+    )
 
     def __init__(self, content: str, format: str = "markdown"):
         """Initialize markdown descriptor.
@@ -87,9 +91,10 @@ class MarkdownDescriptor(BaseUIDescriptor):
         Returns:
             bool: True if content is non-empty string.
         """
-        return isinstance(self.props.get("content"), str) and len(
-            self.props.get("content", "")
-        ) > 0
+        return (
+            isinstance(self.props.get("content"), str)
+            and len(self.props.get("content", "")) > 0
+        )
 
 
 @dataclass

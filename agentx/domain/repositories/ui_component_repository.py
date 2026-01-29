@@ -4,7 +4,6 @@ Abstract base class for UI component persistence.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any
 from uuid import UUID
 
 from agentx.domain.entities.ui_component import UIComponentEntity
@@ -26,9 +25,7 @@ class UIComponentRepository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_session(
-        self, session_id: UUID
-    ) -> list[UIComponentEntity]:
+    async def find_by_session(self, session_id: UUID) -> list[UIComponentEntity]:
         """Find all UI components for a session.
 
         Args:

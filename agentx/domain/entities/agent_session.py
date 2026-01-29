@@ -4,7 +4,7 @@ Locked from LLD: docs/engineering/lld/domain_model.md:38-110
 Represents a user's conversation session with the AI agent.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID, uuid4
 

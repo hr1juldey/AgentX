@@ -49,4 +49,3 @@ async def executor_node(state: AgentState) -> dict[str, Any]:
         "reasoning_steps": state["reasoning_steps"] + 1,
         "total_tool_calls": state["total_tool_calls"] + (1 if tool_result else 0),
     }
-}

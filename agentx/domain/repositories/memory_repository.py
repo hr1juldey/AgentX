@@ -84,9 +84,7 @@ class MemoryRepository(ABC):
         pass
 
     @abstractmethod
-    async def invalidate(
-        self, memory_id: str, memory_type: MemoryType
-    ) -> None:
+    async def invalidate(self, memory_id: str, memory_type: MemoryType) -> None:
         """Invalidate a memory entry.
 
         Used for temporal RAG fact invalidation.
@@ -98,9 +96,7 @@ class MemoryRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_session_history(
-        self, session_id: UUID
-    ) -> list[dict[str, Any]]:
+    async def get_session_history(self, session_id: UUID) -> list[dict[str, Any]]:
         """Get all episodic memories for a session.
 
         Args:

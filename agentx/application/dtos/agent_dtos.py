@@ -5,7 +5,6 @@ Data Transfer Objects for agent-related API operations.
 
 from datetime import datetime
 from typing import Any
-from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -14,7 +13,9 @@ class ExecuteAgentQueryRequest(BaseModel):
     """Request DTO for executing an agent query."""
 
     query: str = Field(..., description="User's query text", min_length=1)
-    session_id: str | None = Field(None, description="Optional session ID for continuation")
+    session_id: str | None = Field(
+        None, description="Optional session ID for continuation"
+    )
     user_id: str | None = Field(None, description="Optional user identifier")
     context: str | None = Field(None, description="Optional context for the query")
 
@@ -23,7 +24,9 @@ class ToolCallDTO(BaseModel):
     """DTO representing a tool execution call."""
 
     tool_name: str = Field(..., description="Name of the tool")
-    parameters: dict[str, Any] = Field(default_factory=dict, description="Tool parameters")
+    parameters: dict[str, Any] = Field(
+        default_factory=dict, description="Tool parameters"
+    )
     result: Any = Field(None, description="Tool execution result")
     status: str = Field("pending", description="Tool execution status")
     timestamp: datetime = Field(default_factory=datetime.now)
@@ -33,8 +36,12 @@ class UIComponentDTO(BaseModel):
     """DTO representing a UI component for server-driven UI."""
 
     component_id: str = Field(..., description="Component identifier")
-    component_type: str = Field(..., description="Component type (markdown, card, etc.)")
-    props: dict[str, Any] = Field(default_factory=dict, description="Component properties")
+    component_type: str = Field(
+        ..., description="Component type (markdown, card, etc.)"
+    )
+    props: dict[str, Any] = Field(
+        default_factory=dict, description="Component properties"
+    )
     merge: bool = Field(False, description="Whether to merge with existing component")
 
 

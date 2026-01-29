@@ -53,7 +53,9 @@ async def designer_node(state: AgentState) -> dict[str, Any]:
     elif intent == "web_search" and "searchResult" not in existing_widgets:
         widget_type = "searchResult"
         widget_props = {
-            "query": analysis.get("entities", [""])[0] if analysis.get("entities") else response,
+            "query": analysis.get("entities", [""])[0]
+            if analysis.get("entities")
+            else response,
             "results": [],  # Would be populated from search tool
         }
     elif intent == "get_time" and "card" not in existing_widgets:

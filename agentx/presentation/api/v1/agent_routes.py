@@ -131,7 +131,9 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     try:
         # Send connection established message
-        status_msg = StatusMessage(status="connected", details="WebSocket connection established")
+        status_msg = StatusMessage(
+            status="connected", details="WebSocket connection established"
+        )
         await websocket.send_json(status_msg.to_dict())
 
         while True:
@@ -150,7 +152,9 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 # Execute query
                 request = ExecuteAgentQueryRequest(
                     query=query_msg.data["query"],
-                    session_id=str(query_msg.session_id) if query_msg.session_id else None,
+                    session_id=str(query_msg.session_id)
+                    if query_msg.session_id
+                    else None,
                 )
 
                 response = await _query_use_case.execute(request)
@@ -165,22 +169,27 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
                 # Send UI components
                 for component in response.ui_components:
-                    from agentx.ui.protocols.websocket_messages import UIComponentMessage
+                    from agentx.ui.protocols.websocket_messages import (
+                        UIComponentMessage,
+                    )
 
                     ui_msg = UIComponentMessage(
                         component_type=component.component_type,
                         props=component.props,
                         session_id=UUID(response.session_id),
                         merge=component.merge,
-                        component_id=UUID(component.component_id) if component.component_id != "placeholder" else None,
+                        component_id=UUID(component.component_id)
+                        if component.component_id != "placeholder"
+                        else None,
                     )
                     await websocket.send_json(ui_msg.to_dict())
 
             elif message.message_type.value == "ping":
                 # Respond with pong
-                from agentx.ui.protocols.websocket_messages import PongMessage
 
-                pong_msg = WebSocketMessage(message_type=WebSocketMessage.message_type.__class__("PONG"))
+                pong_msg = WebSocketMessage(
+                    message_type=WebSocketMessage.message_type.__class__("PONG")
+                )
                 await websocket.send_json(pong_msg.to_dict())
 
             else:

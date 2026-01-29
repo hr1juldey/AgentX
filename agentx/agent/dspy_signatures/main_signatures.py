@@ -14,9 +14,7 @@ class MainAgentSignature(dspy.Signature):
     """
 
     query = dspy.InputField(desc="User's question or request")
-    context = dspy.InputField(
-        desc="Relevant context from memory or tools", default=""
-    )
+    context = dspy.InputField(desc="Relevant context from memory or tools", default="")
     response = dspy.OutputField(desc="Agent's response to the user")
     reasoning = dspy.OutputField(desc="Step-by-step reasoning process")
 

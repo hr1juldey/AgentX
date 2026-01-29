@@ -6,7 +6,6 @@ Following the use case pattern from mimicus.
 
 from uuid import UUID
 
-from pydantic import BaseModel, Field
 
 from agentx.application.dtos.agent_dtos import (
     ExecuteAgentQueryRequest,
@@ -35,7 +34,9 @@ class ExecuteAgentQueryUseCase:
         self._session_repository = get_agent_session_repository()
         self._session_mapper = AgentSessionMapper()
 
-    async def execute(self, request: ExecuteAgentQueryRequest) -> ExecuteAgentQueryResponse:
+    async def execute(
+        self, request: ExecuteAgentQueryRequest
+    ) -> ExecuteAgentQueryResponse:
         """Execute an agent query.
 
         Args:
@@ -60,18 +61,20 @@ class ExecuteAgentQueryUseCase:
         response_text = f"Processed: {request.query}"
 
         # Step 5: Select UI components (would use designer agent)
-        ui_components = []  # Would be populated by designer agent
+        # ui_components = []  # Would be populated by designer agent
 
         # Step 6: Build response
         return ExecuteAgentQueryResponse(
             session_id=str(session.session_id),
             response=response_text,
             reasoning="Placeholder reasoning",
-            ui_components=[UIComponentDTO(
-                component_id="placeholder",
-                component_type="markdown",
-                props={"content": response_text},
-            )],
+            ui_components=[
+                UIComponentDTO(
+                    component_id="placeholder",
+                    component_type="markdown",
+                    props={"content": response_text},
+                )
+            ],
             tool_calls=[],
         )
 

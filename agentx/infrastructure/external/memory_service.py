@@ -4,7 +4,6 @@ Multi-hop agentic RAG with temporal fact invalidation.
 Following memory patterns from docs/research/07_temporal_rag.md.
 """
 
-import time
 import uuid
 from datetime import datetime, timedelta
 from typing import Any
@@ -108,9 +107,7 @@ class MemoryService:
             query_vector=query_embedding,
             query_filter=Filter(
                 must=[
-                    {
-                        "key": "memory_type",
-                        "match": {"value": memory_type.value}},
+                    {"key": "memory_type", "match": {"value": memory_type.value}},
                 ]
             ),
             limit=limit,
@@ -196,7 +193,10 @@ class MemoryService:
             collection_name=self._collection_name,
             scroll_filter=Filter(
                 must=[
-                    {"key": "memory_type", "match": {"value": MemoryType.EPISODIC.value}},
+                    {
+                        "key": "memory_type",
+                        "match": {"value": MemoryType.EPISODIC.value},
+                    },
                     {"key": "session_id", "match": {"value": str(session_id)}},
                 ]
             ),
