@@ -1,0 +1,193 @@
+# Tasks Artifact: c010-voice-client
+
+**Generated**: 2026-01-29
+**Change**: c010-voice-client
+**Schema**: spec-driven v1
+
+---
+
+## Summary
+
+Implement voice client infrastructure for external kyutai voice-server integration. This change shifts AgentX from internal voice service implementation (VAD, STT, TTS) to external kyutai service dependency, focusing on fast async text stream handling and conversational state management.
+
+**Total Tasks**: 42 tasks across 7 phases
+
+---
+
+## 1. Data Contracts & Types
+
+**Goal**: Define Pydantic models and Zod schemas for kyutai protocol and conversational state.
+
+- [ ] 1.1 Create `agentx/application/dtos/voice_gateway_dtos.py` with KyutaiMessage, KyutaiMessageType models
+- [ ] 1.2 Create `agentx/domain/entities/conversation_session.py` with ConversationSession, ConversationMessage, ConversationContext entities
+- [ ] 1.3 Create `frontend/types/voice-protocol.ts` with Zod schemas matching Pydantic models
+- [ ] 1.4 Create `frontend/lib/voice/types.ts` with TypeScript types for voice client
+- [ ] 1.5 Verify Pydantic ↔ Zod sync (field aliases, enum values, optional fields)
+- [ ] 1.6 Run type checking (tsc --noEmit, pyright) and verify no errors
+
+---
+
+## 2. Backend Infrastructure
+
+**Goal**: Implement backend voice gateway and stream handling services.
+
+- [ ] 2.1 Create `agentx/infrastructure/external/voice_protocol.py` with kyutai protocol helpers
+- [ ] 2.2 Create `agentx/infrastructure/external/text_stream_handler.py` with TextStreamHandler, STTBuffer classes
+- [ ] 2.3 Create `agentx/infrastructure/external/voice_gateway_service.py` with VoiceGatewayService class
+- [ ] 2.4 Implement VoiceGatewayService.handle_session() for frontend WebSocket management
+- [ ] 2.5 Implement VoiceGatewayService._input_task() for routing audio to kyutai STT
+- [ ] 2.6 Implement VoiceGatewayService._output_task() for receiving from kyutai
+- [ ] 2.7 Implement VoiceGatewayService._process_agent_response() for C003 integration
+- [ ] 2.8 Implement VoiceGatewayService.check_kyutai_health() for health check
+- [ ] 2.9 Implement TextStreamHandler.buffer_stt_chunk() for STT buffering
+- [ ] 2.10 Implement TextStreamHandler.split_tts_sentences() for TTS sentence splitting
+- [ ] 2.11 Implement TextStreamHandler.stream_tts_sentences() for TTS streaming with interruption
+- [ ] 2.12 Run ruff check --fix, ruff format, pyrefly check --summarize-errors
+- [ ] 2.13 Verify all files under 150 lines (CLAUDE_POLICY.md Rule 3)
+
+---
+
+## 3. Backend Application Layer
+
+**Goal**: Implement conversational state management use case.
+
+- [ ] 3.1 Create `agentx/application/use_cases/conversation_state_manager.py` with ConversationStateManager class
+- [ ] 3.2 Implement ConversationStateManager.get_or_create_session() for session CRUD
+- [ ] 3.3 Implement ConversationStateManager.add_user_message() for tracking user input
+- [ ] 3.4 Implement ConversationStateManager.add_assistant_message() for tracking agent response
+- [ ] 3.5 Implement ConversationStateManager.get_conversation_history() for history retrieval
+- [ ] 3.6 Implement ConversationStateManager.update_context() for context updates
+- [ ] 3.7 Implement ConversationStateManager._cleanup_expired_sessions() for session cleanup
+- [ ] 3.8 Implement ConversationStateManager.start() and stop() for cleanup task management
+- [ ] 3.9 Run ruff check --fix, ruff format, pyrefly check --summarize-errors
+- [ ] 3.10 Verify file under 150 lines (CLAUDE_POLICY.md Rule 3)
+
+---
+
+## 4. Frontend Voice Client
+
+**Goal**: Implement frontend voice client for WebSocket connections.
+
+- [ ] 4.1 Create `frontend/lib/voice/client.ts` with VoiceClient class
+- [ ] 4.2 Implement VoiceClient.connect() for WebSocket connection
+- [ ] 4.3 Implement VoiceClient.send_audio() for sending audio chunks
+- [ ] 4.4 Implement VoiceClient.send_interrupt() for interruption
+- [ ] 4.5 Implement VoiceClient.on() for message handler registration
+- [ ] 4.6 Implement VoiceClient.reconnect() with exponential backoff
+- [ ] 4.7 Implement VoiceClient.disconnect() for cleanup
+- [ ] 4.8 Create `frontend/lib/voice/conversation.ts` with conversation state helpers
+- [ ] 4.9 Run ESLint check, TypeScript type check (tsc --noEmit)
+- [ ] 4.10 Verify no TypeScript errors
+
+---
+
+## 5. Backend API Routes
+
+**Goal**: Implement REST and WebSocket endpoints for voice interaction.
+
+- [ ] 5.1 Update `agentx/presentation/api/v1/voice_routes.py` with new endpoints
+- [ ] 5.2 Implement GET /api/v1/voice/kyutai/status for health check
+- [ ] 5.3 Implement GET /api/v1/voice/conversation/history for session history
+- [ ] 5.4 Implement POST /api/v1/voice/conversation/context for context updates
+- [ ] 5.5 Update WebSocket /ws/voice endpoint to use VoiceGatewayService
+- [ ] 5.6 Update WebSocket handler to integrate ConversationStateManager
+- [ ] 5.7 Update WebSocket handler to integrate TextStreamHandler
+- [ ] 5.8 Run ruff check --fix, ruff format, pyrefly check --summarize-errors
+- [ ] 5.9 Verify files under 150 lines (CLAUDE_POLICY.md Rule 3)
+
+---
+
+## 6. Integration & Testing
+
+**Goal**: Integrate all components and verify end-to-end functionality.
+
+- [ ] 6.1 Wire VoiceGatewayService into voice_routes.py dependency injection
+- [ ] 6.2 Wire ConversationStateManager into voice pipeline
+- [ ] 6.3 Wire TextStreamHandler into voice pipeline
+- [ ] 6.4 Test frontend → AgentX → kyutai STT flow
+- [ ] 6.5 Test kyutai STT → AgentX → C003 → kyutai TTS flow
+- [ ] 6.6 Test conversation history tracking across multiple turns
+- [ ] 6.7 Test context injection into C003 agent queries
+- [ ] 6.8 Test interruption handling during TTS playback
+- [ ] 6.9 Test graceful degradation when kyutai unavailable
+- [ ] 6.10 Test WebSocket reconnection with exponential backoff
+- [ ] 6.11 Verify end-to-end latency <500ms (P95), target <300ms (P50)
+
+---
+
+## 7. Migration & Cleanup
+
+**Goal**: Migrate from internal voice services to external kyutai integration.
+
+- [ ] 7.1 Add feature flag USE_KYUTAI_EXTERNAL=true to voice_routes.py
+- [ ] 7.2 Update documentation to recommend external kyutai integration
+- [ ] 7.3 Add deprecation notices to VADService, STTService, TTSService
+- [ ] 7.4 Update c004 tasks.md to reference c010 for voice implementation
+- [ ] 7.5 Verify coexistence with internal services (Phase 1)
+- [ ] 7.6 Set feature flag default to USE_KYUTAI_EXTERNAL=true (Phase 2)
+- [ ] 7.7 Plan Phase 3 removal of deprecated internal services
+- [ ] 7.8 Update CLAUDE.md with voice client architecture
+- [ ] 7.9 Verify all documentation updated
+
+---
+
+## Verification Checklist
+
+**Data Contracts**:
+- [ ] KyutaiMessage Pydantic model validates kyutai protocol
+- [ ] KyutaiMessage Zod schema matches Pydantic model exactly
+- [ ] ConversationSession entity tracks session state correctly
+- [ ] Field aliases map snake_case → camelCase
+- [ ] Enum values match exactly (case-sensitive)
+
+**Backend Services**:
+- [ ] VoiceGatewayService connects to kyutai STT/TTS WebSockets
+- [ ] VoiceGatewayService routes messages correctly (frontend ↔ kyutai)
+- [ ] ConversationStateManager tracks messages and context
+- [ ] TextStreamHandler buffers STT transcripts until Eos
+- [ ] TextStreamHandler splits TTS input into sentences
+- [ ] All files pass ruff check, ruff format, pyrefly check
+- [ ] All files under 150 lines
+
+**Frontend Client**:
+- [ ] VoiceClient connects to AgentX WebSocket
+- [ ] VoiceClient sends Audio messages to AgentX
+- [ ] VoiceClient receives and plays TTS audio
+- [ ] VoiceClient handles interrupt messages
+- [ ] VoiceClient reconnects with exponential backoff
+- [ ] All TypeScript files pass type check
+
+**Integration**:
+- [ ] End-to-end voice interaction works (speech → speech)
+- [ ] Conversation history tracked across turns
+- [ ] Context injected into C003 agent queries
+- [ ] Interruption terminates TTS within 200ms
+- [ ] Graceful degradation when kyutai unavailable
+- [ ] Latency targets met (<500ms P95, <300ms P50)
+
+**Migration**:
+- [ ] Feature flag switches between internal/external services
+- [ ] Deprecation notices added to internal services
+- [ ] Documentation updated with new architecture
+- [ ] CLAUDE.md reflects voice client changes
+
+---
+
+**Total Estimated Tasks**: 42 tasks
+
+**Completion Criteria**:
+- All tasks checked off
+- All verification criteria met
+- End-to-end voice interaction functional
+- Latency targets achieved
+- All quality checks pass (ruff, pyrefly, ESLint, TypeScript)
+
+---
+
+**Related Changes**:
+- C003-agent-pipeline - Agent pipeline integration
+- C002-data-contracts - Data contract updates
+- C001-folder-structure - Folder structure updates
+- C007-frontend-architecture - Frontend architecture
+
+---

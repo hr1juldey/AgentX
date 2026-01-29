@@ -177,4 +177,56 @@
 
 ---
 
+## 6. Spec: voice-protocol-contracts (NEW from c010-voice-client)
+
+**File**: `specs/voice-protocol-contracts/spec.md`
+
+**Purpose**: Define voice streaming data contracts for kyutai voice-server integration with Pydantic v2 ↔ Zod alignment.
+
+**Key Requirements**:
+- Backend uses Pydantic v2 with Field aliases for kyutai protocol
+- Frontend uses Zod validation schemas matching Pydantic exactly
+- Kyutai message types: Config, Audio, Text, Error, Eos, Heartbeat
+- Conversational state models: ConversationSession, ConversationMessage, ConversationContext
+- MessageRole enum: USER, ASSISTANT, SYSTEM
+
+**Kyutai Protocol Types**:
+`KyutaiMessageType` (CONFIG, AUDIO, TEXT, ERROR, EOS, HEARTBEAT)
+
+**Conversational State Types**:
+`MessageRole` (USER, ASSISTANT, SYSTEM)
+`ConversationSession` (session tracking)
+`ConversationMessage` (message with role, content, timestamp)
+`ConversationContext` (topic, entities, sentiment, language, timezone)
+
+**Acceptance Criteria**:
+- [ ] KyutaiMessage Pydantic model validates kyutai protocol
+- [ ] KyutaiMessage Zod schema matches Pydantic model
+- [ ] ConversationSession Pydantic model tracks session state
+- [ ] ConversationSession Zod schema matches Pydantic model
+- [ ] MessageRole enum values match exactly (Pydantic ↔ Zod)
+- [ ] Field aliases map snake_case → camelCase (sessionId, messageId, etc.)
+- [ ] Optional fields use .optional() in Zod, default=None in Pydantic
+
+**Integration Points** (NEW):
+
+| Backend Domain | Frontend Domain | Interface |
+|----------------|-----------------|-----------|
+| `agentx/application/dtos/voice_gateway_dtos.py` | `frontend/types/voice-protocol.ts` | Kyutai protocol types |
+| `agentx/domain/entities/conversation_session.py` | `frontend/types/voice-protocol.ts` | Conversational state types |
+| `infrastructure/external/voice_gateway_service.py` | `lib/voice/client.ts` | Voice gateway client |
+
+**Component Registration Mapping** (NEW):
+
+| Message Type | Backend Emission | Frontend Handler | Location |
+|--------------|-----------------|------------------|----------|
+| Config (kyutai) | `KyutaiMessage(type=CONFIG)` | VoiceClient sends config | lib/voice/client.ts |
+| Audio (kyutai) | `KyutaiMessage(type=AUDIO)` | VoiceGatewayService routes | voice_gateway_service.py |
+| Text (kyutai) | `KyutaiMessage(type=TEXT)` | Transcript / TTS input | voice_gateway_service.py |
+| Error (kyutai) | `KyutaiMessage(type=ERROR)` | Error display | VoiceClient handler |
+| Eos (kyutai) | `KyutaiMessage(type=EOS)` | Buffer flush | voice_stream_handler.py |
+| Heartbeat (kyutai) | `KyutaiMessage(type=HEARTBEAT)` | Connection keep-alive | VoiceGatewayService |
+
+---
+
 **Next Artifact**: design.md

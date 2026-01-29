@@ -96,4 +96,65 @@ This artifact generates domain-specific specification files in `specs/{domain}/s
 
 ---
 
+## 5. Spec: voice-client-structure (NEW from c010-voice-client)
+
+**File**: `specs/voice-client-structure/spec.md`
+
+**Purpose**: Define folder structure for voice client components (backend and frontend) for kyutai voice-server integration.
+
+### Backend Voice Client Structure
+
+```
+agentx/
+├── domain/
+│   └── entities/
+│       └── conversation_session.py          # ConversationSession, ConversationMessage, ConversationContext
+├── application/
+│   ├── dtos/
+│   │   └── voice_gateway_dtos.py            # KyutaiMessage, KyutaiMessageType, DTOs
+│   └── use_cases/
+│       └── conversation_state_manager.py    # ConversationStateManager
+└── infrastructure/
+    └── external/
+        ├── voice_gateway_service.py         # VoiceGatewayService (bridges frontend ↔ kyutai)
+        ├── voice_protocol.py                 # Kyutai protocol helpers
+        └── text_stream_handler.py            # TextStreamHandler (buffer, split, interrupt)
+```
+
+### Frontend Voice Client Structure
+
+```
+frontend/
+├── lib/
+│   └── voice/
+│       ├── client.ts                        # VoiceClient (WebSocket connection)
+│       ├── types.ts                         # TypeScript types for voice protocol
+│       └── conversation.ts                  # Conversational state helpers
+└── types/
+    └── voice-protocol.ts                    # Zod schemas for voice protocol
+```
+
+**Key Requirements**:
+- Backend voice components follow Clean Architecture (domain, application, infrastructure layers)
+- Frontend voice components organized in lib/voice/ for client library
+- All voice DTOs use Pydantic v2 with Field aliases (snake_case → camelCase)
+- All voice types have corresponding Zod schemas in frontend
+- No file exceeds 150 lines (CLAUDE_POLICY.md Rule 3)
+
+**Acceptance Criteria**:
+- [ ] domain/entities/conversation_session.py exists with ConversationSession entity
+- [ ] application/dtos/voice_gateway_dtos.py exists with KyutaiMessage model
+- [ ] application/use_cases/conversation_state_manager.py exists
+- [ ] infrastructure/external/voice_gateway_service.py exists
+- [ ] infrastructure/external/voice_protocol.py exists
+- [ ] infrastructure/external/text_stream_handler.py exists
+- [ ] lib/voice/client.ts exists with VoiceClient class
+- [ ] lib/voice/types.ts exists with TypeScript types
+- [ ] lib/voice/conversation.ts exists with conversation helpers
+- [ ] types/voice-protocol.ts exists with Zod schemas
+- [ ] All files pass ruff check, ruff format, pyrefly check (backend)
+- [ ] All files pass ESLint check, TypeScript type check (frontend)
+
+---
+
 **Next Artifact**: design.md
