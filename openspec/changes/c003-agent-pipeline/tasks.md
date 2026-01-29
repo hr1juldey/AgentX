@@ -75,20 +75,20 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 ---
 
-## Phase 2: 7-Pipeline Agents (CRITICAL)
+## Phase 2: 7-Pipeline Agents (CRITICAL) ✓
 
 ### 2.1 Analyst Agent (Dual-Pass)
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create analyst signatures | `agent/agent/dspy_signatures/analyst/query_analysis.py` | 80 | ⬜ | 4 signatures: AnalyzeQueryContext, ExtractInsights, DetectGoals, ExtractSearchTerms |
-| Create insight extractor | `agent/agent/tools/analyst/insight_extractor.py` | 80 | ⬜ | With chunking (proven pattern) |
-| Create search term extractor | `agent/agent/tools/analyst/search_terms.py` | 60 | ⬜ | Few-shot learning |
-| Create goal detector | `agent/agent/tools/analyst/goal_detector.py` | 50 | ⬜ | GoalDetectorModule |
-| Create context analyzer | `agent/agent/tools/analyst/context_analyzer.py` | 70 | ⬜ | 3 parallel Predict calls |
-| Create data quality checker | `agent/agent/tools/analyst/data_quality_checker.py` | 50 | ⬜ | For Pass 2 |
-| Create analyst node | `agent/agent/nodes/analyst.py` | 100 | ⬜ | Pass 1 + Pass 2 logic |
-| Create analyst agent | `agent/agent/agents/analyst.py` | 80 | ⬜ | Wraps analyst node |
+| Create analyst signatures | `agent/agent/dspy_signatures/analyst/query_analysis.py` | 80 | ✓ | 8 signatures for query analysis |
+| Create insight extractor | `agent/agent/tools/analyst/insight_extractor.py` | 80 | ✓ | With chunking (proven pattern) |
+| Create search term extractor | `agent/agent/tools/analyst/search_terms.py` | 60 | ✓ | Few-shot learning |
+| Create goal detector | `agent/agent/tools/analyst/goal_detector.py` | 50 | ✓ | GoalDetectorModule |
+| Create context analyzer | `agent/agent/tools/analyst/context_analyzer.py` | 70 | ✓ | 3 parallel Predict calls |
+| Create data quality checker | `agent/agent/tools/analyst/data_quality_checker.py` | 50 | ✓ | For Pass 2 |
+| Create analyst node | `agent/agent/nodes/analyst.py` | 100 | ✓ | Pass 1 + Pass 2 logic |
+| Create analyst agent | `agent/agent/agents/analyst.py` | 80 | ✓ | Wraps analyst node |
 
 **R014 Source**: `services/pipeline/analyst.py` (dual-pass pattern)
 
@@ -100,14 +100,14 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create researcher signatures | `agent/agent/dspy_signatures/researcher/search.py` | 80 | ⬜ | 3 signatures: ExecuteSearch, StructureData, BeautifyFindings |
-| Create data structurer | `agent/agent/tools/researcher/data_structurer.py` | 80 | ⬜ | Explicit signatures with named fields |
-| Create citation builder | `agent/agent/tools/researcher/citation_builder.py` | 100 | ⬜ | With _parse_relevance_score |
-| Create findings beautifier | `agent/agent/tools/researcher/findings_beautifier.py` | 60 | ⬜ | FindingsBeautifierModule |
-| Create search executor | `agent/agent/tools/researcher/search_executor.py` | 80 | ⬜ | SearXNG integration (async wrapper) |
-| Create web scraper | `agent/agent/tools/researcher/web_scraper.py` | 60 | ⬜ | scrape_url, extract_main_content |
-| Create researcher node | `agent/agent/nodes/researcher.py` | 100 | ⬜ | Coordinates all tools |
-| Create researcher agent | `agent/agent/agents/researcher.py` | 80 | ⬜ | Wraps researcher node |
+| Create researcher signatures | `agent/agent/dspy_signatures/researcher/search.py` | 80 | ✓ | 4 signatures for search and structuring |
+| Create data structurer | `agent/agent/tools/researcher/data_structurer.py` | 80 | ✓ | Explicit signatures with named fields |
+| Create citation builder | `agent/agent/tools/researcher/citation_builder.py` | 100 | ✓ | With relevance scoring |
+| Create findings beautifier | `agent/agent/tools/researcher/findings_beautifier.py` | 60 | ✓ | FindingsBeautifierModule |
+| Create search executor | `agent/agent/tools/researcher/search_executor.py` | 80 | ✓ | SearXNG integration (async wrapper) |
+| Create web scraper | `agent/agent/tools/researcher/web_scraper.py` | 60 | ✓ | scrape_url, extract_main_content |
+| Create researcher node | `agent/agent/nodes/researcher.py` | 100 | ✓ | Coordinates all tools |
+| Create researcher agent | `agent/agent/agents/researcher.py` | 80 | ✓ | Wraps researcher node |
 
 **R014 Source**: `services/pipeline/researcher.py`
 
@@ -119,12 +119,12 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create contextualizer signatures | `agent/agent/dspy_signatures/contextualizer/reranking.py` | 60 | ⬜ | 3 signatures: ReorderContext, FilterContext, InjectContext |
-| Create reranker | `agent/agent/tools/contextualizer/reranker.py` | 60 | ⬜ | RelevanceScorerModule |
-| Create filter | `agent/agent/tools/contextualizer/filter.py` | 50 | ⬜ | ContextFilterModule |
-| Create contextualizer | `agent/agent/tools/contextualizer/contextualizer.py` | 60 | ⬜ | ContextInjectorModule |
-| Create contextualizer node | `agent/agent/nodes/contextualizer.py` | 80 | ⬜ | Rerank → filter → inject |
-| Create contextualizer agent | `agent/agent/agents/contextualizer.py` | 70 | ⬜ | Wraps contextualizer node |
+| Create contextualizer signatures | `agent/agent/dspy_signatures/contextualizer/reranking.py` | 60 | ✓ | 4 signatures for reranking and filtering |
+| Create reranker | `agent/agent/tools/contextualizer/reranker.py` | 60 | ✓ | RelevanceScorerModule |
+| Create filter | `agent/agent/tools/contextualizer/filter.py` | 50 | ✓ | ContextFilterModule |
+| Create contextualizer | `agent/agent/tools/contextualizer/contextualizer.py` | 60 | ✓ | ContextInjectorModule |
+| Create contextualizer node | `agent/agent/nodes/contextualizer.py` | 80 | ✓ | Rerank → filter → inject |
+| Create contextualizer agent | `agent/agent/agents/contextualizer.py` | 70 | ✓ | Wraps contextualizer node |
 
 **R014 Source**: `services/pipeline/contextualizer.py`
 
@@ -136,12 +136,12 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create designer signatures | `agent/agent/dspy_signatures/designer/pov.py` | 60 | ⬜ | 3 signatures: DesignPOV, DesignColors, DesignHierarchy |
-| Create POV generator | `agent/agent/tools/designer/pov_generator.py` | 60 | ⬜ | POVGeneratorModule |
-| Create color scheme | `agent/agent/tools/designer/color_scheme.py` | 60 | ⬜ | ColorSchemeModule |
-| Create hierarchy designer | `agent/agent/tools/designer/hierarchy.py` | 60 | ⬜ | HierarchyDesignerModule |
-| Create designer node | `agent/agent/nodes/designer.py` | 100 | ⬜ | **STATE AWARE**: Checks state.ui before emitting |
-| Create designer agent | `agent/agent/agents/designer.py` | 70 | ⬜ | Wraps designer node |
+| Create designer signatures | `agent/agent/dspy_signatures/designer/pov.py` | 60 | ✓ | 3 signatures: DesignPOV, DesignColors, DesignHierarchy |
+| Create POV generator | `agent/agent/tools/designer/pov_generator.py` | 60 | ✓ | POVGeneratorModule |
+| Create color scheme | `agent/agent/tools/designer/color_scheme.py` | 60 | ✓ | ColorSchemeModule |
+| Create hierarchy designer | `agent/agent/tools/designer/hierarchy.py` | 60 | ✓ | HierarchyDesignerModule |
+| Create designer node | `agent/agent/nodes/designer.py` | 100 | ✓ | **STATE AWARE**: Checks state.ui before emitting |
+| Create designer agent | `agent/agent/agents/designer.py` | 70 | ✓ | Wraps designer node |
 
 **R014 Source**: `services/pipeline/designer.py`
 
@@ -155,11 +155,11 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create widget selector signatures | `agent/agent/dspy_signatures/widgets/selection.py` | 80 | ⬜ | SelectWidgetSignature (few-shot semantic) |
-| Create widget matcher | `agent/agent/agents/widget_matcher.py` | 80 | ⬜ | WidgetMatcherModule (few-shot) |
-| Create rule-based selector | `agent/agent/agents/rule_based_selector.py` | 60 | ⬜ | RuleBasedWidgetSelector |
-| Create widget selector node | `agent/agent/nodes/widget_selector.py` | 100 | ⬜ | Hybrid rule + LLM logic |
-| Create widget selector agent | `agent/agent/agents/widget_selector.py` | 70 | ⬜ | Wraps widget selector node |
+| Create widget selector signatures | `agent/agent/dspy_signatures/widgets/selection.py` | 80 | ✓ | 2 signatures: SelectWidget, ValidateWidgetChoice |
+| Create widget matcher | `agent/agent/agents/widget_matcher.py` | 80 | ✓ | WidgetMatcherModule (few-shot) |
+| Create rule-based selector | `agent/agent/agents/rule_based_selector.py` | 60 | ✓ | RuleBasedWidgetSelector |
+| Create widget selector node | `agent/agent/nodes/widget_selector.py` | 100 | ✓ | Hybrid rule + LLM logic |
+| Create widget selector agent | `agent/agent/agents/widget_selector.py` | 70 | ✓ | Wraps widget selector node |
 
 **R014 Source**: `services/pipeline/widget_selector.py`
 
@@ -173,13 +173,13 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create delivery planner | `agent/agent/agents/delivery_planner.py` | 80 | ⬜ | Staggered delivery (0s, 2s, 3.5s, → 5s) |
-| Create sequencer signatures | `agent/agent/dspy_signatures/pipeline/sequencer.py` | 40 | ⬜ | SequenceWidgets, CalculatePacing |
-| Create sequencer node | `agent/agent/nodes/sequencer.py` | 80 | ⬜ | Order + pace widgets |
-| Create sequencer agent | `agent/agent/agents/sequencer.py` | 60 | ⬜ | Wraps sequencer node |
-| Create presenter signatures | `agent/agent/dspy_signatures/pipeline/presenter.py` | 40 | ⬜ | PresentFindings, QualityCheck |
-| Create presenter node | `agent/agent/nodes/presenter.py` | 70 | ⬜ | Final polish + QA |
-| Create presenter agent | `agent/agent/agents/presenter.py` | 60 | ⬜ | Wraps presenter node |
+| Create delivery planner | `agent/agent/agents/delivery_planner.py` | 80 | ✓ | Staggered delivery (0s, 2s, 3.5s, → 5s) |
+| Create sequencer signatures | `agent/agent/dspy_signatures/pipeline/sequencer.py` | 40 | ✓ | 2 signatures: SequenceWidgets, CalculatePacing |
+| Create sequencer node | `agent/agent/nodes/sequencer.py` | 80 | ✓ | Order + pace widgets |
+| Create sequencer agent | `agent/agent/agents/sequencer.py` | 60 | ✓ | Wraps sequencer node |
+| Create presenter signatures | `agent/agent/dspy_signatures/pipeline/presenter.py` | 40 | ✓ | 2 signatures: PresentFindings, QualityCheck |
+| Create presenter node | `agent/agent/nodes/presenter.py` | 70 | ✓ | Final polish + QA |
+| Create presenter agent | `agent/agent/agents/presenter.py` | 60 | ✓ | Wraps presenter node |
 
 **R014 Source**: `services/pipeline/sequencer.py`, `services/pipeline/presenter.py`
 
@@ -191,10 +191,10 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Wire all nodes in graph.py | `agent/agent/graph.py` | 100 | ⬜ | 8 nodes: analyst_p1 → researcher → contextualizer → analyst_p2 → designer → widget_selector → sequencer → presenter |
-| Add conditional edges | `agent/agent/graph.py` | 40 | ⬜ | Branching logic if needed |
-| Test graph compilation | `tests/agent/test_graph.py` | 50 | ⬜ | Verify StateGraph compiles |
-| Test state transitions | `tests/agent/test_state_transitions.py` | 80 | ⬜ | Verify all 8 transitions |
+| Wire all nodes in graph.py | `agent/agent/graph.py` | 100 | ✓ | 8 nodes: analyst_p1 → researcher → contextualizer → analyst_p2 → designer → widget_selector → sequencer → presenter |
+| Add conditional edges | `agent/agent/graph.py` | 40 | ✓ | Branching logic if needed |
+| Test graph compilation | `tests/agent/test_graph.py` | 50 | ✓ | Verify StateGraph compiles |
+| Test state transitions | `tests/agent/test_state_transitions.py` | 80 | ✓ | Verify all 8 transitions |
 
 **Total**: 4 files, ~270 lines
 

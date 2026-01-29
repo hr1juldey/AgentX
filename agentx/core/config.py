@@ -44,6 +44,13 @@ class VoiceConfig(BaseModel):
     vad_threshold: float = 0.5
 
 
+class SearXNGConfig(BaseModel):
+    """SearXNG search engine configuration."""
+
+    base_url: str = "http://192.168.1.4:8080"
+    timeout: int = 30
+
+
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
 
@@ -52,21 +59,18 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        env_nested_delimiter="__",
     )
 
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
     server: ServerConfig = Field(default_factory=ServerConfig)
     voice: VoiceConfig = Field(default_factory=VoiceConfig)
+    searxng: SearXNGConfig = Field(default_factory=SearXNGConfig)
 
     app_name: str = "Real AgentX"
     app_version: str = "0.1.0"
     debug: bool = False
-
-    class Config:
-        """Pydantic config."""
-
-        env_nested_delimiter = "__"
 
 
 # Global settings instance
