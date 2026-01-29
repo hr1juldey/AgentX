@@ -49,17 +49,84 @@
 │
 ├── agent/                             # Layer 3: DSPy Agents & LangGraph
 │   ├── __init__.py                    # Package init
-│   ├── graph.py                       # LangGraph StateGraph definition
+│   ├── graph.py                       # LangGraph StateGraph definition (8 nodes)
 │   ├── state.py                       # AgentState TypedDict with ui_message_reducer
 │   ├── ui.tsx                         # React components (colocated!)
 │   │                                  # └── Export default {component, ...}
-│   ├── nodes/                         # LangGraph nodes
-│   │   ├── analyst.py                 # Query understanding
-│   │   ├── designer.py                # UI widget selection (state aware!)
-│   │   └── ...
-│   ├── dspy_signatures/               # DSPy signatures
-│   ├── tools/                         # DSPy tools
-│   └── dspy_agents/                   # ReAct agents
+│   │
+│   ├── nodes/                         # LangGraph nodes layer (state transitions)
+│   │   ├── __init__.py                # Node exports
+│   │   ├── analyst_node.py            # Analyst node (state-aware wrapper)
+│   │   ├── researcher_node.py         # Researcher node (updates state)
+│   │   ├── contextualizer_node.py     # Contextualizer node
+│   │   ├── designer_node.py           # Designer node (STATE AWARE!)
+│   │   ├── selector_node.py           # Widget selector node
+│   │   ├── sequencer_node.py          # Sequencer node
+│   │   ├── presenter_node.py          # Presenter node
+│   │   └── executor_node.py           # Tool execution node
+│   │
+│   ├── pipeline/                      # R014 PATTERN: Domain-centric organization
+│   │   ├── analyst/                   # All analyst DSPy modules/tools (6+ files)
+│   │   │   ├── __init__.py
+│   │   │   ├── signatures.py          # DSPy signatures for analyst
+│   │   │   ├── modules.py             # DSPy modules (ContextAnalyzer, InsightExtractor)
+│   │   │   └── tools/                 # Analyst tools
+│   │   │       ├── query_analyzer.py  # Decision tree + chunking
+│   │   │       ├── insight_extractor.py  # Chunking + iteration
+│   │   │       ├── goal_detector.py
+│   │   │       └── search_terms.py
+│   │   ├── researcher/                # All researcher DSPy modules/tools (19+ files)
+│   │   │   ├── __init__.py
+│   │   │   ├── signatures.py
+│   │   │   ├── modules.py
+│   │   │   └── tools/
+│   │   │       ├── search_agent.py    # ReAct search agent
+│   │   │       ├── data_structurer.py # Data structuring
+│   │   │       └── citation_builder.py
+│   │   ├── contextualizer/            # All contextualizer modules/tools (5+ files)
+│   │   │   ├── __init__.py
+│   │   │   ├── signatures.py
+│   │   │   └── tools/
+│   │   ├── designer/                  # All designer modules/tools (7+ files)
+│   │   │   ├── __init__.py
+│   │   │   ├── signatures.py
+│   │   │   └── tools/
+│   │   │       ├── widget_matcher.py  # Few-shot semantic learning
+│   │   │       └── color_selector.py
+│   │   ├── presenter/                 # All presenter modules/tools (4+ files)
+│   │   │   ├── __init__.py
+│   │   │   └── tools/
+│   │   └── sequencer/                 # Sequencer modules/tools
+│   │
+│   ├── orchestration/                 # R014 PATTERN: master_agent (26 files)
+│   │   ├── __init__.py
+│   │   ├── master_agent.py            # Main orchestrator (port to LangGraph nodes)
+│   │   ├── delivery_planner.py        # Staggered delivery (2-5s pacing)
+│   │   ├── pipeline_validator.py      # QA checkpoints
+│   │   └── factory.py                 # Agent initialization
+│   │
+│   ├── widget_spawner/                # R014 PATTERN: Multi-agent widget generation (32 files)
+│   │   ├── __init__.py
+│   │   ├── agent.py                   # Main spawner agent
+│   │   ├── builders/                  # Widget builders
+│   │   ├── layouts/                   # Layout strategies
+│   │   └── rewards/                   # Reward calculation
+│   │
+│   ├── multihop_search/               # R014 PATTERN: Reflection-based search (20 files)
+│   │   ├── __init__.py
+│   │   ├── agents/                    # Search agents
+│   │   ├── execution/                 # Hop execution
+│   │   └── reflection/                # Search quality assessment
+│   │
+│   ├── tools/                         # Common utilities (domain-agnostic)
+│   │   ├── __init__.py
+│   │   ├── common/                    # Type utils, chunking (R014: 3 files)
+│   │   │   ├── type_utils.py          # _to_float, _to_bool (CRITICAL)
+│   │   │   └── chunking.py            # MAX_CHUNK_SIZE=500, OVERLAP=100
+│   │   └── hydrators/                 # Data hydration for widgets (11 files)
+│   │
+│   ├── dspy_signatures/               # (Legacy - moving to pipeline/*/signatures.py)
+│   └── dspy_agents/                   # (Legacy - moving to pipeline/*/modules.py)
 │
 ├── ui/                                # Layer 4: UI Descriptors
 │   ├── descriptors/                    # UI descriptor classes
@@ -134,6 +201,45 @@ export default {
 - Designer agent gets state awareness via `state.ui`
 - Shadow DOM for style isolation
 - Industry standard (LangSmith/LangChain)
+
+### 1.2.2 R014 → AgentX Migration: Critical Architectural Shift
+
+**R014 Callback Pattern** (Problem: No state awareness):
+```python
+# From R014: services/master_agent/master_agent.py
+master_agent, delivery_plan_type = use_case.setup_master_agent_with_pipeline(
+    widget_callback=send_widget,  # Nested callback - no state awareness!
+)
+# BUG: Designer agent sends duplicate widgets - doesn't know what already exists
+```
+
+**AgentX LangGraph Pattern** (Solution: State-aware Designer node):
+```python
+# From AgentX design: agent/state.py + nodes/designer_node.py
+class AgentState(TypedDict):
+    messages: Annotated[Sequence[BaseMessage], add_messages]
+    ui: Annotated[Sequence[AnyUIMessage], ui_message_reducer]  # State tracking!
+
+async def designer_node(state: AgentState):
+    # FIX: Check existing widgets before selecting new one
+    existing_widgets = [msg.name for msg in state.get("ui", [])]
+    # Select widget that COMPLEMENTS existing widgets
+    push_ui_message(widget_type, widget_props, message=message)
+    return {"messages": [message]}
+```
+
+**Key Files from R014 to Port**:
+
+| R014 File | AgentX Mapping | Purpose |
+|-----------|----------------|---------|
+| `services/tools/common/type_utils.py` | `agent/tools/common/type_utils.py` | `_to_float`, `_to_bool` (CRITICAL) |
+| `services/tools/analyst/query_analyzer.py` | `agent/pipeline/analyst/tools/query_analyzer.py` | Decision tree + chunking |
+| `services/tools/researcher/data_structurer.py` | `agent/pipeline/researcher/tools/data_structurer.py` | Data structuring |
+| `services/tools/selector_tools.py` | `agent/pipeline/designer/tools/widget_matcher.py` | Few-shot semantic learning |
+| `services/master_agent/delivery_planner.py` | `agent/orchestration/delivery_planner.py` | Staggered delivery (2-5s pacing) |
+| `services/pipeline/analyst.py` | `agent/pipeline/analyst/modules.py` | Dual-pass analyst pattern |
+| `services/widget_spawner/` | `agent/widget_spawner/` | Multi-agent widget generation (32 files) |
+| `services/multihop_search/` | `agent/multihop_search/` | Reflection-based search (20 files) |
 
 ### 1.3 Frontend Structure
 

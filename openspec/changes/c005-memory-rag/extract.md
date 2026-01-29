@@ -18,6 +18,11 @@
 | **Consolidation** | research:07_temporal_rag.md + LLD | Periodic Tier 2 → Tier 3 migration | ✅ |
 | **Duration Tracking** | research:07_temporal_rag.md | State events have start/end times | ✅ |
 | **Multi-Hop RAG** | research:07_temporal_rag.md | Search both Tier 2 and Tier 3, merge results | ✅ |
+| **mem0 Agent Memory** | dspy-compounding-engineering | Per-agent persistent memory with conversation history | ✅ NEW |
+| **KBPredict Auto-Injection** | dspy-compounding-engineering | Auto-inject KB context before DSPy prediction | ✅ NEW |
+| **Hybrid Search (RRF)** | dspy-compounding-engineering | Dense + Sparse retrieval with Reciprocal Rank Fusion | ✅ NEW |
+| **Reflection-Based Multi-Hop** | R014 (no NetworkX!) | Completeness assessment, hop planning, iterative search | ✅ NEW |
+| **MemoryPredict Wrapper** | dspy-compounding-engineering | Auto-inject agent memory + auto-store interactions | ✅ NEW |
 | Clean Architecture | mimicus | Layered separation with domain independence | ✅ |
 | Repository Pattern | mimicus | ABC base + implementations | ✅ |
 
@@ -41,6 +46,193 @@
 | **All memories equal** | Preferences ≠ events ≠ states | Classify by temporal_type |
 | **No fact invalidation** | Contradictory memories | Track supersedes relationships |
 | **Point events only** | Misses long-term states | DurationMemory for state tracking |
+
+### 1.4 RAG Patterns from dspy-compounding-engineering (CRITICAL - R014 doesn't have memory!)
+
+**Memory Architecture** (NEW for AgentX):
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  mem0 Agent Memory                        │
+├─────────────────────────────────────────────────────────────┤
+│  Collection: mem_{agent_name}_{project_hash}              │
+│  Storage: Qdrant + OpenAI LLM (for fact extraction)        │
+│  ├── Conversation history (query → result)                │
+│  ├── Learned reasoning patterns                            │
+│  └── Entity relationship cache (3-hop limit, 7-day TTL)     │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                  MemoryPredict Wrapper                      │
+├─────────────────────────────────────────────────────────────┤
+│  1. Auto-injects past interactions as context              │
+│  2. Calls predictor with augmented kwargs                  │
+│  3. Auto-stores interaction after prediction               │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**KBPredict Auto-Injection Pattern**:
+```python
+# From dspy-compounding-engineering/utils/knowledge/module.py
+class KBPredict(dspy.Module):
+    """DSPy Module that wraps dspy.Predict with automatic KB injection."""
+
+    def forward(self, **kwargs):
+        # 1. Generate query from kwargs (combine all string inputs)
+        query = " ".join([str(v)[:500] for v in kwargs.values() if isinstance(v, str)])
+
+        # 2. Retrieve learnings (hybrid: dense + sparse + RRF)
+        kb_context = kb.get_context_string(query=query, tags=self.kb_tags)
+
+        # 3. Inject into largest string field
+        if kb_context:
+            target_key = max((k for k, v in kwargs.items() if isinstance(v, str)), key=lambda k: len(kwargs[k]))
+            kwargs[target_key] = f"{kb_context}\n\n---\n\n{kwargs[target_key]}"
+
+        # 4. Call predictor
+        return self.predictor(**kwargs)
+```
+
+**Hybrid Search with RRF** (Dense + Sparse):
+```python
+# From dspy-compounding-engineering/utils/knowledge/learning/learning_retrieval.py
+def retrieve_relevant(self, query: str = "", tags: list = None, limit: int = 5):
+    """Hybrid search with tag filtering, falls back to disk."""
+    # Dense: Vector embeddings (semantic similarity)
+    dense = self.embedding_provider.get_embedding(query)
+
+    # Sparse: BM25 keyword matching (exact term overlap)
+    sparse = self.embedding_provider.get_sparse_embedding(query)
+
+    # Combined: Reciprocal Rank Fusion (RRF)
+    result = self.client.query_points(
+        collection_name=self.collection_name,
+        prefetch=[
+            Prefetch(query=dense, using=None, limit=limit * 2),
+            Prefetch(query=sparse, using="text-sparse", limit=limit * 2),
+        ],
+        query=FusionQuery(fusion=Fusion.RRF),
+        limit=limit,
+    ).points
+
+    # Fallback: Disk-based keyword matching if Qdrant unavailable
+    if not result:
+        return self._legacy_search(query, tags, limit)
+```
+
+**Key Learnings**:
+- mem0 requires OpenAI API key for fact extraction
+- Per-agent memory isolation (collection_name includes agent_name)
+- Auto-injection: no manual context needed, wrapper handles it
+- Fallback pattern: disk-based search if Qdrant unavailable
+- Tag-based filtering: `kb_tags=["knowledge-gardening", "patterns"]`
+
+### 1.5 Multi-Hop Search Patterns from R014 (NO NetworkX/PageRank!)
+
+**R014 Reflection-Based Multi-Hop** (Simpler than NetworkX approach):
+```
+┌──────────────┐
+│ User Question│
+└──────┬───────┘
+       ▼
+┌──────────────────────────────────────────────┐
+│  HOP LOOP (max_hops=5, stop_threshold=0.85) │
+│  ┌────────────────────────────────────────┐  │
+│  │ 1. GenerateSearchQuery                 │  │
+│  │    (context-aware query refinement)    │  │
+│  │ 2. SearXNG Search (privacy-focused)     │  │
+│  │ 3. AnswerWithSources (ChainOfThought)  │  │
+│  │ 4. CompletenessAssessor                │  │ ← STOP if ≥0.85
+│  │ 5. GenerateNextQuery                   │  │    (avoid unnecessary hops)
+│  │    (strategy: REFINE_TOPIC/            │  │
+│  │     DISCOVER_NEW/VALIDATE_EXPAND)      │  │
+│  └────────────────────────────────────────┘  │
+└──────────────────────────────────────────────┘
+       ▼
+┌──────────────────┐
+│ SynthesizeFinalAnswer │ Combine all hop results
+└──────────────────┘
+```
+
+**DSPy Signatures** (from R014 services/multihop_search/signatures.py):
+- `GenerateSearchQuery`: context-aware query generation
+- `AnswerWithSources`: CoT with inline citations [1], [2]
+- `CheckCompleteness`: is_sufficient (bool), confidence (0.0-1.0), gap_description
+- `GenerateNextQuery`: outputs strategy (REFINE_TOPIC/DISCOVER_NEW/VALIDATE_EXPAND)
+- `SynthesizeFinalAnswer`: combines all_hop_answers, all_context
+
+**Key Components** (from R014):
+- `HopOrchestrator`: manages multi-hop loop logic
+- `CompletenessAssessor`: stop_threshold (0.85) determines when answer is complete enough
+- `ProgressCallback`: real-time UI updates during long-running tasks
+- `SearXNGClient`: privacy-focused metasearch at http://192.168.1.4:8080
+
+**Key Differences from NetworkX Approach**:
+| Aspect | NetworkX (dspy-compounding) | R014 Reflection |
+|--------|----------------------------|-----------------|
+| **Graph** | Explicit NetworkX DiGraph | Implicit (reflection-based) |
+| **Path Finding** | shortest_path() | GenerateNextQuery with strategy |
+| **Stopping** | Fixed hops | CompletenessAssessor (0.85 threshold) |
+| **Complexity** | High (graph maintenance) | Low (iterative refinement) |
+
+**AgentX Decision**: Use R014's reflection-based approach (simpler, no NetworkX dependency)
+
+### 1.6 Knowledge Consolidation Patterns
+
+**From dspy-compounding-engineering agents/knowledge_gardener/**:
+
+```
+┌─────────────────────────────────────────┐
+│     Knowledge Gardener Orchestrator    │
+├─────────────────────────────────────────┤
+│  1. KBConsolidatorSignature            │
+│     ├── Merge duplicate learnings       │
+│     ├── Remove noise                    │
+│     ├── Categorize entries              │
+│     └── Assess confidence               │
+│  2. MemoryCompressorSignature          │
+│     ├── Deduplicate conversations       │
+│     ├── Compress reasoning chains       │
+│     └── Track compression metrics       │
+│  3. PatternExtractorSignature          │
+│     └── Extract reusable patterns        │
+└─────────────────────────────────────────┘
+```
+
+**Auto-Codification Pattern** (from dspy-compounding-engineering docs):
+```python
+# After every `work` command execution:
+learnings = LearningExtractor.extract_from_todo(
+    todo_path=completed_todo,
+    changes_made=git_diff
+)
+for learning in learnings:
+    kb.save_learning(learning)  # Auto-stores with tags, category
+```
+
+**Knowledge Base Structure**:
+```
+.knowledge/
+├── learnings/
+│   ├── 2025-12-01_security_bcrypt.json
+│   ├── 2025-12-02_architecture_factory.json
+│   └── ...
+├── index.json  # Fast lookup by tags/categories
+└── AI.md       # Human-readable consolidated learnings
+```
+
+**Learning Entry Format**:
+```json
+{
+  "id": "uuid",
+  "timestamp": "2025-12-07T10:00:00Z",
+  "source": "work|review|triage|manual",
+  "context": "When working on authentication",
+  "action": "Use bcrypt for password hashing",
+  "rationale": "MD5 is cryptographically broken",
+  "tags": ["security", "authentication", "hashing"],
+  "category": "best_practice"
+}
+```
 
 ---
 

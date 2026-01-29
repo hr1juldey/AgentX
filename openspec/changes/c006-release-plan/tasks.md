@@ -253,6 +253,9 @@ pytest tests/integration/test_load.py -v
 | **C003 integration** | Agent tests | DSPy agents work with LangGraph |
 | **C004 integration** | Voice tests | Voice services integrated (Phase 7) |
 | **C005 integration** | Memory tests | TemporalRAGService works |
+| **C007 integration** | Frontend tests | LangGraph SDK, LoadExternalComponent |
+| **C008 integration** | UI tests | Metaballs, voice nucleus, design tokens |
+| **C009 integration** | Polish tests | Raycast minimalism applied |
 | **LLD alignment** | Grep tests | 100% field name match |
 
 ---
@@ -266,7 +269,7 @@ C006-release-plan is **complete** when:
 - [ ] API freezing rules documented
 - [ ] Verification criteria for each phase
 - [ ] Dependency graph established (0→1→2→3→4→5→6→7)
-- [ ] Integration with C001-C005 specifications
+- [ ] Integration with C001-C009 specifications
 - [ ] All frozen APIs documented
 - [ ] All verification criteria documented
 - [ ] LLD alignment verified (100% match)
@@ -344,9 +347,9 @@ Phase 1 (Domain) ─────────────────────
                                                       │   │
 Phase 2 (Agent) ──────────────────────────────┐   │   │
                                                   │   │   │
-Phase 3 (UI) ──────────────────────────────┐   │   │   │
+Phase 3 (UI + Frontend) ────────────────────┐   │   │   │
                                               │   │   │   │
-Phase 4 (State) ────────────────────────┐   │   │   │   │
+Phase 4 (State + Polish) ─────────────────┐   │   │   │   │
                                           │   │   │   │   │
 Phase 5 (Memory) ────────────────────┐   │   │   │   │   │
                                       │   │   │   │   │   │
@@ -359,7 +362,10 @@ Dependencies:                │   │   │   │   │   │   │   │
 ├─ C002-data-contracts        └─────────┴─────────┴───────┘ (Phase 2+)
 ├─ C003-agent-pipeline        └─────────────┴─────────────┘ (Phase 2-4)
 ├─ C004-voice-streaming       └───────────────────────────┘ (Phase 7)
-└─ C005-memory-rag            └─────────────────────┘ (Phase 5)
+├─ C005-memory-rag            └─────────────────────┘ (Phase 5)
+├─ C007-frontend-architecture └─────────────┴─────────────┘ (Phase 3-4)
+├─ C008-organic-ui            └─────────────┴─────────────┘ (Phase 3-4)
+└─ C009-ui-polish             └───────────────────────────┘ (Phase 4)
 ```
 
 ---
@@ -370,9 +376,14 @@ Dependencies:                │   │   │   │   │   │   │   │
 |--------|----------------|-------|
 | **C001-folder-structure** | All phases (0-7) | Clean Architecture foundation |
 | **C002-data-contracts** | Phase 2+ | DTOs required for API layer |
-| **C003-agent-pipeline** | Phase 2-4 | DSPy agents, LangGraph |
+| **C003-agent-pipeline** | Phase 2-4 | DSPy agents, LangGraph, server-driven UI |
 | **C004-voice-streaming** | Phase 7 | Voice services integration |
 | **C005-memory-rag** | Phase 5 | Memory + RAG services |
+| **C007-frontend-architecture** | Phase 3-4 | LangGraph SDK, LoadExternalComponent |
+| **C008-organic-ui** | Phase 3-4 | Metaballs, voice nucleus, design tokens |
+| **C009-ui-polish** | Phase 4 | Raycast minimalism, aesthetic fixes |
+
+**Total Changes**: 9 (C001-C009)
 
 ---
 
@@ -402,7 +413,7 @@ Before marking C006-release-plan complete, verify:
 - [ ] API freezing rules documented
 - [ ] Verification criteria for each phase
 - [ ] Dependency graph established
-- [ ] Integration with C001-C005 specifications
+- [ ] Integration with C001-C009 specifications
 - [ ] LLD alignment verified (100% match)
 - [ ] Frozen APIs documented
 - [ ] Health check endpoints defined
@@ -429,4 +440,4 @@ This change unlocks:
 
 **End of spec-factory pipeline**
 
-**All 6 changes complete**: C001-C006, 42 artifacts total
+**All 9 changes complete**: C001-C009, 63 artifacts total

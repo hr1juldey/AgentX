@@ -8,6 +8,39 @@
 
 ## 1. Implementation Checklist
 
+### 1.0 R014 File Count Reality Check
+
+**R014 Production Files**: 227 Python files
+- Services: 192 files (84.6% of codebase)
+- API/Presentation: 18 files (7.9%)
+- Application: 7 files (3.1%)
+- Config/Core: 6 files (2.6%)
+- Domain: 4 files (1.8%)
+- Models: 1 file (0.4%)
+- Entry: 1 file (0.4%)
+
+**AgentX Expected File Count** (conservative estimate):
+- Backend: ~180-200 files (C001 + C003 + C004 + C005)
+- Frontend: ~40-50 files (C007 + C008 + C009)
+- Total: ~220-250 files
+
+**R014 Service Breakdown** (192 files → AgentX mapping):
+| Category | R014 Files | AgentX Mapping |
+|----------|-----------|----------------|
+| Pipeline agents | 31 | `agent/pipeline/*/` (analyst, researcher, etc.) |
+| Master agent | 26 | `agent/orchestration/` |
+| Widget spawner | 32 | `agent/widget_spawner/` |
+| Multihop search | 20 | `agent/multihop_search/` |
+| Tools (analyst) | 6 | `agent/pipeline/analyst/tools/` |
+| Tools (researcher) | 19 | `agent/pipeline/researcher/tools/` |
+| Tools (contextualizer) | 5 | `agent/pipeline/contextualizer/tools/` |
+| Tools (designer) | 7 | `agent/pipeline/designer/tools/` |
+| Tools (presenter) | 4 | `agent/pipeline/presenter/tools/` |
+| Tools (hydrators) | 11 | `agent/tools/hydrators/` |
+| Core services | 3 | `agent/tools/common/` |
+
+**Critical**: C001 establishes the folder structure, but actual file creation happens in C003-C005.
+
 ### 1.1 Phase 0: Foundation
 
 | Task | File | Status | Notes |
@@ -35,13 +68,52 @@
 | Create RedisSessionAdapter | `agentx/infrastructure/database/redis_session_adapter.py` | ⬜ | Implementation, ~80 lines |
 | Create SQLiteSessionAdapter | `agentx/infrastructure/database/sqlite_session_adapter.py` | ⬜ | Implementation, ~90 lines |
 
-### 1.3 Phase 2: Agent Layer
+### 1.3 Phase 2: Agent Layer (Structure Only - Detailed in C003)
+
+**Note**: C001 creates the folder structure. C003 (agent-pipeline) will populate with ~100+ files based on R014.
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create main signatures | `agentx/agent/dspy_signatures/main_signatures.py` | ⬜ | MainAgentSignature, ~50 lines |
-| Create main tools | `agentx/agent/tools/main_tools.py` | ⬜ | Calculator, search, ~100 lines |
-| Create main ReAct agent | `agentx/agent/dspy_agents/main_react_agent.py` | ⬜ | MainDSPyReActAgent, ~120 lines |
+| **LangGraph Core** ||||
+| Create graph.py | `agentx/agent/graph.py` | ⬜ | StateGraph definition, ~80 lines |
+| Create state.py | `agentx/agent/state.py` | ⬜ | AgentState with ui_message_reducer, ~40 lines |
+| Create ui.tsx | `agentx/agent/ui.tsx` | ⬜ | React component registry, ~50 lines |
+| **LangGraph Node Layer** (NEW - not in R014) ||||
+| Create nodes/ directory | `agentx/agent/nodes/` | ⬜ | 8 node files |
+| Create analyst_node | `agentx/agent/nodes/analyst_node.py` | ⬜ | State-aware wrapper, ~60 lines |
+| Create researcher_node | `agentx/agent/nodes/researcher_node.py` | ⬜ | State-aware wrapper, ~60 lines |
+| Create contextualizer_node | `agentx/agent/nodes/contextualizer_node.py` | ⬜ | State-aware wrapper, ~60 lines |
+| Create designer_node | `agentx/agent/nodes/designer_node.py` | ⬜ | STATE AWARE!, ~70 lines |
+| Create selector_node | `agentx/agent/nodes/selector_node.py` | ⬜ | Widget selector, ~50 lines |
+| Create sequencer_node | `agentx/agent/nodes/sequencer_node.py` | ⬜ | Sequencer, ~50 lines |
+| Create presenter_node | `agentx/agent/nodes/presenter_node.py` | ⬜ | Presenter, ~50 lines |
+| Create executor_node | `agentx/agent/nodes/executor_node.py` | ⬜ | Tool execution, ~60 lines |
+| **Pipeline Directory Structure** (R014 PATTERN) ||||
+| Create pipeline/ directory | `agentx/agent/pipeline/` | ⬜ | Domain-centric organization |
+| Create analyst/ directory | `agentx/agent/pipeline/analyst/` | ⬜ | 6+ files (C003) |
+| Create researcher/ directory | `agentx/agent/pipeline/researcher/` | ⬜ | 19+ files (C003) |
+| Create contextualizer/ directory | `agentx/agent/pipeline/contextualizer/` | ⬜ | 5+ files (C003) |
+| Create designer/ directory | `agentx/agent/pipeline/designer/` | ⬜ | 7+ files (C003) |
+| Create presenter/ directory | `agentx/agent/pipeline/presenter/` | ⬜ | 4+ files (C003) |
+| Create sequencer/ directory | `agentx/agent/pipeline/sequencer/` | ⬜ | Files (C003) |
+| **Orchestration Directory** (R014 PATTERN: 26 files) ||||
+| Create orchestration/ directory | `agentx/agent/orchestration/` | ⬜ | Master agent orchestration |
+| **Widget Spawner Directory** (R014 PATTERN: 32 files) ||||
+| Create widget_spawner/ directory | `agentx/agent/widget_spawner/` | ⬜ | Multi-agent widget generation |
+| **Multihop Search Directory** (R014 PATTERN: 20 files) ||||
+| Create multihop_search/ directory | `agentx/agent/multihop_search/` | ⬜ | Reflection-based search |
+| **Common Tools Directory** (R014 PATTERN) ||||
+| Create tools/common/ directory | `agentx/agent/tools/common/` | ⬜ | type_utils.py, chunking.py |
+| Create tools/hydrators/ directory | `agentx/agent/tools/hydrators/` | ⬜ | Data hydration (11 files) |
+
+**Expected Agent/ File Count** (from R014):
+- nodes/: 8 files (NEW in AgentX)
+- pipeline/: ~50 files (31 agents + ~19 tools)
+- orchestration/: 26 files
+- widget_spawner/: 32 files
+- multihop_search/: 20 files
+- tools/: ~14 files (3 common + 11 hydrators)
+- **Total**: ~150 files in agent/ layer
 
 ### 1.4 Phase 3: UI Layer
 
