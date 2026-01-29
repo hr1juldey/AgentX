@@ -1,3 +1,4 @@
+
 # Specs Artifact: c002-data-contracts
 
 **Generated**: 2026-01-29 (Updated with LangGraph server-driven UI)
