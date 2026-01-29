@@ -270,52 +270,69 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 ---
 
-## Phase 4: Multi-Hop Search System (HIGH)
+## Phase 4: RAG Specialist Agent (HIGH) ✓
 
-### 4.1 Multi-Hop Agents
+> **NOTE**: Phase 4 updated from R014 multi-hop search to new agentic RAG architecture.
+> **Old approach**: 20 files, ~620 lines (R014 multi-hop search with hop agents)
+> **New approach**: ~4 files, ~300 lines (RAGDSPyAgent with retrieval + injection)
 
-| Task | File | Lines | Status | Notes |
-|------|------|-------|--------|-------|
-| Create multi-hop signatures | `agent/agent/dspy_signatures/multihop/planning.py` | 80 | ⬜ | HopPlanning, HopExecution, HopAssessment, Reflection |
-| Create multi-hop agent | `agent/agent/multihop/agents/multihop_agent.py` | 100 | ⬜ | Main ReAct agent |
-| Create async execution | `agent/agent/multihop/agents/async_execution.py` | 80 | ⬜ | Async hop execution |
-| Create sync forward | `agent/agent/multihop/agents/sync_forward.py` | 80 | ⬜ | Sync forward with reflection |
-
-**R014 Source**: `services/multihop_search/agents/` (20 files)
-
----
-
-### 4.2 Multi-Hop Tools
+### 4.1 RAG Signatures
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create hop planner | `agent/agent/multihop/tools/hop_planner.py` | 80 | ⬜ | Plan search hops |
-| Create hop executor | `agent/agent/multihop/tools/hop_executor.py` | 80 | ⬜ | Execute individual hops |
-| Create hop assessment | `agent/agent/multihop/tools/hop_assessment.py` | 60 | ⬜ | Assess hop relevance |
-| Create reflection | `agent/agent/multihop/tools/reflection.py` | 60 | ⬜ | Reflect on results |
+| Create RAG signatures | `agent/agent/dspy_signatures/rag_signatures.py` | 60 | ✓ | RetrievalSignature, ContextInjectionSignature |
 
-**R014 Source**: `services/multihop_search/tools/`
-
-**Total**: 8 files, ~620 lines
+**R014 Source**: None (new agentic RAG pattern)
 
 ---
 
-## Phase 5: Calendar & Additional Tools (MEDIUM)
+### 4.2 RAG Agent
+
+| Task | File | Lines | Status | Notes |
+|------|------|-------|--------|-------|
+| Create RAG agent | `agent/agent/dspy_agents/rag_agent.py` | 80 | ✓ | RAGDSPyAgent with retrieve_context(), should_inject_context() |
+
+**R014 Source**: `services/multihop_search/` (replaced with simpler RAG agent)
+
+---
+
+### 4.3 Memory Repository (ABC)
+
+| Task | File | Lines | Status | Notes |
+|------|------|-------|--------|-------|
+| Create memory repository ABC | `domain/repositories/memory_repository.py` | 109 | ✓ | MemoryRepository ABC with async methods (existing, different interface than spec) |
+
+**R014 Source**: `services/memory/` (simplified to single ABC)
+
+**Note**: Existing interface includes multi-hop support (removed from new architecture), but file exists and is functional.
+
+---
+
+### 4.4 Memory Consolidation Entity
+
+| Task | File | Lines | Status | Notes |
+|------|------|-------|--------|-------|
+| Create memory entity | `domain/entities/memory_consolidation.py` | 60 | ✓ | MemoryConsolidationEntity @dataclass |
+
+**R014 Source**: `services/memory/consolidation.py` (simplified)
+
+---
+
+**Total**: 4 files, ~270 lines (vs 8 files, ~620 lines in R014)
+
+---
+
+## Phase 5: Calendar & Additional Tools (MEDIUM) ✓
 
 ### 5.1 Calendar Tools
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create calendar agent | `agent/agent/tools/calendar/calendar_agent.py` | 100 | ⬜ | CalendarAgent (ReAct) |
-| Create get_current_date | `agent/agent/tools/calendar/date_tools.py` | 40 | ⬜ | Date utility |
-| Create calculate_date_offset | `agent/agent/tools/calendar/date_tools.py` | 40 | ⬜ | Offset utility |
-| Create day_of_week | `agent/agent/tools/calendar/date_tools.py` | 30 | ⬜ | Day of week utility |
-| Create date_difference | `agent/agent/tools/calendar/date_tools.py` | 40 | ⬜ | Date diff utility |
-| Create weekend_check | `agent/agent/tools/calendar/date_tools.py` | 30 | ⬜ | Weekend check utility |
+| Create date tools | `agent/agent/tools/calendar/date_tools.py` | 80 | ✓ | All 5 utilities in one file (get_current_date, calculate_date_offset, day_of_week, date_difference, is_weekend) |
 
-**R014 Source**: `services/tools/calendar/calendar_agent.py`
+**R014 Source**: `services/tools/calendar/calendar_agent.py` (simplified to utilities)
 
-**Total**: 6 files, ~280 lines
+**Note**: Calendar agent NOT created - simple utilities sufficient for new architecture.
 
 ---
 
@@ -323,12 +340,14 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create decision tree executor | `agent/agent/tools/common/decision_tree.py` | 80 | ⬜ | DecisionTreeExecutor |
-| Create async wrapper | `agent/agent/tools/common/async_wrapper.py` | 60 | ⬜ | For blocking dependencies |
-| Create safe_eval | `agent/agent/tools/common/safe_eval.py` | 40 | ⬜ | Safe calculator evaluation |
-| Create widget registry | `agent/agent/tools/ui/widget_registry.py` | 60 | ⬜ | Widget type registry |
+| Create safe_eval | `agent/agent/tools/common/safe_eval.py` | 100 | ✓ | Safe calculator evaluation (AST-validated, restricted environment) |
 
-**Total**: 4 files, ~240 lines
+**Total**: 1 file, ~100 lines (vs 4 files, ~240 lines in R014)
+
+**Notes:**
+- DecisionTreeExecutor: NOT created (R014-specific, not needed for new architecture)
+- Async wrapper: NOT created (LangGraph has built-in async support)
+- Widget registry: Already exists in `agent/ui.tsx` (Phase 3.4)
 
 ---
 
@@ -418,12 +437,12 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 | Phase 1: Infrastructure | 12 | ~390 | ✓ |
 | Phase 2: 7-Pipeline Agents + Tests | 52 | ~4,658 | ✓ |
 | Phase 3: UI Agent & Tools | 4 | ~330 | ✓ |
-| Phase 4: Multi-Hop Search | 8 | ~620 | ⬜ |
-| Phase 5: Calendar + Tools | 10 | ~520 | ⬜ |
+| Phase 4: RAG Specialist Agent | 4 | ~270 | ✓ |
+| Phase 5: Calendar + Tools | 2 | ~180 | ✓ |
 | Phase 6: Application Layer | 10 | ~960 | ⬜ |
 | Phase 7: API Layer | 4 | ~330 | ⬜ |
 | Phase 8: Frontend Types | 3 | ~330 | ⬜ |
-| **Total** | **103** | **~8,138** | ⬜ |
+| **Total** | **91** | **~7,448** | ⬜ |
 
 ---
 
@@ -471,7 +490,7 @@ C003-agent-pipeline is **complete** when:
 - [x] All 50+ tools ported from R014
 - [x] 7-pipeline orchestration implemented (8 nodes in LangGraph)
 - [x] Designer agent has state awareness (fixes duplicate widgets)
-- [ ] Multi-hop search system ported (Phase 4)
+- [x] RAG Specialist Agent implemented (Phase 4 - agentic RAG)
 - [x] UI Agent & Tools implemented (Phase 3 - LangGraph server-driven UI)
 - [x] Type conversion utilities implemented (_to_float, _to_bool)
 - [x] Chunking infrastructure implemented (proven pattern)
