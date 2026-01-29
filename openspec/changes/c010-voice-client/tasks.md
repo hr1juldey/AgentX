@@ -18,12 +18,12 @@ Implement voice client infrastructure for external kyutai voice-server integrati
 
 **Goal**: Define Pydantic models and Zod schemas for kyutai protocol and conversational state.
 
-- [ ] 1.1 Create `agentx/application/dtos/voice_gateway_dtos.py` with KyutaiMessage, KyutaiMessageType models
-- [ ] 1.2 Create `agentx/domain/entities/conversation_session.py` with ConversationSession, ConversationMessage, ConversationContext entities
-- [ ] 1.3 Create `frontend/types/voice-protocol.ts` with Zod schemas matching Pydantic models
-- [ ] 1.4 Create `frontend/lib/voice/types.ts` with TypeScript types for voice client
-- [ ] 1.5 Verify Pydantic ↔ Zod sync (field aliases, enum values, optional fields)
-- [ ] 1.6 Run type checking (tsc --noEmit, pyright) and verify no errors
+- [x] 1.1 Create `agentx/application/dtos/voice_gateway_dtos.py` with KyutaiMessage, KyutaiMessageType models
+- [x] 1.2 Create `agentx/domain/entities/conversation_session.py` with ConversationSession, ConversationMessage, ConversationContext entities
+- [x] 1.3 Create `frontend/types/voice-protocol.ts` with Zod schemas matching Pydantic models
+- [x] 1.4 Create `frontend/lib/voice/types.ts` with TypeScript types for voice client
+- [x] 1.5 Verify Pydantic ↔ Zod sync (field aliases, enum values, optional fields)
+- [x] 1.6 Run type checking (tsc --noEmit, pyright) and verify no errors
 
 ---
 
@@ -31,19 +31,19 @@ Implement voice client infrastructure for external kyutai voice-server integrati
 
 **Goal**: Implement backend voice gateway and stream handling services.
 
-- [ ] 2.1 Create `agentx/infrastructure/external/voice_protocol.py` with kyutai protocol helpers
-- [ ] 2.2 Create `agentx/infrastructure/external/text_stream_handler.py` with TextStreamHandler, STTBuffer classes
-- [ ] 2.3 Create `agentx/infrastructure/external/voice_gateway_service.py` with VoiceGatewayService class
-- [ ] 2.4 Implement VoiceGatewayService.handle_session() for frontend WebSocket management
-- [ ] 2.5 Implement VoiceGatewayService._input_task() for routing audio to kyutai STT
-- [ ] 2.6 Implement VoiceGatewayService._output_task() for receiving from kyutai
-- [ ] 2.7 Implement VoiceGatewayService._process_agent_response() for C003 integration
-- [ ] 2.8 Implement VoiceGatewayService.check_kyutai_health() for health check
-- [ ] 2.9 Implement TextStreamHandler.buffer_stt_chunk() for STT buffering
-- [ ] 2.10 Implement TextStreamHandler.split_tts_sentences() for TTS sentence splitting
-- [ ] 2.11 Implement TextStreamHandler.stream_tts_sentences() for TTS streaming with interruption
-- [ ] 2.12 Run ruff check --fix, ruff format, pyrefly check --summarize-errors
-- [ ] 2.13 Verify all files under 150 lines (CLAUDE_POLICY.md Rule 3)
+- [x] 2.1 Create `agentx/infrastructure/external/voice_protocol.py` with kyutai protocol helpers
+- [x] 2.2 Create `agentx/infrastructure/external/text_stream_handler.py` with TextStreamHandler, STTBuffer classes
+- [x] 2.3 Create `agentx/infrastructure/external/voice_gateway_service.py` with VoiceGatewayService class
+- [x] 2.4 Implement VoiceGatewayService.handle_session() for frontend WebSocket management
+- [x] 2.5 Implement VoiceGatewayService._input_task() for routing audio to kyutai STT
+- [x] 2.6 Implement VoiceGatewayService._output_task() for receiving from kyutai
+- [x] 2.7 Implement VoiceGatewayService._process_agent_response() for C003 integration
+- [x] 2.8 Implement VoiceGatewayService.check_kyutai_health() for health check
+- [x] 2.9 Implement TextStreamHandler.buffer_stt_chunk() for STT buffering
+- [x] 2.10 Implement TextStreamHandler.split_tts_sentences() for TTS sentence splitting
+- [x] 2.11 Implement TextStreamHandler.stream_tts_sentences() for TTS streaming with interruption
+- [x] 2.12 Run ruff check --fix, ruff format, pyrefly check --summarize-errors
+- [x] 2.13 Verify all files under 150 lines (CLAUDE_POLICY.md Rule 3)
 
 ---
 
@@ -51,16 +51,16 @@ Implement voice client infrastructure for external kyutai voice-server integrati
 
 **Goal**: Implement conversational state management use case.
 
-- [ ] 3.1 Create `agentx/application/use_cases/conversation_state_manager.py` with ConversationStateManager class
-- [ ] 3.2 Implement ConversationStateManager.get_or_create_session() for session CRUD
-- [ ] 3.3 Implement ConversationStateManager.add_user_message() for tracking user input
-- [ ] 3.4 Implement ConversationStateManager.add_assistant_message() for tracking agent response
-- [ ] 3.5 Implement ConversationStateManager.get_conversation_history() for history retrieval
-- [ ] 3.6 Implement ConversationStateManager.update_context() for context updates
-- [ ] 3.7 Implement ConversationStateManager._cleanup_expired_sessions() for session cleanup
-- [ ] 3.8 Implement ConversationStateManager.start() and stop() for cleanup task management
-- [ ] 3.9 Run ruff check --fix, ruff format, pyrefly check --summarize-errors
-- [ ] 3.10 Verify file under 150 lines (CLAUDE_POLICY.md Rule 3)
+- [x] 3.1 Create `agentx/application/use_cases/conversation_state_manager.py` with ConversationStateManager class
+- [x] 3.2 Implement ConversationStateManager.get_or_create_session() for session CRUD
+- [x] 3.3 Implement ConversationStateManager.add_user_message() for tracking user input
+- [x] 3.4 Implement ConversationStateManager.add_assistant_message() for tracking agent response
+- [x] 3.5 Implement ConversationStateManager.get_conversation_history() for history retrieval
+- [x] 3.6 Implement ConversationStateManager.update_context() for context updates
+- [x] 3.7 Implement ConversationStateManager._cleanup_expired_sessions() for session cleanup
+- [x] 3.8 Implement ConversationStateManager.start() and stop() for cleanup task management
+- [x] 3.9 Run ruff check --fix, ruff format, pyrefly check --summarize-errors
+- [x] 3.10 Verify file under 150 lines (CLAUDE_POLICY.md Rule 3)
 
 ---
 
@@ -68,16 +68,16 @@ Implement voice client infrastructure for external kyutai voice-server integrati
 
 **Goal**: Implement frontend voice client for WebSocket connections.
 
-- [ ] 4.1 Create `frontend/lib/voice/client.ts` with VoiceClient class
-- [ ] 4.2 Implement VoiceClient.connect() for WebSocket connection
-- [ ] 4.3 Implement VoiceClient.send_audio() for sending audio chunks
-- [ ] 4.4 Implement VoiceClient.send_interrupt() for interruption
-- [ ] 4.5 Implement VoiceClient.on() for message handler registration
-- [ ] 4.6 Implement VoiceClient.reconnect() with exponential backoff
-- [ ] 4.7 Implement VoiceClient.disconnect() for cleanup
-- [ ] 4.8 Create `frontend/lib/voice/conversation.ts` with conversation state helpers
-- [ ] 4.9 Run ESLint check, TypeScript type check (tsc --noEmit)
-- [ ] 4.10 Verify no TypeScript errors
+- [x] 4.1 Create `frontend/lib/voice/client.ts` with VoiceClient class
+- [x] 4.2 Implement VoiceClient.connect() for WebSocket connection
+- [x] 4.3 Implement VoiceClient.send_audio() for sending audio chunks
+- [x] 4.4 Implement VoiceClient.send_interrupt() for interruption
+- [x] 4.5 Implement VoiceClient.on() for message handler registration
+- [x] 4.6 Implement VoiceClient.reconnect() with exponential backoff
+- [x] 4.7 Implement VoiceClient.disconnect() for cleanup
+- [x] 4.8 Create `frontend/lib/voice/conversation.ts` with conversation state helpers
+- [x] 4.9 Run ESLint check, TypeScript type check (tsc --noEmit)
+- [x] 4.10 Verify no TypeScript errors
 
 ---
 
@@ -85,15 +85,15 @@ Implement voice client infrastructure for external kyutai voice-server integrati
 
 **Goal**: Implement REST and WebSocket endpoints for voice interaction.
 
-- [ ] 5.1 Update `agentx/presentation/api/v1/voice_routes.py` with new endpoints
-- [ ] 5.2 Implement GET /api/v1/voice/kyutai/status for health check
-- [ ] 5.3 Implement GET /api/v1/voice/conversation/history for session history
-- [ ] 5.4 Implement POST /api/v1/voice/conversation/context for context updates
-- [ ] 5.5 Update WebSocket /ws/voice endpoint to use VoiceGatewayService
-- [ ] 5.6 Update WebSocket handler to integrate ConversationStateManager
-- [ ] 5.7 Update WebSocket handler to integrate TextStreamHandler
-- [ ] 5.8 Run ruff check --fix, ruff format, pyrefly check --summarize-errors
-- [ ] 5.9 Verify files under 150 lines (CLAUDE_POLICY.md Rule 3)
+- [x] 5.1 Update `agentx/presentation/api/v1/voice_routes.py` with new endpoints
+- [x] 5.2 Implement GET /api/v1/voice/kyutai/status for health check
+- [x] 5.3 Implement GET /api/v1/voice/conversation/history for session history
+- [x] 5.4 Implement POST /api/v1/voice/conversation/context for context updates
+- [x] 5.5 Update WebSocket /ws/voice endpoint to use VoiceGatewayService
+- [x] 5.6 Update WebSocket handler to integrate ConversationStateManager
+- [x] 5.7 Update WebSocket handler to integrate TextStreamHandler
+- [x] 5.8 Run ruff check --fix, ruff format, pyrefly check --summarize-errors
+- [x] 5.9 Verify files under 150 lines (CLAUDE_POLICY.md Rule 3)
 
 ---
 
