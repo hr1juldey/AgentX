@@ -217,30 +217,56 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 
 ---
 
-## Phase 3: Widget Spawner System (HIGH)
+## Phase 3: UI Agent & Tools (HIGH)
 
-### 3.1 Widget Generators (12 types)
+> **NOTE**: Phase 3 updated from R014 widget spawner to new LangGraph server-driven UI architecture.
+> **Old approach**: 32 files, ~920 lines (R014 callback pattern)
+> **New approach**: ~4 files, ~400 lines (DSPy signatures + LangGraph push_ui_message)
+
+### 3.1 UI Signatures
 
 | Task | File | Lines | Status | Notes |
 |------|------|-------|--------|-------|
-| Create single widget agent | `agent/agent/widget_spawner/single_widget_agent.py` | 80 | ⬜ | Individual widget generation |
-| Create multi widget agent | `agent/agent/widget_spawner/multi_widget_agent.py` | 80 | ⬜ | Multi-widget coordination |
-| Create intelligent agent | `agent/agent/widget_spawner/intelligent_agent.py` | 80 | ⬜ | Smart UI generation |
-| Create chart generator | `agent/agent/widget_spawner/generators/chart_generator.py` | 80 | ⬜ | Chart widget generation |
-| Create form generator | `agent/agent/widget_spawner/generators/form_generator.py` | 80 | ⬜ | Form widget generation |
-| Create gallery generator | `agent/agent/widget_spawner/generators/gallery_generator.py` | 70 | ⬜ | Gallery widget generation |
-| Create progress generator | `agent/agent/widget_spawner/generators/progress_generator.py` | 60 | ⬜ | Progress widget generation |
-| Create confirmation generator | `agent/agent/widget_spawner/generators/confirmation_generator.py` | 60 | ⬜ | Confirmation dialog generation |
-| Create action generator | `agent/agent/widget_spawner/generators/action_generator.py` | 50 | ⬜ | Action button generation |
-| Create voice generator | `agent/agent/widget_spawner/generators/voice_generator.py` | 60 | ⬜ | Voice widget generation |
-| Create image generator | `agent/agent/widget_spawner/generators/image_generator.py` | 50 | ⬜ | Image widget generation |
-| Create citation card generator | `agent/agent/widget_spawner/generators/citation_card_generator.py` | 70 | ⬜ | Citation card generation |
-| Create search result generator | `agent/agent/widget_spawner/generators/search_result_generator.py` | 80 | ⬜ | Search result widget |
-| Create hop progress generator | `agent/agent/widget_spawner/generators/hop_progress_generator.py` | 60 | ⬜ | Multi-hop RAG progress |
+| Create UI signatures | `agent/agent/dspy_signatures/ui_signatures.py` | 80 | ⬜ | SelectWidget, ConfigureForm, ShowCard, RequestConfirmation, UpdateProgress (from LLD) |
+| Add UI generation signatures | `agent/agent/dspy_signatures/ui_signatures.py` | 60 | ⬜ | ConfigureForm, ShowCard, RequestConfirmation, UpdateProgress |
 
-**R014 Source**: `services/widget_spawner/` (32 files)
+**R014 Source**: `services/widget_spawner/signatures.py` (simplified)
 
-**Total**: 14 files, ~920 lines
+**Note**: Widget selection signatures exist in `widgets/selection.py`, but UI generation signatures are missing.
+
+---
+
+### 3.2 UI Agent
+
+| Task | File | Lines | Status | Notes |
+|------|------|-------|--------|-------|
+| Create UI agent | `agent/agent/dspy_agents/ui_agent.py` | 80 | ⬜ | UIDSPyAgent with 6 signatures (SelectWidget, ConfigureForm, ShowCard, RequestConfirmation, UpdateProgress) |
+
+**R014 Source**: `services/widget_spawner/agent.py` (simplified to single agent)
+
+---
+
+### 3.3 UI Tools (Simple functions, not complex agents)
+
+| Task | File | Lines | Status | Notes |
+|------|------|-------|--------|-------|
+| Create UI tools | `agent/agent/tools/ui_tools.py` | 120 | ⬜ | render_markdown_block, render_card, request_confirmation, update_progress (return descriptor IDs) |
+
+**R014 Source**: `services/widget_spawner/builders/` (simplified from 3 files to 1)
+
+---
+
+### 3.4 Frontend UI Components (colocated with graph)
+
+| Task | File | Lines | Status | Notes |
+|------|------|-------|--------|-------|
+| Create widget registry | `agent/agent/ui.tsx` | 50 | ⬜ | Export default {component, ...} for 12 widget types |
+
+**R014 Source**: None (new LangGraph pattern)
+
+---
+
+**Total**: 4 files, ~330 lines (vs 14 files, ~920 lines in R014)
 
 ---
 
@@ -391,13 +417,13 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 |-------|-------|--------------|--------|
 | Phase 1: Infrastructure | 12 | ~390 | ✓ |
 | Phase 2: 7-Pipeline Agents + Tests | 52 | ~4,658 | ✓ |
-| Phase 3: Widget Spawner | 14 | ~920 | ⬜ |
+| Phase 3: UI Agent & Tools | 4 | ~330 | ⬜ |
 | Phase 4: Multi-Hop Search | 8 | ~620 | ⬜ |
 | Phase 5: Calendar + Tools | 10 | ~520 | ⬜ |
 | Phase 6: Application Layer | 10 | ~960 | ⬜ |
 | Phase 7: API Layer | 4 | ~330 | ⬜ |
 | Phase 8: Frontend Types | 3 | ~330 | ⬜ |
-| **Total** | **113** | **~8,728** | ⬜ |
+| **Total** | **103** | **~8,138** | ⬜ |
 
 ---
 
@@ -446,7 +472,7 @@ C003-agent-pipeline is **complete** when:
 - [x] 7-pipeline orchestration implemented (8 nodes in LangGraph)
 - [x] Designer agent has state awareness (fixes duplicate widgets)
 - [ ] Multi-hop search system ported (Phase 4)
-- [ ] Widget spawner system ported (12+ generators) (Phase 3)
+- [ ] UI Agent & Tools implemented (Phase 3 - LangGraph server-driven UI)
 - [x] Type conversion utilities implemented (_to_float, _to_bool)
 - [x] Chunking infrastructure implemented (proven pattern)
 - [x] Safe DSPy extraction pattern used throughout
