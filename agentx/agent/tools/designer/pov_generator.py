@@ -59,12 +59,17 @@ class POVGeneratorModule(dspy.Module):
         widget_props = safe_extract(result, "widget_props", "{}")
         rationale = safe_extract(result, "rationale", "")
 
-        # Parse widget props as JSON
+        # Parse widget props as JSON - handle None value
         import json
+
+        if widget_props is None:
+            widget_props = "{}"
+        if not isinstance(widget_props, str):
+            widget_props = str(widget_props)
 
         try:
             props_dict = json.loads(widget_props)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, TypeError, ValueError):
             props_dict = {}
 
         return {
