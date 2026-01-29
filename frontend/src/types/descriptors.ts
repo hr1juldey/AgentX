@@ -149,7 +149,102 @@ export const VoiceDescriptorSchema = BaseUIDescriptorSchema.extend({
 export type VoiceDescriptor = z.infer<typeof VoiceDescriptorSchema>;
 
 /**
- * Union of all descriptor types.
+ * Image component descriptor.
+ */
+export const ImageDescriptorSchema = BaseUIDescriptorSchema.extend({
+  component_type: z.literal('image'),
+  props: z.object({
+    url: z.string().url(),
+    alt: z.string().default(''),
+    caption: z.string().default(''),
+  }),
+});
+
+export type ImageDescriptor = z.infer<typeof ImageDescriptorSchema>;
+
+/**
+ * Gallery component descriptor.
+ */
+export const GalleryDescriptorSchema = BaseUIDescriptorSchema.extend({
+  component_type: z.literal('gallery'),
+  props: z.object({
+    images: z.array(z.object({
+      url: z.string().url(),
+      alt: z.string().default(''),
+      caption: z.string().default(''),
+    })),
+    columns: z.number().min(1).max(6).default(3),
+  }),
+});
+
+export type GalleryDescriptor = z.infer<typeof GalleryDescriptorSchema>;
+
+/**
+ * Chart component descriptor.
+ */
+export const ChartDescriptorSchema = BaseUIDescriptorSchema.extend({
+  component_type: z.literal('chart'),
+  props: z.object({
+    chart_type: z.enum(['line', 'bar', 'pie']),
+    data: z.record(z.any()),
+    options: z.record(z.any()).default({}),
+  }),
+});
+
+export type ChartDescriptor = z.infer<typeof ChartDescriptorSchema>;
+
+/**
+ * Search result component descriptor.
+ */
+export const SearchResultDescriptorSchema = BaseUIDescriptorSchema.extend({
+  component_type: z.literal('searchResult'),
+  props: z.object({
+    query: z.string(),
+    results: z.array(z.object({
+      title: z.string(),
+      url: z.string().url(),
+      snippet: z.string(),
+    })),
+  }),
+});
+
+export type SearchResultDescriptor = z.infer<typeof SearchResultDescriptorSchema>;
+
+/**
+ * Hop progress component descriptor (multi-hop RAG).
+ */
+export const HopProgressDescriptorSchema = BaseUIDescriptorSchema.extend({
+  component_type: z.literal('hopProgress'),
+  props: z.object({
+    current_hop: z.number().min(1),
+    total_hops: z.number().min(1),
+    hop_status: z.array(z.object({
+      hop_number: z.number(),
+      status: z.enum(['pending', 'running', 'complete', 'error']),
+      result_count: z.number().default(0),
+    })),
+  }),
+});
+
+export type HopProgressDescriptor = z.infer<typeof HopProgressDescriptorSchema>;
+
+/**
+ * Citation card component descriptor.
+ */
+export const CitationCardDescriptorSchema = BaseUIDescriptorSchema.extend({
+  component_type: z.literal('citationCard'),
+  props: z.object({
+    source: z.string(),
+    content: z.string(),
+    url: z.string().url().default(''),
+    relevance: z.number().min(0).max(1),
+  }),
+});
+
+export type CitationCardDescriptor = z.infer<typeof CitationCardDescriptorSchema>;
+
+/**
+ * Union of all descriptor types (12 frozen widget types from C007).
  */
 export const AnyUIDescriptorSchema = z.discriminatedUnion('component_type', [
   MarkdownDescriptorSchema,
@@ -159,7 +254,12 @@ export const AnyUIDescriptorSchema = z.discriminatedUnion('component_type', [
   ActionDescriptorSchema,
   ConfirmationDescriptorSchema,
   VoiceDescriptorSchema,
-  // Additional descriptors can be added here
+  ImageDescriptorSchema,
+  GalleryDescriptorSchema,
+  ChartDescriptorSchema,
+  SearchResultDescriptorSchema,
+  HopProgressDescriptorSchema,
+  CitationCardDescriptorSchema,
 ]);
 
 export type AnyUIDescriptor = z.infer<typeof AnyUIDescriptorSchema>;
