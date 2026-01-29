@@ -1,0 +1,160 @@
+/**
+ * Global styles for Real AgentX Organic UI (C008).
+ *
+ * CSS variables for design tokens and Tailwind CSS directives.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Organic UI color tokens (C008) */
+    --color-void: 0 0% 4%; /* #0A0A0A */
+    --color-membrane: 0 0% 8%; /* #141414 */
+    --color-enzyme: 187 100% 50%; /* #00D9FF */
+    --color-cell: 0 0% 12%; /* #1E1E1E */
+    --color-nucleus: 0 0% 100%; /* #FFFFFF */
+    --color-cytoplasm: 0 0% 63%; /* #A0A0A0 */
+    --color-vacuole: 0 0% 40%; /* #666666 */
+    --color-mitochondria: 17 90% 60%; /* #FF6B35 */
+    --color-golgi: 50 100% 50%; /* #FFD700 */
+    --color-lysosome: 4 90% 63%; /* #FF4757 */
+    --color-endoplasmic: 270 60% 70%; /* #C792EA */
+    --color-microtubule: 164 100% 67%; /* #64FFDA */
+    --color-actin: 220 70% 73%; /* #82AAFF */
+    --color-myosin: 38 90% 70%; /* #FFCB6B */
+
+    /* Spacing tokens (C008) */
+    --spacing-atom: 4px;
+    --spacing-molecule: 8px;
+    --spacing-organelle: 16px;
+    --spacing-cell: 24px;
+    --spacing-tissue: 32px;
+    --spacing-organ: 48px;
+    --spacing-system: 64px;
+    --spacing-organism: 96px;
+
+    /* Border radius */
+    --radius: 0.5rem;
+
+    /* Animation durations */
+    --duration-fast: 150ms;
+    --duration-normal: 300ms;
+    --duration-slow: 500ms;
+  }
+
+  * {
+    @apply border-membrane;
+  }
+
+  body {
+    @apply bg-void text-nucleus antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-void;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-membrane rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-cytoplasm;
+  }
+}
+
+@layer components {
+  /* Button base styles */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 font-medium transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-enzyme focus:ring-offset-2 focus:ring-offset-void;
+  }
+
+  .btn-primary {
+    @apply bg-enzyme text-void hover:opacity-90;
+  }
+
+  .btn-secondary {
+    @apply bg-membrane text-nucleus hover:bg-cell;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-nucleus hover:bg-membrane;
+  }
+
+  /* Card base styles */
+  .card {
+    @apply bg-cell border border-membrane rounded-lg p-organelle;
+  }
+
+  /* Input base styles */
+  .input {
+    @apply bg-membrane border border-membrane rounded-lg px-organelle py-cell text-nucleus placeholder-vacuole;
+    @apply focus:outline-none focus:border-enzyme focus:ring-1 focus:ring-enzyme;
+  }
+
+  /* Text styles */
+  .text-display {
+    @apply text-4xl font-bold;
+  }
+
+  .text-heading {
+    @apply text-2xl font-semibold;
+  }
+
+  .text-subheading {
+    @apply text-lg font-medium;
+  }
+
+  .text-body {
+    @apply text-base text-cytoplasm;
+  }
+
+  .text-caption {
+    @apply text-sm text-vacuole;
+  }
+}
+
+@layer utilities {
+  /* Animation utilities */
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animate-drift {
+    animation: drift 20s ease-in-out infinite;
+  }
+
+  @keyframes drift {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(10px);
+    }
+  }
+
+  /* Platform-aware utilities */
+  .mobile-only {
+    @apply hidden;
+  }
+
+  @media (max-width: 768px) {
+    .mobile-only {
+      @apply block;
+    }
+
+    .desktop-only {
+      @apply hidden;
+    }
+  }
+}

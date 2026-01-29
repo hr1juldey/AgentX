@@ -165,13 +165,13 @@ find /home/riju279/Documents/Code/XRIG/AgentX/agentx -name "schemas.py"
 C001-folder-structure is **complete** when:
 
 - [x] All 7 backend directories exist with README.md files
-- [ ] All domain entities are @dataclass with business methods
-- [ ] All repositories follow ABC pattern
-- [ ] All imports are absolute paths (zero relative imports)
-- [ ] No files exceed 150 lines
+- [x] All domain entities are @dataclass with business methods
+- [x] All repositories follow ABC pattern
+- [x] All imports are absolute paths (zero relative imports)
+- [x] No files exceed 150 lines
 - [ ] All code passes ruff check, ruff format, pyrefly check
 - [ ] Frontend has atomic state pattern implemented
-- [ ] Zero `models.py` or `schemas.py` in service folders
+- [x] Zero `models.py` or `schemas.py` in service folders
 - [ ] All TypeScript files pass `npx tsc --noEmit`
 
 ---
