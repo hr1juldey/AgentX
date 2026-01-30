@@ -140,12 +140,14 @@ This tasks.md contains **actual R014 porting tasks** based on the postmortem cat
 | Create POV generator | `agent/agent/tools/designer/pov_generator.py` | 60 | ✓ | POVGeneratorModule |
 | Create color scheme | `agent/agent/tools/designer/color_scheme.py` | 60 | ✓ | ColorSchemeModule |
 | Create hierarchy designer | `agent/agent/tools/designer/hierarchy.py` | 60 | ✓ | HierarchyDesignerModule |
-| Create designer node | `agent/agent/nodes/designer.py` | 100 | ✓ | **STATE AWARE**: Checks state.ui before emitting |
+| Create designer node | `agent/agent/nodes/designer.py` | 161 | ✓ | **STATE AWARE** + push_ui_message() (2026-01-31) |
 | Create designer agent | `agent/agent/agents/designer.py` | 70 | ✓ | Wraps designer node |
 
 **R014 Source**: `services/pipeline/designer.py`
 
-**Critical Fix**: Designer now has state awareness (fixes R014 duplicate widget bug)
+**Critical Fixes**:
+- Designer has state awareness (fixes R014 duplicate widget bug)
+- **push_ui_message() implemented** (2026-01-31) - Was placeholder comment, now emits widgets to state.ui
 
 **Total**: 6 files, ~410 lines
 

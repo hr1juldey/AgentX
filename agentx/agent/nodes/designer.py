@@ -13,6 +13,7 @@ Server-driven UI pattern from C007: push_ui_message() for widget emission.
 from typing import Any
 
 from langchain_core.messages import AIMessage
+from langgraph.graph.ui import push_ui_message  # type: ignore[import]
 
 from agentx.agent.state import AgentState
 from agentx.agent.tools.designer.color_scheme import ColorSchemeModule
@@ -108,8 +109,20 @@ This widget complements the existing UI without duplicating functionality.
 
     message = AIMessage(content=design_content)
 
-    # Note: In the full LangGraph integration, we would use push_ui_message()
-    # here to emit the widget to state.ui. For now, we return the design data.
+    # **EMIT WIDGET** using push_ui_message() for LangGraph server-driven UI
+    # This adds the widget to state.ui, making it available to the frontend
+    push_ui_message(
+        recommended_widget,
+        {
+            "title": final_props.get("title", f"{recommended_widget.title()} Widget"),
+            "content": final_props.get("content", ""),
+            "colors": final_props.get("colors", {}),
+            "hierarchy": final_props.get("hierarchy", {}),
+            "rationale": rationale,
+        },
+        message=message,
+    )
+
     return {
         "messages": [message],
         "_widget_design": {
