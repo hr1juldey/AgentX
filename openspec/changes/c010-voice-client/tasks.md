@@ -101,9 +101,9 @@ Implement voice client infrastructure for external kyutai voice-server integrati
 
 **Goal**: Integrate all components and verify end-to-end functionality.
 
-- [ ] 6.1 Wire VoiceGatewayService into voice_routes.py dependency injection
-- [ ] 6.2 Wire ConversationStateManager into voice pipeline
-- [ ] 6.3 Wire TextStreamHandler into voice pipeline
+- [x] 6.1 Wire VoiceGatewayService into voice_routes.py dependency injection
+- [x] 6.2 Wire ConversationStateManager into voice pipeline
+- [x] 6.3 Wire TextStreamHandler into voice pipeline
 - [ ] 6.4 Test frontend → AgentX → kyutai STT flow
 - [ ] 6.5 Test kyutai STT → AgentX → C003 → kyutai TTS flow
 - [ ] 6.6 Test conversation history tracking across multiple turns

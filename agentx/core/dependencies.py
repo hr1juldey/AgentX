@@ -10,6 +10,9 @@ from agentx.core.config import get_settings
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from agentx.application.use_cases.conversation_state_manager import (
+        ConversationStateManager,
+    )
     from agentx.domain.repositories.agent_session_repository import (
         AgentSessionRepository,
     )
@@ -19,6 +22,12 @@ if TYPE_CHECKING:
     from agentx.infrastructure.database.sqlite_session_adapter import (
         SQLiteSessionAdapter,
     )
+    from agentx.infrastructure.external.text_stream_handler import (
+        TextStreamHandler,
+    )
+    from agentx.infrastructure.external.voice_gateway_service import (
+        VoiceGatewayService,
+    )
 
 
 # Lazy-loaded singletons
@@ -26,6 +35,9 @@ _redis_adapter: "RedisSessionAdapter | None" = None
 _sqlite_adapter: "SQLiteSessionAdapter | None" = None
 _agent_session_repo: "AgentSessionRepository | None" = None
 _dspy_configured: bool = False
+_voice_gateway_service: "VoiceGatewayService | None" = None
+_conversation_state_manager: "ConversationStateManager | None" = None
+_text_stream_handler: "TextStreamHandler | None" = None
 
 
 def _configure_dspy() -> None:
@@ -112,7 +124,71 @@ def reset_dependencies() -> None:
     Useful for testing or clearing state.
     """
     global _redis_adapter, _sqlite_adapter, _agent_session_repo, _dspy_configured
+    global _voice_gateway_service, _conversation_state_manager, _text_stream_handler
     _redis_adapter = None
     _sqlite_adapter = None
     _agent_session_repo = None
     _dspy_configured = False
+    _voice_gateway_service = None
+    _conversation_state_manager = None
+    _text_stream_handler = None
+
+
+def get_text_stream_handler() -> "TextStreamHandler":
+    """Get the text stream handler singleton.
+
+    Returns:
+        TextStreamHandler: The text stream handler instance.
+    """
+    global _text_stream_handler
+    if _text_stream_handler is None:
+        from agentx.infrastructure.external.text_stream_handler import (
+            TextStreamHandler,
+        )
+
+        _text_stream_handler = TextStreamHandler()
+    return _text_stream_handler
+
+
+def get_conversation_state_manager() -> "ConversationStateManager":
+    """Get the conversation state manager singleton.
+
+    Returns:
+        ConversationStateManager: The conversation state manager instance.
+    """
+    global _conversation_state_manager
+    if _conversation_state_manager is None:
+        from agentx.application.use_cases.conversation_state_manager import (
+            ConversationStateManager,
+        )
+
+        _conversation_state_manager = ConversationStateManager()
+    return _conversation_state_manager
+
+
+def get_voice_gateway_service() -> "VoiceGatewayService":
+    """Get the voice gateway service singleton.
+
+    Returns:
+        VoiceGatewayService: The voice gateway service instance.
+    """
+    global _voice_gateway_service
+    if _voice_gateway_service is None:
+        from agentx.core.config import get_settings
+        from agentx.infrastructure.external.voice_gateway_service import (
+            VoiceGatewayConfig,
+            VoiceGatewayService,
+        )
+
+        settings = get_settings()
+        state_manager = get_conversation_state_manager()
+        text_handler = get_text_stream_handler()
+
+        config = VoiceGatewayConfig(
+            stt_url=settings.voice.kyutai_stt_url,
+            tts_url=settings.voice.kyutai_tts_url,
+        )
+        _voice_gateway_service = VoiceGatewayService(
+            config=config, state_manager=state_manager, text_handler=text_handler
+        )
+    return _voice_gateway_service

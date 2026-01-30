@@ -39,6 +39,9 @@ class ServerConfig(BaseModel):
 class VoiceConfig(BaseModel):
     """Voice service configuration."""
 
+    use_kyutai_external: bool = True  # Use external kyutai voice-server
+    kyutai_stt_url: str = "ws://localhost:16000/stt"
+    kyutai_tts_url: str = "ws://localhost:16000/tts"
     stt_sample_rate: int = 16000
     tts_sample_rate: int = 24000
     vad_threshold: float = 0.5

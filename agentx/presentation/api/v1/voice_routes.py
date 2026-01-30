@@ -8,16 +8,12 @@ from agentx.application.dtos.voice_gateway_dtos import (
     ConversationContextDTO,
     ConversationMessageDTO,
 )
-from agentx.application.use_cases.conversation_state_manager import (
-    ConversationStateManager,
-)
-from agentx.infrastructure.external.voice_gateway_service import (
-    VoiceGatewayService,
+from agentx.core.dependencies import (
+    get_conversation_state_manager,
+    get_voice_gateway_service,
 )
 
 router = APIRouter(prefix="/api/v1/voice", tags=["voice"])
-_gateway_service = VoiceGatewayService()
-_state_manager = ConversationStateManager()
 
 
 @router.get("/kyutai/status")
@@ -27,7 +23,8 @@ async def kyutai_status() -> dict[str, bool]:
     Returns:
         Dictionary with 'available' key.
     """
-    available = await _gateway_service.check_kyutai_health()
+    gateway_service = get_voice_gateway_service()
+    available = await gateway_service.check_kyutai_health()
     return {"available": available}
 
 
@@ -45,11 +42,12 @@ async def get_conversation_history(
     Returns:
         List of conversation messages.
     """
-    session = _state_manager.get_session(UUID(session_id))
+    state_manager = get_conversation_state_manager()
+    session = state_manager.get_session(UUID(session_id))
     if not session:
         return []
 
-    messages = _state_manager.get_conversation_history(UUID(session_id), limit)
+    messages = state_manager.get_conversation_history(UUID(session_id), limit)
 
     return [
         ConversationMessageDTO(
@@ -77,7 +75,8 @@ async def update_conversation_context(
     Returns:
         Updated context.
     """
-    _state_manager.update_context(
+    state_manager = get_conversation_state_manager()
+    state_manager.update_context(
         UUID(session_id),
         current_topic=context.current_topic,
         entities=context.entities,
@@ -86,7 +85,7 @@ async def update_conversation_context(
         timezone=context.timezone,
     )
 
-    session = _state_manager.get_session(UUID(session_id))
+    session = state_manager.get_session(UUID(session_id))
     if not session:
         return context
 
@@ -118,7 +117,8 @@ async def voice_websocket(websocket: WebSocket) -> None:
 
     try:
         session_id = UUID(session_id_str)
-        await _gateway_service.handle_session(websocket, session_id)
+        gateway_service = get_voice_gateway_service()
+        await gateway_service.handle_session(websocket, session_id)
     except ValueError:
         await websocket.close(code=1008, reason="Invalid session_id format")
     except Exception as e:
