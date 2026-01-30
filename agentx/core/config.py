@@ -24,14 +24,14 @@ class LLMConfig(BaseModel):
     model: str = "gemma3:4b"
     api_base: str = "http://localhost:11434"
     temperature: float = 0.7
-    max_tokens: int = 2048
+    max_tokens: int = 4096
 
 
 class ServerConfig(BaseModel):
     """Server configuration."""
 
     host: str = "0.0.0.0"
-    port: int = 2024  # LangGraph default port
+    port: int = 8015
     workers: int = 1
     log_level: str = "info"
 
