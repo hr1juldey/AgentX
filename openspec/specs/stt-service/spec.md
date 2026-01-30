@@ -231,7 +231,25 @@ async def process_audio_chunk(audio_bytes: bytes, sample_rate: int) -> Optional[
 
 ---
 
+## 1.10 DEPRECATED (2026-01-31)
+
+**This spec is superseded by C010-voice-client.**
+
+The internal STT service described here has been replaced with external kyutai STT integration via `VoiceGatewayService`.
+
+**Replacement**:
+- **C010-voice-client** - External kyutai STT WebSocket integration
+- **`voice-gateway` spec** - VoiceGatewayService for kyutai routing
+- **`voice-stream-handling` spec** - TextStreamHandler for STT buffering
+
+**Migration Path**:
+- Internal `STTService` → External `VoiceGatewayService` with kyutai STT WebSocket
+- Direct model loading → WebSocket connection to kyutai server
+- Local audio preprocessing → Handled by kyutai service
+
 **Related Specs**:
 - `specs/voice-pipeline/spec.md` - Voice pipeline orchestration
 - `specs/vad-service/spec.md` - VAD filtering (pre-processing for STT)
+- `specs/voice-gateway/spec.md` - External kyutai integration (C010)
+- `specs/voice-stream-handling/spec.md` - STT buffering (C010)
 - research/08_tts_stt_integration.md - STT patterns and best practices

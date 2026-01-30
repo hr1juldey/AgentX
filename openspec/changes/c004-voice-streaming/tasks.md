@@ -8,51 +8,45 @@
 
 ---
 
-## 1. Implementation Checklist
+## 1. Implementation Status
 
-### 1.1 Phase 1: Voice Services (Infrastructure Layer)
+**⚠️ DEPRECATED (2026-01-31):** This change is **superseded by C010-voice-client**.
 
-| Task | File | Lines (est.) | Status | Notes |
-|------|------|--------------|--------|-------|
-| Create VADService | `infrastructure/external/vad_service.py` | 80 | ⬜ | Silero VAD, resampling, <50ms latency |
-| Create STTService | `infrastructure/external/stt_service.py` | 100 | ⬜ | Kyutai STT 2.6B, preprocessing |
-| Create TTSService | `infrastructure/external/tts_service.py` | 120 | ⬜ | Pocket TTS, streaming, reload strategy |
-| Create voice config | `core/voice_config.py` | 50 | ⬜ | Voice service settings |
+### 1.1 Reason for Deprecation
 
-### 1.2 Phase 2: Domain and Application Layer
+C004 was designed to implement internal voice services (VAD, STT, TTS) running locally. However, **C010-voice-client** was completed first and implements a superior architecture using external kyutai voice-server integration.
 
-| Task | File | Lines (est.) | Status | Notes |
-|------|------|--------------|--------|-------|
-| Create VoiceSessionEntity | `domain/entities/voice_session.py` | 80 | ⬜ | @dataclass, state transitions |
-| Create VoiceSessionRepository | `domain/repositories/voice_session_repository.py` | 60 | ⬜ | In-memory session storage |
-| Create VoicePipelineUseCase | `application/use_cases/voice_pipeline_use_case.py` | 120 | ⬜ | Orchestrate VAD → STT → LLM → TTS |
-| Create voice DTOs | `application/dtos/voice_dtos.py` | 80 | ⬜ | AudioChunkMessage, TranscriptMessage, etc. |
+| Aspect | C004 (Internal) | C010 (External) | Winner |
+|--------|-----------------|-----------------|--------|
+| **Architecture** | Internal VAD/STT/TTS services | External kyutai integration | C010 |
+| **Model management** | Local model loading (~7GB) | No local models | C010 |
+| **Latency** | VAD<50ms + STT<200ms + TTS<100ms | Network to kyutai (<100ms) | C010 |
+| **Maintenance** | Model updates, memory management | External service updates | C010 |
+| **Complexity** | 3 services + pipeline | 1 VoiceGatewayService | C010 |
 
-### 1.3 Phase 3: Presentation Layer
+### 1.2 C010 Implementation Details
 
-| Task | File | Lines (est.) | Status | Notes |
-|------|------|--------------|--------|-------|
-| Create voice routes | `presentation/api/v1/voice_routes.py` | 100 | ⬜ | REST endpoints + WebSocket handler |
-| Create WebSocket handler | `presentation/api/v1/voice_websocket.py` | 80 | ⬜ | Full duplex input/output tasks |
-| Create health check | `presentation/api/v1/voice_health.py` | 40 | ⬜ | Service readiness endpoint |
+**Completed 2026-01-31**: C010-voice-client (111/111 tasks)
 
-### 1.4 Phase 4: Frontend Types
+| Component | File | Purpose |
+|-----------|------|---------|
+| `VoiceGatewayService` | `infrastructure/external/voice_gateway_service.py` | Main service for kyutai integration |
+| `ConversationStateManager` | `application/use_cases/conversation_state_manager.py` | Session/conversation tracking |
+| `TextStreamHandler` | `infrastructure/external/text_stream_handler.py` | STT buffering + TTS streaming |
+| `VoiceSDKAdapter` | `infrastructure/external/voice_sdk_adapter.py` | Hybrid SDK/Direct WebSocket adapter |
+| Voice routes | `presentation/api/v1/voice_routes.py` | REST + WebSocket endpoints |
 
-| Task | File | Lines (est.) | Status | Notes |
-|------|------|--------------|--------|-------|
-| Create voice types | `frontend/types/voice.ts` | 100 | ⬜ | Zod schemas matching Pydantic |
-| Create voice hooks | `frontend/hooks/useVoiceWebSocket.ts` | 80 | ⬜ | WebSocket connection, audio handling |
-| Create voice components | `frontend/components/VoiceInterface.tsx` | 120 | ⬜ | Recording, playback, interrupt button |
+### 1.3 Implementation Tasks (All Skipped)
 
-### 1.5 Phase 5: Testing
+All implementation tasks are **skipped** due to deprecation:
 
-| Task | Type | Status | Notes |
-|------|------|--------|-------|
-| Unit tests for VADService | `tests/unit/test_vad_service.py` | ⬜ | Mock audio, verify probability |
-| Unit tests for STTService | `tests/unit/test_stt_service.py` | ⬜ | Mock model, verify resampling |
-| Unit tests for TTSService | `tests/unit/test_tts_service.py` | ⬜ | Mock model, verify streaming |
-| Integration tests | `tests/integration/test_voice_pipeline.py` | ⬜ | End-to-end voice flow |
-| WebSocket tests | `tests/integration/test_voice_websocket.py` | ⬜ | Full duplex communication |
+| Phase | Tasks | Status |
+|-------|-------|--------|
+| Phase 1: Voice Services | 4 tasks | ⏭️ Skipped (C010 supersedes) |
+| Phase 2: Domain/Application | 4 tasks | ⏭️ Skipped (C010 supersedes) |
+| Phase 3: Presentation | 3 tasks | ⏭️ Skipped (C010 supersedes) |
+| Phase 4: Frontend | 3 tasks | ⏭️ Skipped (C010 supersedes) |
+| Phase 5: Testing | 5 tasks | ⏭️ Skipped (C010 supersedes) |
 
 ---
 
@@ -175,25 +169,26 @@ pytest tests/integration/test_voice_concurrent.py -v
 
 ## 4. Definition of Done
 
-C004-voice-streaming is **complete** when:
+C004-voice-streaming is **superseded** by C010-voice-client.
 
-- [ ] All 3 voice services created (VAD, STT, TTS)
-- [ ] VoicePipelineUseCase orchestrates VAD → STT → LLM → TTS flow
-- [ ] WebSocket full duplex handler with input/output tasks
-- [ ] REST endpoints for session management (port 8018)
-- [ ] WebSocket endpoint for streaming (port 8019)
-- [ ] Health check endpoint (port 8020)
-- [ ] All DTOs created with Pydantic → Zod alignment
-- [ ] Frontend Zod schemas match backend Pydantic
-- [ ] Zero field name mismatches with LLD
-- [ ] Zero relative imports (absolute only)
-- [ ] All files under 150 lines
-- [ ] All quality checks pass (ruff, pyrefly, tsc)
-- [ ] Integration tests pass (VAD, STT, TTS, pipeline)
-- [ ] WebSocket full duplex validated
-- [ ] Interruption works end-to-end
-- [ ] End-to-end latency <500ms (P95)
-- [ ] Memory usage stable after 1 hour
+**Status**: ⚠️ DEPRECATED (2026-01-31)
+
+**Reason**: C010 implements external kyutai voice-server integration, which is superior to the internal voice services architecture planned for C004.
+
+**Replacement**: All voice functionality is now implemented in:
+- **C010-voice-client** (111/111 tasks complete)
+  - `VoiceGatewayService` - External kyutai integration
+  - `ConversationStateManager` - Session/conversation tracking
+  - `TextStreamHandler` - STT buffering + TTS streaming
+  - `VoiceSDKAdapter` - Hybrid SDK/Direct WebSocket adapter
+
+**Artifacts Complete**:
+- [x] All 7 artifacts created (scan, extract, validate, proposal, specs, design, tasks)
+- [x] Deprecation notice added
+- [x] Superseding change (C010) documented
+
+**Implementation Skipped**:
+- ⏭️ All implementation phases skipped (C010 provides superior implementation)
 
 ---
 
@@ -250,19 +245,24 @@ This change unlocks:
 
 ## 7. Verification Checklist
 
-Before marking C004-voice-streaming complete, verify:
+C004-voice-streaming is **superseded by C010**. No implementation verification required.
 
+**Artifacts Status**:
 - [x] All 7 artifacts created (scan, extract, validate, proposal, specs, design, tasks)
-- [ ] All implementation tasks in Phase 1 complete
-- [ ] All implementation tasks in Phase 2 complete
-- [ ] All implementation tasks in Phase 3 complete
-- [ ] All implementation tasks in Phase 4 complete
-- [ ] All implementation tasks in Phase 5 complete
-- [ ] Code quality checks pass
-- [ ] Integration tests pass
-- [ ] WebSocket streaming validated
-- [ ] Interruption handling validated
-- [ ] Latency targets met
+- [x] Deprecation notice documented
+- [x] C010 replacement documented
+
+**Implementation Status**: ⏭️ **SKIPPED** - C010 provides superior implementation
+
+**C010 Voice Functionality** (replaces C004):
+- [x] VoiceGatewayService implements external kyutai integration
+- [x] ConversationStateManager tracks sessions/messages/context
+- [x] TextStreamHandler handles STT buffering + TTS streaming
+- [x] VoiceSDKAdapter provides hybrid SDK/Direct WebSocket adapter
+- [x] Voice routes updated (REST + WebSocket)
+- [x] Frontend voice client implemented (client.ts, conversation.ts)
+- [x] All quality checks pass (ruff, pyrefly, ESLint, TypeScript)
+- [x] End-to-end voice interaction functional
 
 ---
 

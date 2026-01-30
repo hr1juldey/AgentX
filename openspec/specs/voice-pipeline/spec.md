@@ -259,9 +259,30 @@ export default {
 
 ---
 
+## 1.10 DEPRECATED (2026-01-31)
+
+**This spec is superseded by C010-voice-client.**
+
+The internal voice pipeline (VAD → STT → LLM → TTS) described here has been replaced with external kyutai voice-server integration.
+
+**Replacement**:
+- **C010-voice-client** - External kyutai integration
+- **`voice-gateway` spec** - VoiceGatewayService for kyutai routing
+- **`conversational-state` spec** - ConversationStateManager for state tracking
+- **`voice-stream-handling` spec** - TextStreamHandler for STT/TTS streaming
+
+**Migration Path**:
+- Internal `VoicePipelineUseCase` → External `VoiceGatewayService`
+- Internal VAD/STT/TTS services → kyutai WebSocket connections
+- Direct LLM calls → kyutai STT → AgentX → kyutai TTS flow
+- Local session management → `ConversationStateManager`
+
 **Related Specs**:
-- `specs/vad-service/spec.md` - VAD filtering
-- `specs/stt-service/spec.md` - Speech transcription
-- `specs/tts-service/spec.md` - Text-to-speech synthesis
+- `specs/vad-service/spec.md` - VAD filtering (deprecated, see C010)
+- `specs/stt-service/spec.md` - Speech transcription (deprecated, see C010)
+- `specs/tts-service/spec.md` - Text-to-speech synthesis (deprecated, see C010)
+- `specs/voice-gateway/spec.md` - External kyutai integration (C010)
+- `specs/conversational-state/spec.md` - Conversation state management (C010)
+- `specs/voice-stream-handling/spec.md` - STT/TTS streaming (C010)
 - C002 data contracts - WebSocket message types
 - C003 agent pipeline - LLM integration

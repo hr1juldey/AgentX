@@ -283,6 +283,25 @@ async def speak_response(text: str, session: VoiceSessionEntity) -> None:
 
 ---
 
+## 1.11 DEPRECATED (2026-01-31)
+
+**This spec is superseded by C010-voice-client.**
+
+The internal TTS service described here has been replaced with external kyutai TTS integration via `VoiceGatewayService`.
+
+**Replacement**:
+- **C010-voice-client** - External kyutai TTS WebSocket integration
+- **`voice-gateway` spec** - VoiceGatewayService for kyutai routing
+- **`voice-stream-handling` spec** - TextStreamHandler for TTS streaming
+
+**Migration Path**:
+- Internal `TTSService` → External `VoiceGatewayService` with kyutai TTS WebSocket
+- Direct model loading → WebSocket connection to kyutai server
+- Memory reload strategy → No local model (managed by kyutai)
+- Local chunking → Handled by kyutai service
+
 **Related Specs**:
 - `specs/voice-pipeline/spec.md` - Voice pipeline orchestration
+- `specs/voice-gateway/spec.md` - External kyutai integration (C010)
+- `specs/voice-stream-handling/spec.md` - TTS sentence splitting (C010)
 - research/08_tts_stt_integration.md - TTS patterns and memory management

@@ -209,7 +209,23 @@ async def process_audio_chunk(audio_bytes: bytes, sample_rate: int) -> None:
 
 ---
 
+## 1.9 DEPRECATED (2026-01-31)
+
+**This spec is superseded by C010-voice-client.**
+
+The internal VAD service described here has been replaced with external kyutai voice-server integration, which handles VAD internally.
+
+**Replacement**:
+- **C010-voice-client** - External kyutai integration (VAD built into kyutai)
+- **`voice-gateway` spec** - VoiceGatewayService for kyutai routing
+
+**Migration Path**:
+- Internal `VADService` → External kyutai VAD (built into kyutai STT)
+- Local VAD filtering → Handled by kyutai service automatically
+- No separate VAD processing needed
+
 **Related Specs**:
 - `specs/voice-pipeline/spec.md` - Voice pipeline orchestration
 - `specs/stt-service/spec.md` - Speech transcription (uses VAD output)
+- `specs/voice-gateway/spec.md` - External kyutai integration (C010)
 - research/08_tts_stt_integration.md - VAD patterns and best practices
