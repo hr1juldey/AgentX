@@ -106,14 +106,14 @@ Implement voice client infrastructure for external kyutai voice-server integrati
 - [x] 6.1 Wire VoiceGatewayService into voice_routes.py dependency injection
 - [x] 6.2 Wire ConversationStateManager into voice pipeline
 - [x] 6.3 Wire TextStreamHandler into voice pipeline
-- [ ] 6.4 Test frontend → AgentX → kyutai STT flow
-- [ ] 6.5 Test kyutai STT → AgentX → C003 → kyutai TTS flow
-- [ ] 6.6 Test conversation history tracking across multiple turns
-- [ ] 6.7 Test context injection into C003 agent queries
-- [ ] 6.8 Test interruption handling during TTS playback
-- [ ] 6.9 Test graceful degradation when kyutai unavailable
-- [ ] 6.10 Test WebSocket reconnection with exponential backoff
-- [ ] 6.11 Verify end-to-end latency <500ms (P95), target <300ms (P50)
+- [x] 6.4 Test frontend → AgentX → kyutai STT flow
+- [x] 6.5 Test kyutai STT → AgentX → C003 → kyutai TTS flow
+- [x] 6.6 Test conversation history tracking across multiple turns
+- [x] 6.7 Test context injection into C003 agent queries
+- [x] 6.8 Test interruption handling during TTS playback
+- [x] 6.9 Test graceful degradation when kyutai unavailable
+- [x] 6.10 Test WebSocket reconnection with exponential backoff
+- [x] 6.11 Verify end-to-end latency <500ms (P95), target <300ms (P50)
 
 ---
 
