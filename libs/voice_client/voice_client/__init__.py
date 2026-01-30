@@ -10,8 +10,16 @@ __version__ = "0.1.0"
 # Audio
 from voice_client.audio import AudioHandler
 
-# Audio I/O
-from voice_client.audio_io import AudioPlayer, AudioRecorder
+# Audio I/O (optional - requires sounddevice)
+try:
+    from voice_client.audio_io import AudioPlayer, AudioRecorder
+
+    _AUDIO_IO_AVAILABLE = True
+except ImportError:
+    _AUDIO_IO_AVAILABLE = False
+    # Create stub classes for type hints
+    AudioPlayer = None  # type: ignore
+    AudioRecorder = None  # type: ignore
 
 # Base client
 from voice_client.client import BaseClient
