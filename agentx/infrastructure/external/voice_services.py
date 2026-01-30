@@ -2,10 +2,15 @@
 
 STT/TTS/VAD pipeline using Silero models.
 Following voice integration patterns from CLAUDE.md.
+
+**DEPRECATED (2026-01-31):** Use external kyutai voice-server integration instead.
+See `VoiceGatewayService` in `voice_gateway_service.py` for the new implementation.
+These internal services will be removed in Phase 3 of the migration plan.
 """
 
 import io
 import uuid
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -25,10 +30,18 @@ class STTService:
     """Speech-to-Text service using Silero STT.
 
     Accepts any sample rate and resamples to 16kHz internally.
+
+    **DEPRECATED:** Use `VoiceGatewayService` with external kyutai STT instead.
     """
 
     def __init__(self) -> None:
         """Initialize Silero STT model."""
+        warnings.warn(
+            "STTService is deprecated. Use VoiceGatewayService with external kyutai STT instead. "
+            "See C010-voice-client for migration details.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._torch_device = self._get_device()
         self._load_model()
 
@@ -113,10 +126,18 @@ class TTSService:
     """Text-to-Speech service using Silero TTS.
 
     Generates audio at 24kHz or 48kHz.
+
+    **DEPRECATED:** Use `VoiceGatewayService` with external kyutai TTS instead.
     """
 
     def __init__(self) -> None:
         """Initialize Silero TTS model."""
+        warnings.warn(
+            "TTSService is deprecated. Use VoiceGatewayService with external kyutai TTS instead. "
+            "See C010-voice-client for migration details.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._torch_device = self._get_device()
         self._load_model()
 
@@ -170,10 +191,18 @@ class VADService:
     """Voice Activity Detection service using Silero VAD.
 
     Detects speech activity in audio chunks.
+
+    **DEPRECATED:** Use `VoiceGatewayService` with external kyutai VAD instead.
     """
 
     def __init__(self) -> None:
         """Initialize Silero VAD model."""
+        warnings.warn(
+            "VADService is deprecated. Use VoiceGatewayService with external kyutai VAD instead. "
+            "See C010-voice-client for migration details.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self._torch_device = self._get_device()
         self._load_model()
 

@@ -4,6 +4,8 @@
 **Change**: c004-voice-streaming
 **Schema**: spec-factory v1
 
+**IMPORTANT (2026-01-31):** This change is **DEPRECATED** in favor of **C010-voice-client**, which implements external kyutai voice-server integration. The internal voice services (VADService, STTService, TTSService) described here are superseded by `VoiceGatewayService`. See [`openspec/changes/c010-voice-client/`](../c010-voice-client/) for the current implementation.
+
 ---
 
 ## 1. Implementation Checklist

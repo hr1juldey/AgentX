@@ -91,6 +91,17 @@ python main.py
 | **Local LLM** | [Ollama](https://ollama.com/) | Privacy-first local inference |
 | **Vector DB** | [Qdrant](https://qdrant.tech/) | High-performance vector search |
 
+### Voice
+
+| Component | Technology | Purpose |
+| ----------- | ------------ | --------- |
+| **Integration** | [kyutai voice-server](https://github.com/kyutai/voice-server) | External STT/TTS service |
+| **SDK** | voice_client SDK | Hybrid adapter pattern with fallback |
+| **Gateway** | VoiceGatewayService | WebSocket routing + state management |
+| **Feature Flag** | `USE_KYUTAI_EXTERNAL=True` | Enable external integration |
+
+See [`openspec/changes/c010-voice-client/`](openspec/changes/c010-voice-client/) for implementation details.
+
 ### Plugins
 
 | Plugin | Technology | Purpose |
@@ -98,7 +109,6 @@ python main.py
 | **Framework** | [FastMCP 2.0](https://gofastmcp.com/) | MCP server framework |
 | **Search** | [SearXNG](https://searxng.org/) | Privacy-respecting web search |
 | **Vision** | LLaVA + ColPali | Multimodal understanding |
-| **Voice** | Whisper + Piper | STT/TTS capabilities |
 
 ### Frontend
 

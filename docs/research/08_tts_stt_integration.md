@@ -2,7 +2,30 @@
 
 ## Overview
 
-This guide covers building real-time voice interfaces for AGENTX using CPU-efficient Text-to-Speech (TTS) and Speech-to-Text (STT) models. The primary challenge is managing the real-time, unpredictable nature of human speech while maintaining low latency and natural conversation flow.
+This guide covers building real-time voice interfaces for AGENTX.
+
+**IMPORTANT (2026-01-30):** AGENTX now uses **external kyutai voice-server** integration (see C010-voice-client). This document describes the internal voice service architecture for reference, but new implementations should use the external kyutai integration via `VoiceGatewayService`.
+
+### Quick Start: External kyutai Integration
+
+```python
+from agentx.infrastructure.external.voice_gateway_service import VoiceGatewayService
+
+# Feature flag (default: true)
+USE_KYUTAI_EXTERNAL = True
+
+# The VoiceGatewayService handles:
+# - STT via kyutai external server
+# - TTS via kyutai external server
+# - Conversation state management
+# - Text stream buffering
+```
+
+See `openspec/changes/c010-voice-client/` for complete implementation details.
+
+## Legacy: Internal Voice Services
+
+The following sections describe the internal voice service architecture (Silero VAD, STT, TTS) which is now **deprecated** in favor of external kyutai integration.
 
 ## The Real-Time Challenge
 

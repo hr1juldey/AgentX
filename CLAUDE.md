@@ -384,9 +384,13 @@ agentx.mount_server("vision", vision_server)
 agentx.run()
 ```
 
-## Voice Integration (Silero)
+## Voice Integration (Silero - DEPRECATED)
 
-The project uses Silero for both STT and TTS. Key requirements:
+**DEPRECATED (2026-01-31)**: The project previously used Silero for internal STT/TTS. This has been superseded by external kyutai voice-server integration (see Voice Client section below). The internal services (VADService, STTService, TTSService) are deprecated and will be removed in Phase 3.
+
+**Legacy Information** (for reference during migration):
+
+The project used Silero for both STT and TTS. Key requirements:
 
 ### Audio Pipeline Requirements
 
@@ -553,6 +557,203 @@ async def voice_websocket(websocket: WebSocket):
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected")
 ```
+
+## Voice Client (C010 - External Kyutai Integration)
+
+**Architecture**: AGENTX uses external kyutai voice-server integration via `VoiceGatewayService` for STT/TTS.
+
+**Implementation**: See `openspec/changes/c010-voice-client/` for complete implementation details.
+
+### Voice Gateway Service
+
+The `VoiceGatewayService` handles WebSocket connections between frontend and kyutai voice-server:
+
+```python
+from agentx.infrastructure.external.voice_gateway_service import VoiceGatewayService
+from agentx.core.dependencies import get_voice_gateway_service
+
+# Get service instance
+gateway_service = get_voice_gateway_service()
+
+# Handle voice session
+await gateway_service.handle_session(websocket, session_id)
+```
+
+### Hybrid Adapter Pattern
+
+Voice client SDK integration with fallback to direct WebSocket:
+
+```python
+from agentx.infrastructure.external.voice_sdk_adapter import VoiceSDKAdapter
+
+# Create adapter (SDK or direct WebSocket)
+adapter = VoiceSDKAdapter(
+    use_sdk=settings.voice.use_voice_sdk,  # Feature flag
+    stt_url=settings.voice.kyutai_stt_url,
+    tts_url=settings.voice.kyutai_tts_url,
+)
+
+# Handle voice session
+await adapter.handle_session(websocket, session_id, agent_callback)
+```
+
+### Feature Flags
+
+| Flag | Default | Purpose |
+|------|---------|---------|
+| `USE_KYUTAI_EXTERNAL` | `True` | Enable external kyutai integration |
+| `USE_VOICE_SDK` | `False` | Use voice_client SDK (hybrid adapter) |
+
+### WebSocket Protocol
+
+**Message Format** (JSON with snake_case fields):
+
+```python
+# Config message
+config_msg = {
+    "type": "Config",
+    "data": {"voice_id": "default", "output_format": "pcm_int16", "streaming": True},
+    "session_id": str(session_id),
+    "timestamp": time.time(),
+}
+
+# Audio message (STT)
+audio_msg = {
+    "type": "Audio",
+    "data": {"audio": base64.b64encode(audio_chunk).decode()},
+    "session_id": str(session_id),
+    "timestamp": time.time(),
+}
+
+# Text message (TTS)
+text_msg = {
+    "type": "Text",
+    "data": text,
+    "session_id": str(session_id),
+    "timestamp": time.time(),
+}
+
+# EOS (End of Stream)
+eos_msg = {
+    "type": "Eos",
+    "session_id": str(session_id),
+    "timestamp": time.time(),
+}
+```
+
+**Message Types**: Config, Audio, Text, Error, Eos (End of Stream), Heartbeat
+
+### Conversation State Management
+
+Track conversation sessions and history:
+
+```python
+from agentx.application.use_cases.conversation_state_manager import ConversationStateManager
+from agentx.core.dependencies import get_conversation_state_manager
+
+state_manager = get_conversation_state_manager()
+
+# Get or create session
+session = state_manager.get_or_create_session(session_id)
+
+# Add user message
+state_manager.add_user_message(session_id, "Hello")
+
+# Add assistant message
+state_manager.add_assistant_message(session_id, "Hi there!")
+
+# Get conversation history
+history = state_manager.get_conversation_history(session_id, limit=20)
+
+# Update context
+state_manager.update_context(
+    session_id,
+    current_topic="voice_conversation",
+    language="en",
+)
+```
+
+### Text Stream Handler
+
+Handle STT buffering and TTS sentence splitting:
+
+```python
+from agentx.infrastructure.external.text_stream_handler import TextStreamHandler
+
+text_handler = TextStreamHandler()
+
+# Buffer STT chunks until Eos
+text_handler.buffer_stt_chunk(session_id, partial_text)
+final_text = text_handler.get_stt_text(session_id)
+
+# Split TTS into sentences
+async def on_sentence(sentence: str):
+    # Send each sentence to TTS
+    pass
+
+await text_handler.stream_tts_sentences(session_id, long_text, on_sentence)
+
+# Interrupt TTS
+text_handler.interrupt_tts(session_id)
+```
+
+### Voice Routes
+
+REST endpoints for voice interaction:
+
+```python
+# Health check
+GET /api/v1/voice/kyutai/status
+
+# Conversation history
+GET /api/v1/voice/conversation/history?session_id={id}&limit=20
+
+# Update context
+POST /api/v1/voice/conversation/context
+
+# WebSocket endpoint
+WS /ws/voice?session_id={id}
+```
+
+### Kyutai Server URLs
+
+| Service | URL |
+|---------|-----|
+| STT | `ws://localhost:16000/stt` |
+| TTS | `ws://localhost:16000/tts` |
+
+### Audio Format
+
+| Property | Value |
+|----------|-------|
+| Format | 16-bit PCM |
+| Sample Rate | 24000 Hz |
+| Channels | Mono (1) |
+
+### Testing
+
+Run voice integration tests:
+
+```bash
+# E2E tests (require kyutai server running)
+pytest tests/integration/infrastructure/external/test_voice_e2e.py -v
+
+# SDK integration tests
+pytest tests/integration/infrastructure/external/test_voice_sdk_integration.py -v
+
+# TTS demo
+python tests/integration/infrastructure/external/test_tts_demo.py
+```
+
+### Migration Notes
+
+**Phase 1 (Coexistence)**: Internal Silero services available with deprecation warnings
+**Phase 2 (Default External)**: `USE_KYUTAI_EXTERNAL=True` is the default
+**Phase 3 (Removal)**: Internal services will be removed (planned: 2026-05-01)
+
+See `openspec/changes/c010-voice-client/phase3_removal_plan.md` for detailed removal plan.
+
+---
 
 ## Frontend Patterns (Next.js + Tailwind)
 
