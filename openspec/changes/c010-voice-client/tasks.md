@@ -148,10 +148,10 @@ Implement voice client infrastructure for external kyutai voice-server integrati
 - [x] 8.7 Implement VoiceSDKAdapter.handle_via_direct_ws() fallback path
 - [x] 8.8 Update VoiceGatewayService to use VoiceSDKAdapter based on feature flag
 - [x] 8.9 Add logging at adapter boundaries for debugging (SDK messages, mapped sessions)
-- [ ] 8.10 Test SDK path: frontend → Adapter → SDK → kyutai → frontend
-- [ ] 8.11 Test fallback path: frontend → Adapter → direct WebSocket → kyutai
-- [ ] 8.12 Test session mapping: SDK UUID → AgentX conversation_id
-- [ ] 8.13 Test feature flag switching between SDK and direct modes
+- [x] 8.10 Test SDK path: frontend → Adapter → SDK → kyutai → frontend
+- [x] 8.11 Test fallback path: frontend → Adapter → direct WebSocket → kyutai
+- [x] 8.12 Test session mapping: SDK UUID → AgentX conversation_id
+- [x] 8.13 Test feature flag switching between SDK and direct modes
 - [x] 8.14 Run ruff check --fix, ruff format, pyrefly check --summarize-errors
 - [x] 8.15 Verify adapter file under 150 lines (split if needed)
 

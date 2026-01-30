@@ -5,16 +5,16 @@ public API and providing fallback to direct WebSocket implementation.
 """
 
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING
+from uuid import UUID
+
+from fastapi import WebSocket
 
 from agentx.core.config import get_settings
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from uuid import UUID
-
-    from fastapi import WebSocket
-    from voice_client.voice import VoiceClient
+    pass
 
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ class VoiceSDKAdapter:
         self._tts_url = tts_url or settings.voice.kyutai_tts_url
         self._sdk_to_agentx_sessions: dict[str, UUID] = {}
 
-    def _init_sdk_client(self) -> VoiceClient | None:  # type: ignore[name-defined]
+    def _init_sdk_client(self):
         """Initialize voice_client SDK VoiceClient.
 
         Returns:
