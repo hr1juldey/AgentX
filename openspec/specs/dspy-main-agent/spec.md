@@ -43,6 +43,7 @@ Define the main DSPy ReAct agent that implements the conference room orchestrati
 | FR-MAIN-006 | Agent MUST use dspy.ReAct with max_iters=8 by default | Should |
 | FR-MAIN-007 | Agent MUST score confidence on all responses | Must |
 | FR-MAIN-008 | Agent MUST extract reasoning steps from trajectory | Must |
+| FR-MAIN-009 | Agent MUST integrate with voice interaction via VoiceGatewayService | Must |
 
 ### Non-Functional Requirements
 
@@ -52,6 +53,34 @@ Define the main DSPy ReAct agent that implements the conference room orchestrati
 | NFR-MAIN-002 | Agent file MUST NOT exceed 120 lines (100 executable + 20 overhead) | Must |
 | NFR-MAIN-003 | Agent MUST use absolute imports only | Must |
 | NFR-MAIN-004 | Agent MUST pass ruff check and ruff format | Must |
+
+---
+
+## 1.3.1 Voice Integration via VoiceGatewayService
+
+The agent pipeline MUST integrate with voice interaction via VoiceGatewayService instead of direct internal voice service calls.
+
+**Migration Path**: Update ExecuteAgentQueryUseCase to support conversational context from ConversationStateManager.
+
+### Scenario: Voice query with conversational context
+
+- **WHEN** voice query is received via VoiceGatewayService
+- **THEN** ExecuteAgentQueryUseCase receives conversation history from ConversationStateManager
+- **AND** ExecuteAgentQueryUseCase receives conversation context (topic, entities, sentiment)
+- **AND** Agent processes query with conversation context awareness
+- **AND** Agent response is returned with UI widgets via server-driven UI
+
+### Scenario: Context injection into agent query
+
+- **WHEN** user sends follow-up question (e.g., "And in New York?")
+- **THEN** ConversationStateManager provides conversation history
+- **AND** ConversationContext contains topic="weather", entities=["San Francisco"]
+- **THEN** ExecuteAgentQueryRequest includes conversation context
+- **AND** Agent response references previous context
+- **AND** ConversationStateManager tracks assistant response
+
+**Related Changes**:
+- c010-voice-client - Voice gateway and conversational state infrastructure
 
 ---
 

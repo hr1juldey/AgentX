@@ -41,6 +41,7 @@ Define the central voice interface component that serves as the visual and inter
 | FR-VN-008 | Reduced motion preference MUST disable animations | Must |
 | FR-VN-009 | Voice layer MUST be at z-index 40 (above widgets, below modals) | Must |
 | FR-VN-010 | Nucleus MUST use `Nucleus` primitive component | Must |
+| FR-VN-011 | Voice nucleus widget MUST integrate with server-driven UI for voice state | Must |
 
 ### Non-Functional Requirements
 
@@ -50,6 +51,37 @@ Define the central voice interface component that serves as the visual and inter
 | NFR-VN-002 | Drift animation MUST complete in 2.4s (relaxed floating) | Should |
 | NFR-VN-003 | Component MUST be SSR-safe (no `window` access during render) | Should |
 | NFR-VN-004 | Focus ring MUST be visible (`focus-visible:ring-2 ring-enzyme`) | Should |
+
+---
+
+## 1.3.1 Voice Nucleus Widget for Voice State
+
+The voice nucleus widget MUST be used for voice state visual feedback during voice interactions.
+
+**Migration Path**: Register voice nucleus widget in agent/ui.tsx for server-driven UI emission.
+
+### Scenario: Voice nucleus widget displays voice state
+
+- **WHEN** voice interaction starts
+- **THEN** VoiceGatewayService emits voiceStatus UI message via push_ui_message()
+- **AND** voiceStatus message includes state (listening/processing/speaking)
+- **AND** voiceStatus message includes icon (mic/brain/speaker)
+- **AND** voiceStatus message includes pulse flag for animation
+- **AND** VoiceNucleusWidget renders with platform-aware sizing (160px desktop, 72px mobile)
+- **AND** VoiceNucleusWidget uses design tokens from design-tokens.ts
+- **AND** Metaball effects use platform-aware blur (16px desktop, 12px mobile)
+
+### Scenario: Voice nucleus widget integration
+
+- **WHEN** voice state changes during conversation
+- **THEN** VoiceNucleusWidget updates based on voiceStatus message
+- **AND** VoiceNucleusWidget uses Shadow DOM for style isolation
+- **AND** VoiceNucleusWidget is registered in agent/ui.tsx
+
+**Related Changes**:
+- c010-voice-client - Voice state UI emission via VoiceGatewayService
+
+---
 
 ## 1.4 Data Model
 
