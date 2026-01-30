@@ -241,6 +241,111 @@ for sentence in split_sentences(llm_response):
 - **Immediate passthrough**: Too many WebSocket messages (rejected)
 - **Full buffering**: Wait for complete response (rejected - higher latency)
 
+### Decision 7: SDK Dependency vs Direct WebSocket Implementation
+
+**Choice**: Hybrid adapter pattern using voice_client SDK as internal dependency
+
+**Rationale**:
+
+After exploring the kyutai voice_client SDK at `/home/riju279/Documents/Tools/kyutai/delayed-streams-modeling/voice_client/`, we identified a production-ready Python SDK with:
+- Auto-reconnection with exponential backoff
+- Message encoding abstraction (JSON/MsgPack)
+- Rich exception hierarchy
+- Built-in audio handling (validation, chunking, format conversion)
+
+**Comparison of Three Approaches**:
+
+| Aspect | Direct SDK Dependency | Direct WebSocket (original) | Hybrid Adapter (CHOSEN) |
+|--------|---------------------|----------------------------|-------------------------|
+| **Code maintenance** | SDK handles reconnection, encoding | AgentX maintains all logic | SDK reliability + AgentX control |
+| **External dependencies** | Adds voice_client package | Only websockets | voice_client + websockets fallback |
+| **Protocol control** | SDK dictates protocol | AgentX full control | AgentX DTOs remain public API |
+| **Session management** | SDK generates UUIDs | AgentX controls lifecycle | Adapter maps SDK ↔ AgentX sessions |
+| **Graceful degradation** | SDK failure = hard failure | Custom fallback needed | Feature flag: SDK or direct WS |
+| **Frontend support** | No TypeScript SDK | Protocol documented for TS | Adapter layer documents protocol |
+| **Testing** | Mock SDK | Test WebSocket directly | Mock SDK or use fallback |
+| **Debugging** | Less visibility | Full message visibility | Adapter can log both layers |
+
+**Why Hybrid Adapter Pattern**:
+
+1. **Best of both worlds**: SDK's production-tested reconnection + AgentX's protocol control
+2. **Graceful degradation**: Fall back to direct WebSocket if SDK unavailable
+3. **Public API stability**: AgentX DTOs remain stable even if SDK changes
+4. **Session mapping**: Adapter synchronizes SDK sessions with AgentX conversations
+5. **Feature flag support**: `USE_VOICE_SDK=true/false` for A/B testing
+6. **Frontend-ready**: Adapter documents protocol for future TypeScript SDK
+
+**Implementation Architecture**:
+
+```python
+# VoiceGatewayService uses SDK internally, exposes AgentX DTOs
+class VoiceGatewayService:
+    def __init__(self, state_manager, text_handler):
+        self._state_manager = state_manager
+        self._text_handler = text_handler
+        self._use_sdk = settings.voice.use_voice_sdk  # Feature flag
+
+    async def handle_session(self, frontend_ws: WebSocket, session_id: UUID):
+        if self._use_sdk:
+            # Use SDK via adapter
+            async with VoiceClient(stt_url=..., tts_url=...) as voice:
+                await self._handle_via_sdk(voice, frontend_ws, session_id)
+        else:
+            # Direct WebSocket (fallback)
+            await self._handle_via_direct_ws(frontend_ws, session_id)
+```
+
+**SDK Integration Points**:
+
+- **STT**: `STTClient.transcribe()` and `STTClient.stream_transcription()`
+- **TTS**: `TTSClient.synthesize()` (async iterator of AudioChunk)
+- **Combined**: `VoiceClient.converse()` with agent_callback for C003 integration
+- **Reconnection**: Built-in `BaseClient.connect()` with exponential backoff
+- **Encoding**: `get_encoder("json")` or `get_encoder("msgpack")`
+- **Audio**: `AudioHandler.load_audio_file()`, `validate_audio()`, `chunk_audio()`
+
+**Session Mapping Strategy**:
+
+```python
+# Adapter maps SDK sessions to AgentX conversations
+_sdk_to_agentx_sessions: dict[str, UUID] = {}
+
+# When SDK creates session:
+sdk_session_id = voice.stt.session_id
+_sdk_to_agentx_sessions[sdk_session_id] = agentx_session_id
+
+# When SDK sends messages, remap session_id
+agentx_message = {
+    "type": "Text",
+    "data": text,
+    "session_id": str(_sdk_to_agentx_sessions[sdk_session_id]),
+    "timestamp": time.time()
+}
+```
+
+**Dependencies Added**:
+
+```toml
+# pyproject.toml
+dependencies = [
+    "voice-client>=0.1.0",  # From local path or PyPI
+]
+```
+
+**Alternatives Considered**:
+- **Direct SDK dependency**: Less control, protocol coupling, harder frontend parity (rejected)
+- **Direct WebSocket only**: More maintenance, reinventing reconnection logic (rejected - SDK is proven)
+
+**Risks and Mitigations**:
+
+| Risk | Mitigation |
+|------|------------|
+| SDK version breaks adapter | Pin SDK version, test before upgrading |
+| SDK session_id conflicts | Map SDK sessions to AgentX UUIDs |
+| SDK dependency unavailable | Direct WebSocket fallback path |
+| Debugging complexity | Add logging at adapter boundaries |
+| Frontend has no SDK | Adapter documents protocol for TS implementation |
+
 ---
 
 ## Risks / Trade-offs
@@ -325,11 +430,19 @@ for sentence in split_sentences(llm_response):
 │  ┌──────────────────────────────────────────────────────────────────┐  │
 │  │  VoiceGatewayService (Infrastructure Layer)                      │  │
 │  │    ┌────────────────────────────────────────────────────────┐    │  │
-│  │    │  WebSocket Connection Manager                           │    │  │
-│  │    │    - Manage frontend WebSocket                          │    │  │
-│  │    │    - Manage kyutai STT WebSocket                        │    │  │
-│  │    │    - Manage kyutai TTS WebSocket                        │    │  │
-│  │    │    - Route messages between endpoints                   │    │  │
+│  │    │  Voice SDK Adapter (NEW - Decision 7)                   │    │  │
+│  │    │    - Wraps voice_client SDK                              │    │  │
+│  │    │    - Maps SDK sessions → AgentX sessions                │    │  │
+│  │    │    - Feature flag: USE_VOICE_SDK=true/false              │    │  │
+│  │    │    - Fallback to direct WebSocket                        │    │  │
+│  │    │    ┌────────────────────────────────────────────┐       │    │  │
+│  │    │    │ voice_client SDK (internal dependency)      │       │    │  │
+│  │    │    │  - VoiceClient (STT+TTS combined)            │       │    │  │
+│  │    │    │  - STTClient (streaming transcription)       │       │    │  │
+│  │    │    │  - TTSClient (audio synthesis)               │       │    │  │
+│  │    │    │  - BaseClient (reconnection, encoding)       │       │    │  │
+│  │    │    │  - AudioHandler (chunking, validation)        │       │    │  │
+│  │    │    └────────────────────────────────────────────┘       │    │  │
 │  │    └────────────────────────────────────────────────────────┘    │  │
 │  │                                                                 │  │
 │  │    ┌────────────────────────────────────────────────────────┐    │  │

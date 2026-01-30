@@ -10,7 +10,9 @@
 
 Implement voice client infrastructure for external kyutai voice-server integration. This change shifts AgentX from internal voice service implementation (VAD, STT, TTS) to external kyutai service dependency, focusing on fast async text stream handling and conversational state management.
 
-**Total Tasks**: 42 tasks across 7 phases
+**Total Tasks**: 57 tasks across 8 phases (Phases 1-5: 48/48 complete, Phase 6: 3/11 complete, Phase 7: 0/9, Phase 8: 0/15 SDK integration)
+
+**Phase 8 (NEW)**: Voice Client SDK Integration using hybrid adapter pattern
 
 ---
 
@@ -128,6 +130,30 @@ Implement voice client infrastructure for external kyutai voice-server integrati
 - [ ] 7.7 Plan Phase 3 removal of deprecated internal services
 - [ ] 7.8 Update CLAUDE.md with voice client architecture
 - [ ] 7.9 Verify all documentation updated
+
+---
+
+## 8. Voice Client SDK Integration (Hybrid Adapter Pattern)
+
+**Goal**: Integrate voice_client SDK as internal dependency with fallback to direct WebSocket.
+
+**Background**: After exploring the kyutai voice_client SDK at `/home/riju279/Documents/Tools/kyutai/delayed-streams-modeling/voice_client/`, we identified production-ready patterns for reconnection, encoding, and audio handling. This phase implements a hybrid adapter pattern that uses the SDK internally while maintaining AgentX's public API.
+
+- [ ] 8.1 Add voice_client SDK to pyproject.toml as optional dependency
+- [ ] 8.2 Add USE_VOICE_SDK feature flag to config.py (default: false)
+- [ ] 8.3 Create agentx/infrastructure/external/voice_sdk_adapter.py with VoiceSDKAdapter class
+- [ ] 8.4 Implement VoiceSDKAdapter._init_sdk_client() for VoiceClient initialization
+- [ ] 8.5 Implement VoiceSDKAdapter._map_sdk_session_to_agentx() for session mapping
+- [ ] 8.6 Implement VoiceSDKAdapter.handle_via_sdk() using VoiceClient.converse()
+- [ ] 8.7 Implement VoiceSDKAdapter.handle_via_direct_ws() fallback path
+- [ ] 8.8 Update VoiceGatewayService to use VoiceSDKAdapter based on feature flag
+- [ ] 8.9 Add logging at adapter boundaries for debugging (SDK messages, mapped sessions)
+- [ ] 8.10 Test SDK path: frontend → Adapter → SDK → kyutai → frontend
+- [ ] 8.11 Test fallback path: frontend → Adapter → direct WebSocket → kyutai
+- [ ] 8.12 Test session mapping: SDK UUID → AgentX conversation_id
+- [ ] 8.13 Test feature flag switching between SDK and direct modes
+- [ ] 8.14 Run ruff check --fix, ruff format, pyrefly check --summarize-errors
+- [ ] 8.15 Verify adapter file under 150 lines (split if needed)
 
 ---
 
