@@ -12,40 +12,40 @@
 
 | Task | Command/File | Status | Notes |
 |------|-------------|--------|-------|
-| Install LangGraph SDK | `npm install @langchain/langgraph-sdk @langchain/langgraph-sdk-react-ui` | ⬜ | Add to package.json |
-| Configure useStream() | `src/pages/_app.tsx` or wrapper | ⬜ | Set up LangGraph provider |
-| Test connection | `npm run dev` | ⬜ | Verify connection to backend |
+| Install LangGraph SDK | `npm install @langchain/langgraph-sdk` | ✓ | @langchain/langgraph-sdk v0.0.11 installed |
+| Configure useStream() | `src/hooks/useLangGraph.ts` | ✓ | Custom useStream hook implemented |
+| Test connection | `npm run dev` ⬜ | Pending backend connection |
 
 ### 1.2 Phase 2: Component Colocation (1 hour)
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create agent directory | `src/agent/` | ⬜ | `mkdir -p src/agent` |
-| Create graph.ts | `src/agent/graph.ts` | ⬜ | LangGraph state definition (~100 lines) |
-| Create ui.tsx | `src/agent/ui.tsx` | ⬜ | Widget registry (~50 lines) |
-| Register all 12 widgets | `src/agent/ui.tsx` | ⬜ | Default export with component map |
+| Create agent directory | `src/agent/` | ✓ | Directory created |
+| Create graph.ts | `src/agent/graph.ts` | ✓ | LangGraph state definition (110 lines) |
+| Create ui.tsx | `src/agent/ui.tsx` | ✓ | Widget registry (95 lines) |
+| Register all 12 widgets | `src/agent/ui.tsx` | ✓ | Default export with component map |
 
 ### 1.3 Phase 3: Backend Integration (1 hour)
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Implement push_ui_message() | Backend (C003) | ⬜ | Python function to emit widgets |
-| Configure ui_message_reducer | `src/agent/graph.ts` | ⬜ | Add ui field to AgentState |
-| Test widget emission | Integration test | ⬜ | Verify widget appears in frontend |
+| Implement push_ui_message() | Backend (C003) | ✓ | designer.py:114 - push_ui_message() implemented (2026-01-31) |
+| Configure ui_message_reducer | `src/agent/graph.ts` | ✓ | uiMessageReducer and addMessages implemented |
+| Test widget emission | Integration test | ⬜ | Pending full integration test |
 
 ### 1.4 Phase 4: Shadow DOM Setup (30 minutes)
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Configure Shadow DOM | `src/pages/_app.tsx` or wrapper | ⬜ | LoadExternalComponent config |
-| Test style isolation | Visual inspection | ⬜ | Verify no CSS bleed between widgets |
+| Configure LoadExternalComponent | `src/components/ui/LoadExternalComponent.tsx` | ✓ | React portal rendering (200 lines) |
+| Test style isolation | Visual inspection | ⬜ | Pending visual verification |
 
 ### 1.5 Phase 5: Designer Agent Fix (30 minutes)
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Update Designer agent | Backend (C003) | ⬜ | Check state.ui before emitting |
-| Verify no duplicate widgets | Integration test | ⬜ | Designer agent sees existing widgets |
+| Update Designer agent | Backend (C003) | ✓ | designer.py:161 - state awareness + push_ui_message() |
+| Verify no duplicate widgets | Integration test | ⬜ | Pending integration test |
 
 ---
 

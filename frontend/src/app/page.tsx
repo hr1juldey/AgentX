@@ -10,8 +10,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useStream } from '@langchain/langgraph-sdk/react';
-import { LoadExternalComponent } from '@langchain/langgraph-sdk/react-ui';
+import { useStream } from '@/hooks/useLangGraph';
+import { LoadExternalComponent } from '@/components/ui/LoadExternalComponent';
 
 import { tokens } from '@/lib/design-tokens';
 import { MetaballBackground } from '@/components/metaball-canvas';
@@ -39,7 +39,6 @@ export default function HomePage() {
   // LangGraph stream integration (C007)
   const { thread, values } = useStream({
     apiUrl: 'http://localhost:2024',
-    assistantId: 'agent',
     threadId: threadId || undefined,
     onCustomEvent: useCallback((event: any, options: any) => {
       // Handle UI component events from server-driven UI
@@ -70,15 +69,14 @@ export default function HomePage() {
     sendMessage({
       message_type: 'query',
       data: { query },
+      session_id: threadId ?? null,
     });
 
-    // Also send via LangGraph stream
-    if (thread) {
-      await thread.update({ query });
-    }
+    // Note: LangGraph stream handles queries via the WebSocket endpoint
+    // The useStream hook listens for updates automatically
 
     setQuery('');
-  }, [query, thread, sendMessage]);
+  }, [query, threadId, sendMessage]);
 
   return (
     <main className="min-h-screen bg-void text-nucleus relative overflow-hidden">
@@ -138,7 +136,6 @@ export default function HomePage() {
           {values?.ui?.map((ui: any) => (
             <LoadExternalComponent
               key={ui.id}
-              stream={thread}
               message={ui}
               fallback={
                 <div className="bg-cell border border-membrane rounded-lg p-4">

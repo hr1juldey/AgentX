@@ -4,6 +4,8 @@
  * Exports all 12 frozen widget types from C007.
  */
 
+import { tokens } from '@/lib/design-tokens';
+
 export { MarkdownWidget } from './MarkdownWidget';
 export { CardWidget } from './CardWidget';
 
