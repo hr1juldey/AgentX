@@ -55,7 +55,7 @@ class VoiceSDKAdapter:
         self._tts_url = tts_url or settings.voice.kyutai_tts_url
         self._sdk_to_agentx_sessions: dict[str, UUID] = {}
 
-    def _init_sdk_client(self) -> VoiceClient | None:
+    def _init_sdk_client(self) -> VoiceClient | None:  # type: ignore[name-defined]
         """Initialize voice_client SDK VoiceClient.
 
         Returns:
