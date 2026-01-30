@@ -243,8 +243,8 @@ C001-folder-structure is **complete** when:
 - [x] No files exceed 150 lines
 - [x] All code passes ruff check, ruff format, pyrefly check
   - **Note**: ruff passes ✓ | pyrefly has 42 type errors (known issues with LangGraph types)
-- [ ] Frontend has atomic state pattern implemented
-  - **Note**: Frontend structure exists, atomic state pattern pending C007 implementation
+- [x] Frontend has atomic state pattern implemented
+  - **Note**: C007 implemented AgentState + uiMessageReducer in src/agent/graph.ts (2026-01-31)
 - [x] Zero `models.py` or `schemas.py` in service folders
 - [~] All TypeScript files pass `npx tsc --noEmit`
   - **Note**: 18 type errors remaining (missing @langchain packages, type assertions)

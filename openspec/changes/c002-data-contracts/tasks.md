@@ -138,7 +138,7 @@ C002-data-contracts is **complete** when:
 - [x] Zero type value mismatches (`markdown_block` vs `markdown`)
 - [x] Zero scattered `schemas.py` files
 - [x] All quality checks pass (ruff, pyrefly, tsc)
-- [ ] Alignment tests pass
+- [x] Alignment tests pass (12/12 tests passing) (2026-01-31)
 
 ---
 

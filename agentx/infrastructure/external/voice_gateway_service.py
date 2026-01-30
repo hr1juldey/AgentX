@@ -13,6 +13,10 @@ from agentx.infrastructure.external.voice_gateway_models import (
     VoiceGatewayConfig,
     VoiceSession,
 )
+from agentx.infrastructure.external.voice_gateway_session_manager import (
+    check_kyutai_health,
+    cleanup_session,
+)
 from agentx.infrastructure.external.voice_protocol import create_config_message
 from agentx.infrastructure.external.voice_session_tasks import (
     input_task,
@@ -105,7 +109,7 @@ class VoiceGatewayService:
                 self._output_task(session),
             )
         finally:
-            await self._cleanup_session(session_id)
+            await cleanup_session(session_id, self._sessions, self._text_handler)
 
     def _agent_callback(self, user_text: str) -> str:
         """Callback for processing STT results through agent.
@@ -165,21 +169,6 @@ class VoiceGatewayService:
             session.tts_ws,  # type: ignore[arg-type]
         )
 
-    async def _cleanup_session(self, session_id: UUID) -> None:
-        """Clean up a voice session."""
-        session = self._sessions.pop(session_id, None)
-        if session:
-            if session.stt_ws:
-                await session.stt_ws.close()  # type: ignore[union-attr]
-            if session.tts_ws:
-                await session.tts_ws.close()  # type: ignore[union-attr]
-        # Clean up text handler state
-        self._text_handler.cleanup_session(session_id)
-
-    async def check_kyutai_health(self) -> bool:
+    async def check_health(self) -> bool:
         """Check if kyutai server is available."""
-        try:
-            async with websockets.connect(self._config.stt_url) as _:
-                return True
-        except Exception:
-            return False
+        return await check_kyutai_health(self._config.stt_url)

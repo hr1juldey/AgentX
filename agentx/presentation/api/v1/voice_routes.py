@@ -24,7 +24,7 @@ async def kyutai_status() -> dict[str, bool]:
         Dictionary with 'available' key.
     """
     gateway_service = get_voice_gateway_service()
-    available = await gateway_service.check_kyutai_health()
+    available = await gateway_service.check_health()
     return {"available": available}
 
 
