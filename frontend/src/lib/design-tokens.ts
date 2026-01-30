@@ -93,11 +93,11 @@ export const motion = {
   },
   pulse: {
     duration: 2000,
-    repeat: Number.POSITIVE_INFINITY as const,
+    repeat: Infinity,
   },
   drift: {
     duration: 20000,
-    repeat: Number.POSITIVE_INFINITY as const,
+    repeat: Infinity,
   },
   merge: {
     duration: 600,
@@ -113,11 +113,11 @@ export const motion = {
   },
   breathe: {
     duration: 4000,
-    repeat: Number.POSITIVE_INFINITY as const,
+    repeat: Infinity,
   },
   pulseFast: {
     duration: 1000,
-    repeat: Number.POSITIVE_INFINITY as const,
+    repeat: Infinity,
   },
   settle: {
     duration: 500,
