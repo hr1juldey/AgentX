@@ -9,6 +9,21 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 import { ServerMessage, ClientMessage, WebSocketMessage as WSMessage } from '@/types/websocket';
 
+/**
+ * Generate a UUID with fallback for browsers that don't support crypto.randomUUID().
+ */
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback: generate a random UUID v4
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 interface UseWebSocketOptions {
   reconnectInterval?: number;
   maxReconnectAttempts?: number;
@@ -132,7 +147,7 @@ export function useWebSocket(
 
       const fullMessage: WSMessage = {
         ...message,
-        message_id: crypto.randomUUID(),
+        message_id: generateUUID(),
         timestamp: Date.now() / 1000,
       };
 
