@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from agentx.core.config import get_settings
 from agentx.presentation.api.v1.agent_routes import router as agent_router
 from agentx.presentation.api.v1.health import router as health_router
+from agentx.presentation.api.v1.thread_routes import router as thread_router
 
 
 @asynccontextmanager
@@ -56,7 +57,8 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(health_router, prefix="/api/v1", tags=["health"])
-    app.include_router(agent_router, prefix="/api/v1", tags=["agent"])
+    app.include_router(agent_router, prefix="/api/v1/agent", tags=["agent"])
+    app.include_router(thread_router, prefix="/api/v1/threads", tags=["threads"])
 
     return app
 

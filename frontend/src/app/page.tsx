@@ -33,12 +33,12 @@ export default function HomePage() {
 
   // WebSocket connection for real-time updates
   const { isConnected, sendMessage, messages } = useWebSocket(
-    'ws://localhost:2024/api/v1/ws'
+    'ws://localhost:8015/api/v1/ws'
   );
 
   // LangGraph stream integration (C007)
   const { thread, values } = useStream({
-    apiUrl: 'http://localhost:2024',
+    apiUrl: 'http://localhost:8015/api/v1',
     threadId: threadId || undefined,
     onCustomEvent: useCallback((event: any, options: any) => {
       // Handle UI component events from server-driven UI

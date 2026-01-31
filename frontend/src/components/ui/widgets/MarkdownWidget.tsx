@@ -30,9 +30,9 @@ export function MarkdownWidget({ content, format = 'markdown' }: MarkdownWidgetP
       }}
     >
       {format === 'markdown' ? (
-        <ReactMarkdown
-          className="prose prose-invert max-w-none"
-          components={{
+        <div className="prose prose-invert max-w-none">
+          <ReactMarkdown
+            components={{
             h1: ({ children }) => (
               <h1 className="text-2xl font-bold text-nucleus mb-4 mt-0">
                 {children}
@@ -90,9 +90,10 @@ export function MarkdownWidget({ content, format = 'markdown' }: MarkdownWidgetP
               </a>
             ),
           }}
-        >
-          {content}
-        </ReactMarkdown>
+          >
+            {content}
+          </ReactMarkdown>
+        </div>
       ) : (
         <p className="text-base text-cytoplasm whitespace-pre-wrap">{content}</p>
       )}
