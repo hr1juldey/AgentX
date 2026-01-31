@@ -4,6 +4,7 @@ Orchestrates the agent query processing workflow using LangGraph.
 Following the use case pattern from mimicus.
 """
 
+import logging
 from uuid import UUID
 
 from langchain_core.messages import HumanMessage
@@ -20,6 +21,8 @@ from agentx.core.dependencies import (
     get_agent_session_repository,
 )
 from agentx.domain.entities.agent_session import AgentSessionEntity, SHA256Hash
+
+logger = logging.getLogger(__name__)
 
 
 class ExecuteAgentQueryUseCase:
@@ -50,11 +53,17 @@ class ExecuteAgentQueryUseCase:
         Returns:
             ExecuteAgentQueryResponse: The query response DTO.
         """
+        logger.info(
+            f"[ExecuteAgentQuery] Starting query execution: {request.query[:100]}..."
+        )
+
         # Step 1: Ensure DSPy is configured
         ensure_dspy_configured()
+        logger.debug("[ExecuteAgentQuery] DSPy configured")
 
         # Step 2: Get or create session
         session = await self._get_or_create_session(request)
+        logger.info(f"[ExecuteAgentQuery] Session ID: {session.session_id}")
 
         # Step 3: Build initial state for LangGraph
         initial_state = {
@@ -66,7 +75,11 @@ class ExecuteAgentQueryUseCase:
         }
 
         # Step 4: Invoke LangGraph (this runs the 7-pipeline agent sequence)
+        logger.info("[ExecuteAgentQuery] Invoking LangGraph...")
         final_state = await self._graph.ainvoke(initial_state)
+        logger.info(
+            f"[ExecuteAgentQuery] LangGraph execution complete. Total tool calls: {final_state.get('total_tool_calls', 0)}"
+        )
 
         # Step 5: Extract response from final state
         messages = final_state.get("messages", [])
@@ -82,10 +95,14 @@ class ExecuteAgentQueryUseCase:
 
         if not response_text:
             response_text = "No response generated."
+            logger.warning("[ExecuteAgentQuery] No response text generated")
+
+        logger.debug(f"[ExecuteAgentQuery] Response length: {len(response_text)} chars")
 
         # Step 6: Extract UI components from state
         ui_messages = final_state.get("ui", [])
         ui_components = _extract_ui_components(ui_messages)
+        logger.info(f"[ExecuteAgentQuery] Extracted {len(ui_components)} UI components")
 
         # Step 7: Build response
         return ExecuteAgentQueryResponse(

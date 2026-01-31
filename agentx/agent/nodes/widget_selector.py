@@ -70,7 +70,7 @@ async def widget_selector_node(state: AgentState) -> dict[str, Any]:
         # Step 2: Fall back to LLM-based matcher
         content_summary = findings[:200] + "..." if len(findings) > 200 else findings
 
-        llm_result = llm_matcher.forward(
+        llm_result = llm_matcher(
             query=user_query,
             content_type=content_type,
             content_summary=content_summary,

@@ -73,19 +73,19 @@ async def researcher_node(state: AgentState) -> dict[str, Any]:
         }
 
     # Structure the data
-    structured_result = data_structurer.forward(
+    structured_result = data_structurer(
         raw_results=str(all_results), query_context=user_query
     )
     structured_data = structured_result["structured_data"]
 
     # Build citations
-    citation_result = citation_builder.forward(
+    citation_result = citation_builder(
         structured_data=structured_data, query=user_query
     )
     citations = citation_result["citations"]
 
     # Beautify findings
-    beautified_result = findings_beautifier.forward(
+    beautified_result = findings_beautifier(
         structured_data=structured_data,
         citations=citations,
         query=user_query,

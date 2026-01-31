@@ -77,13 +77,37 @@ async def output_task(
         process_agent_fn: Function to process agent responses
     """
     try:
+        stt_task: asyncio.Task | None = None
+        tts_task: asyncio.Task | None = None
+
         while True:
+            # Cancel previous pending tasks if they exist
+            for task in [stt_task, tts_task]:
+                if task and not task.done():
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass  # Expected cancellation
+
+            # Create new recv tasks
             stt_task = asyncio.create_task(stt_ws.recv())
             tts_task = asyncio.create_task(tts_ws.recv())
 
-            done, _ = await asyncio.wait(
+            # Wait for first to complete
+            done, pending = await asyncio.wait(
                 [stt_task, tts_task], return_when=asyncio.FIRST_COMPLETED
             )
+
+            # Cancel pending tasks immediately
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass  # Expected
+
+            # Process completed message
             message = KyutaiMessage.from_json(list(done)[0].result())
 
             # Handle STT text response
@@ -107,6 +131,12 @@ async def output_task(
             # Forward all other messages
             else:
                 await frontend_ws.send_json(message.to_dict())
+
     except Exception as e:
         logger.error(f"Output task error: {e}")
         raise
+    finally:
+        # Final cleanup
+        for task in [stt_task, tts_task]:
+            if task and not task.done():
+                task.cancel()

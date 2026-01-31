@@ -113,43 +113,78 @@ class VoiceDirectFallback:
         text_handler: object = None,
     ) -> None:
         """Handle messages from kyutai to frontend."""
-        while True:
-            done, _ = await asyncio.wait(
-                [
-                    asyncio.create_task(stt_ws.recv()),
-                    asyncio.create_task(tts_ws.recv()),
-                ],
-                return_when=asyncio.FIRST_COMPLETED,
-            )
+        stt_task: asyncio.Task | None = None
+        tts_task: asyncio.Task | None = None
 
-            message = KyutaiMessage.from_json(list(done)[0].result())
+        try:
+            while True:
+                # Cancel previous pending tasks if they exist
+                for task in [stt_task, tts_task]:
+                    if task and not task.done():
+                        task.cancel()
+                        try:
+                            await task
+                        except asyncio.CancelledError:
+                            pass  # Expected cancellation
 
-            if (
-                message.type == KyutaiMessageType.TEXT
-                and message.data.get("source") == "stt"
-            ):
-                text = message.data.get("text", "")
-                if text_handler and agent_callback:
-                    transcript = text_handler.buffer_stt_chunk(session_id, text)
-                    if transcript:
-                        response = agent_callback(transcript)
-                        if state_manager:
-                            state_manager.add_user_message(session_id, transcript)
-                            state_manager.add_assistant_message(session_id, response)
+                # Create new recv tasks
+                stt_task = asyncio.create_task(stt_ws.recv())
+                tts_task = asyncio.create_task(tts_ws.recv())
 
-                        async def send_sentence(sentence: str) -> None:
-                            await tts_ws.send(
-                                KyutaiMessage(
-                                    type=KyutaiMessageType.TEXT,
-                                    data={"text": sentence, "action": "speak"},
-                                    sessionId=str(session_id),
-                                    timestamp=0,
-                                ).to_json()
+                # Wait for first to complete
+                done, pending = await asyncio.wait(
+                    [stt_task, tts_task],
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+
+                # Cancel pending tasks immediately
+                for task in pending:
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass  # Expected
+
+                # Process completed message
+                message = KyutaiMessage.from_json(list(done)[0].result())
+
+                if (
+                    message.type == KyutaiMessageType.TEXT
+                    and message.data.get("source") == "stt"
+                ):
+                    text = message.data.get("text", "")
+                    if text_handler and agent_callback:
+                        transcript = text_handler.buffer_stt_chunk(session_id, text)
+                        if transcript:
+                            response = agent_callback(transcript)
+                            if state_manager:
+                                state_manager.add_user_message(session_id, transcript)
+                                state_manager.add_assistant_message(
+                                    session_id, response
+                                )
+
+                            async def send_sentence(sentence: str) -> None:
+                                await tts_ws.send(
+                                    KyutaiMessage(
+                                        type=KyutaiMessageType.TEXT,
+                                        data={"text": sentence, "action": "speak"},
+                                        sessionId=str(session_id),
+                                        timestamp=0,
+                                    ).to_json()
+                                )
+
+                            await text_handler.stream_tts_sentences(
+                                session_id, response, send_sentence
                             )
+                    await frontend_ws.send_json(message.to_dict())
+                else:
+                    await frontend_ws.send_json(message.to_dict())
 
-                        await text_handler.stream_tts_sentences(
-                            session_id, response, send_sentence
-                        )
-                await frontend_ws.send_json(message.to_dict())
-            else:
-                await frontend_ws.send_json(message.to_dict())
+        except Exception as e:
+            logger.error(f"Output task error: {e}")
+            raise
+        finally:
+            # Final cleanup
+            for task in [stt_task, tts_task]:
+                if task and not task.done():
+                    task.cancel()

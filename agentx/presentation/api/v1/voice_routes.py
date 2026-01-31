@@ -1,8 +1,10 @@
 """Voice routes for kyutai integration."""
 
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, WebSocket
+from starlette.websockets import WebSocketDisconnect
 
 from agentx.application.dtos.voice_gateway_dtos import (
     ConversationContextDTO,
@@ -12,6 +14,8 @@ from agentx.core.dependencies import (
     get_conversation_state_manager,
     get_voice_gateway_service,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/voice", tags=["voice"])
 
@@ -108,27 +112,32 @@ async def voice_websocket(websocket: WebSocket) -> None:
         websocket: The WebSocket connection.
     """
     await websocket.accept()
-    print("[VoiceRoutes] Connection accepted")
+    logger.info("[VoiceRoutes] Connection accepted")
 
     # Get session_id from query params
     session_id_str = websocket.query_params.get("session_id")
     if not session_id_str:
-        print("[VoiceRoutes] Missing session_id, closing connection")
+        logger.warning("[VoiceRoutes] Missing session_id, closing connection")
         await websocket.close(code=1008, reason="Missing session_id")
         return
 
     try:
         session_id = UUID(session_id_str)
-        print(f"[VoiceRoutes] Session ID: {session_id}")
+        logger.info(f"[VoiceRoutes] Session ID: {session_id}")
         gateway_service = get_voice_gateway_service()
-        print(f"[VoiceRoutes] Starting handle_session")
+        logger.info("[VoiceRoutes] Starting handle_session")
         await gateway_service.handle_session(websocket, session_id)
-        print(f"[VoiceRoutes] handle_session completed")
+        logger.info("[VoiceRoutes] handle_session completed")
     except ValueError as e:
-        print(f"[VoiceRoutes] Invalid session_id format: {e}")
+        logger.warning(f"[VoiceRoutes] Invalid session_id format: {e}")
         await websocket.close(code=1008, reason="Invalid session_id format")
+    except WebSocketDisconnect:
+        # Client disconnected - don't try to close already-closed connection
+        logger.info("[VoiceRoutes] WebSocket disconnected by client")
     except Exception as e:
-        print(f"[VoiceRoutes] Exception in handle_session: {e}")
-        import traceback
-        traceback.print_exc()
-        await websocket.close(code=1011, reason=str(e))
+        logger.error(f"[VoiceRoutes] Exception in handle_session: {e}", exc_info=True)
+        try:
+            await websocket.close(code=1011, reason=str(e))
+        except RuntimeError:
+            # WebSocket already closed
+            logger.debug("[VoiceRoutes] WebSocket already closed, skipping close")

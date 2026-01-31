@@ -78,8 +78,8 @@ class VoiceConfig(BaseSettings):
 
     use_kyutai_external: bool = True
     use_voice_sdk: bool = False
-    kyutai_stt_url: str = "ws://localhost:16000/stt"
-    kyutai_tts_url: str = "ws://localhost:16000/tts"
+    kyutai_stt_url: str = "ws://localhost:16000/api/v1/ws/stt"
+    kyutai_tts_url: str = "ws://localhost:16000/api/v1/ws/tts"
     stt_sample_rate: int = 16000
     tts_sample_rate: int = 24000
     vad_threshold: float = 0.5

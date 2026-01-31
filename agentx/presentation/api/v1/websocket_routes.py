@@ -4,6 +4,7 @@ WebSocket endpoint for real-time agent interaction.
 Supports query streaming, voice, UI components, and tool updates.
 """
 
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -21,6 +22,7 @@ from agentx.ui.protocols.websocket_messages import (
     WebSocketMessage,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 _query_use_case = ExecuteAgentQueryUseCase()
 
@@ -39,6 +41,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         websocket: The WebSocket connection.
     """
     await websocket.accept()
+    logger.info("[WebSocketRoutes] Connection accepted")
 
     try:
         # Send connection established message
@@ -46,11 +49,16 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             status="connected", details="WebSocket connection established"
         )
         await websocket.send_json(status_msg.to_dict())
+        logger.debug("[WebSocketRoutes] Sent status message: connected")
 
         while True:
             # Receive message from client
             data = await websocket.receive_json()
             message = WebSocketMessage.from_dict(data)
+
+            logger.info(
+                f"[WebSocketRoutes] Received message type: {message.message_type.value}"
+            )
 
             # Handle message types
             if message.message_type.value == "query":
@@ -61,8 +69,9 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 await _handle_unknown_message(websocket, message)
 
     except WebSocketDisconnect:
-        print("WebSocket disconnected")
+        logger.info("[WebSocketRoutes] WebSocket disconnected by client")
     except Exception as e:
+        logger.error(f"[WebSocketRoutes] Exception: {e}", exc_info=True)
         error_msg = ErrorMessage(error_message=str(e))
         await websocket.send_json(error_msg.to_dict())
 
@@ -76,9 +85,12 @@ async def _handle_query_message(
         websocket: The WebSocket connection.
         message: Query message from client.
     """
+    query_text = message.data.get("query", "")
+    logger.info(f"[WebSocketRoutes] Processing query: {query_text[:100]}...")
+
     # Process query
     query_msg = QueryMessage(
-        query=message.data.get("query", ""),
+        query=query_text,
         session_id=message.session_id,
     )
 
@@ -88,7 +100,13 @@ async def _handle_query_message(
         session_id=str(query_msg.session_id) if query_msg.session_id else None,
     )
 
+    logger.info(
+        f"[WebSocketRoutes] Executing agent query for session: {request.session_id}"
+    )
     response = await _query_use_case.execute(request)
+    logger.info(
+        f"[WebSocketRoutes] Agent execution completed for session: {response.session_id}"
+    )
 
     # Send response
     response_msg = ResponseMessage(
@@ -97,6 +115,9 @@ async def _handle_query_message(
         is_complete=True,
     )
     await websocket.send_json(response_msg.to_dict())
+    logger.debug(
+        f"[WebSocketRoutes] Sent response message: {len(response.response)} chars"
+    )
 
     # Send UI components
     for component in response.ui_components:
@@ -113,6 +134,7 @@ async def _handle_query_message(
             component_id=component_uuid,
         )
         await websocket.send_json(ui_msg.to_dict())
+        logger.debug(f"[WebSocketRoutes] Sent UI component: {component.component_type}")
 
 
 async def _handle_ping_message(websocket: WebSocket) -> None:

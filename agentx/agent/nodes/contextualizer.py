@@ -65,18 +65,16 @@ async def contextualizer_node(state: AgentState) -> dict[str, Any]:
     injector = ContextInjectorModule()
 
     # Step 1: Rerank by relevance
-    reranked_result = reranker.forward(query=user_query, context_chunks=context_chunks)
+    reranked_result = reranker(query=user_query, context_chunks=context_chunks)
     reordered_context = reranked_result["reordered_context"]
 
     # Step 2: Filter irrelevant chunks
-    filtered_result = filter_module.forward(
-        query=user_query, context_chunks=reordered_context
-    )
+    filtered_result = filter_module(query=user_query, context_chunks=reordered_context)
     filtered_context = filtered_result["filtered_context"]
     filter_stats = filtered_result["stats"]
 
     # Step 3: Inject context into findings
-    injected_result = injector.forward(
+    injected_result = injector(
         findings=findings,
         context=filtered_context,
         query=user_query,

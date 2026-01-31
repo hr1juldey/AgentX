@@ -64,7 +64,7 @@ async def designer_node(state: AgentState) -> dict[str, Any]:
     hierarchy_designer = HierarchyDesignerModule()
 
     # Step 1: Generate point of view (widget recommendation)
-    pov_result = pov_generator.forward(
+    pov_result = pov_generator(
         query=user_query,
         content=findings,
         existing_widgets=existing_widgets,
@@ -75,14 +75,14 @@ async def designer_node(state: AgentState) -> dict[str, Any]:
     rationale = pov_result["rationale"]
 
     # Step 2: Design color scheme
-    colors = color_scheme.forward(
+    colors = color_scheme(
         widget_type=recommended_widget,
         content_purpose="info",
     )
 
     # Step 3: Design hierarchy
     content_structure = str(widget_props.get("structure", "default"))
-    hierarchy = hierarchy_designer.forward(
+    hierarchy = hierarchy_designer(
         widget_type=recommended_widget,
         content_structure=content_structure,
     )
