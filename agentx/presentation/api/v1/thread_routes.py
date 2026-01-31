@@ -10,11 +10,9 @@ Endpoints:
 - DELETE /api/v1/threads/{thread_id} - Delete thread
 """
 
-from contextlib import asynccontextmanager
 from datetime import datetime
-from json import JSONEncoder
 from typing import AsyncGenerator
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -41,7 +39,9 @@ def _serialize_state(state: AgentState) -> dict:
         "messages": [
             {
                 "role": msg.type if hasattr(msg, "type") else "ai",
-                "content": msg.content if isinstance(msg.content, str) else str(msg.content),
+                "content": msg.content
+                if isinstance(msg.content, str)
+                else str(msg.content),
             }
             for msg in state.get("messages", [])
         ],
@@ -65,6 +65,7 @@ def _generate_event(event_type: str, data: dict) -> str:
         SSE-formatted string
     """
     import json
+
     return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
 
 
@@ -98,7 +99,7 @@ async def create_thread() -> dict:
     }
 
 
-@router.get("/threads/{thread_id}")
+@router.get("/{thread_id}")
 async def get_thread(thread_id: str) -> dict:
     """Get thread state.
 
@@ -120,7 +121,7 @@ async def get_thread(thread_id: str) -> dict:
     }
 
 
-@router.delete("/threads/{thread_id}")
+@router.delete("/{thread_id}")
 async def delete_thread(thread_id: str) -> dict:
     """Delete a thread.
 
@@ -158,6 +159,9 @@ async def _stream_graph_execution(
     thread = _threads[thread_id]
     graph = get_graph()
 
+    # Compile the graph first to get CompiledStateGraph
+    compiled_graph = graph.compile()
+
     # Prepare initial state
     initial_state: AgentState = {
         **thread["state"],
@@ -180,7 +184,7 @@ async def _stream_graph_execution(
 
     # Stream the graph execution
     try:
-        async for chunk in graph.astream(
+        async for chunk in compiled_graph.astream(
             initial_state,
             config=config or {},
         ):
@@ -191,10 +195,13 @@ async def _stream_graph_execution(
             # Send UI update events
             if isinstance(chunk, dict) and "ui" in chunk:
                 for ui_msg in chunk.get("ui", []):
-                    yield _generate_event("custom", {
-                        "name": ui_msg.get("name", "ui_component"),
-                        "args": ui_msg,
-                    })
+                    yield _generate_event(
+                        "custom",
+                        {
+                            "name": ui_msg.get("name", "ui_component"),
+                            "args": ui_msg,
+                        },
+                    )
 
             # Send message partial events
             if isinstance(chunk, dict) and "messages" in chunk:
@@ -202,44 +209,55 @@ async def _stream_graph_execution(
                 if messages:
                     latest_msg = messages[-1]
                     if hasattr(latest_msg, "content"):
-                        yield _generate_event("messages/partial", {
-                            "messages": [{
-                                "role": "assistant",
-                                "content": str(latest_msg.content),
-                            }]
-                        })
+                        yield _generate_event(
+                            "messages/partial",
+                            {
+                                "messages": [
+                                    {
+                                        "role": "assistant",
+                                        "content": str(latest_msg.content),
+                                    }
+                                ]
+                            },
+                        )
 
         # Update thread metadata
         thread["updated_at"] = datetime.utcnow().isoformat()
 
         # Send completion event
-        yield _generate_event("messages/complete", {
-            "messages": [
-                {
-                    "role": msg.type if hasattr(msg, "type") else "ai",
-                    "content": str(msg.content) if hasattr(msg, "content") else str(msg),
-                }
-                for msg in thread["state"].get("messages", [])
-            ]
-        })
+        yield _generate_event(
+            "messages/complete",
+            {
+                "messages": [
+                    {
+                        "role": msg.type if hasattr(msg, "type") else "ai",
+                        "content": str(msg.content)
+                        if hasattr(msg, "content")
+                        else str(msg),
+                    }
+                    for msg in thread["state"].get("messages", [])
+                ]
+            },
+        )
 
     except Exception as e:
-        yield _generate_event("error", {
-            "error": str(e),
-            "message": "Graph execution failed",
-        })
+        yield _generate_event(
+            "error",
+            {
+                "error": str(e),
+                "message": "Graph execution failed",
+            },
+        )
 
 
-@router.post("/threads/{thread_id}/stream")
+@router.get("/{thread_id}/stream")
 async def stream_thread(
     thread_id: str,
-    input_data: dict,
 ) -> StreamingResponse:
-    """Stream graph execution for a thread.
+    """Stream graph execution for a thread via SSE (GET).
 
     Args:
         thread_id: Thread identifier
-        input_data: Input data with messages field
 
     Returns:
         StreamingResponse with SSE events
@@ -260,7 +278,7 @@ async def stream_thread(
         }
 
     return StreamingResponse(
-        _stream_graph_execution(thread_id, input_data),
+        _stream_graph_execution(thread_id, {}),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -270,7 +288,7 @@ async def stream_thread(
     )
 
 
-@router.post("/threads/{thread_id}/invoke")
+@router.post("/{thread_id}/invoke")
 async def invoke_thread(
     thread_id: str,
     input_data: dict,
