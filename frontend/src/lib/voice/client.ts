@@ -33,7 +33,7 @@ export class VoiceClient {
   }
 
   connect(): void {
-    const url = `${this.config.url}?sessionId=${this.config.sessionId}`;
+    const url = `${this.config.url}?session_id=${this.config.sessionId}`;
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {

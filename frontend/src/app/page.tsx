@@ -39,7 +39,7 @@ export default function HomePage() {
   const [threadId, setThreadId] = useState<string | null>(null);
 
   // WebSocket connection for real-time updates
-  const { isConnected, sendMessage, messages } = useWebSocket(BACKEND_WS_URL);
+  const { isConnected, sendMessage } = useWebSocket(BACKEND_WS_URL);
 
   // LangGraph stream integration (C007)
   const { thread, values } = useStream({
@@ -89,84 +89,74 @@ export default function HomePage() {
       <MetaballBackground />
 
       {/* Main content */}
-      <div className="relative z-10 container mx-auto px-4 py-8">
+      <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header */}
-        <header className="mb-8">
-          <h1 className="text-4xl font-bold text-nucleus mb-2">
-            Real AgentX v0.1
-          </h1>
-          <p className="text-cytoplasm">
-            LangGraph Server-Driven UI + Organic Design System
-          </p>
+        <header className="px-6 py-4 border-b border-membrane/50 backdrop-blur-sm">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-nucleus flex items-center gap-3">
+                <span className="w-3 h-3 rounded-full bg-enzyme animate-pulse" />
+                AgentX
+              </h1>
+              <p className="text-sm text-cytoplasm mt-1">
+                Organic AI Assistant
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full transition-colors ${
+                  isConnected ? 'bg-enzyme' : 'bg-vacuole'
+                }`}
+              />
+              <span className="text-xs text-cytoplasm">
+                {isConnected ? 'Connected' : 'Offline'}
+              </span>
+            </div>
+          </div>
         </header>
 
-        {/* Connection status */}
-        <div className="mb-4 flex items-center gap-2">
-          <div
-            className={`w-2 h-2 rounded-full ${
-              isConnected ? 'bg-golgi' : 'bg-lysosome'
-            }`}
-          />
-          <span className="text-sm text-cytoplasm">
-            {isConnected ? 'Connected' : 'Disconnected'}
-          </span>
-        </div>
-
-        {/* Query input */}
-        <form onSubmit={handleSubmit} className="mb-8">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ask me anything..."
-              className="flex-1 bg-membrane border border-membrane rounded-lg px-4 py-3 text-nucleus placeholder-vacuole focus:outline-none focus:border-enzyme"
-            />
-            <button
-              type="submit"
-              className="px-6 py-3 bg-enzyme text-void font-semibold rounded-lg hover:opacity-90 transition-opacity"
-            >
-              Send
-            </button>
+        {/* Center content */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+          {/* Voice nucleus button (C008) - Center stage */}
+          <div className="mb-12">
+            <VoiceButton />
           </div>
-        </form>
 
-        {/* Voice nucleus button (C008) */}
-        <div className="mb-8 flex justify-center">
-          <VoiceButton />
-        </div>
-
-        {/* Server-driven UI components (C007) */}
-        <div className="space-y-4">
-          {values?.ui?.map((ui: any) => (
-            <LoadExternalComponent
-              key={ui.id}
-              message={ui}
-              fallback={
-                <div className="bg-cell border border-membrane rounded-lg p-4">
-                  <div className="animate-pulse text-vacuole">Loading widget...</div>
-                </div>
-              }
-            />
-          ))}
-        </div>
-
-        {/* WebSocket messages */}
-        {messages.length > 0 && (
-          <div className="mt-8 space-y-2">
-            <h2 className="text-xl font-semibold text-nucleus mb-4">Messages</h2>
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className="bg-cell border border-membrane rounded-lg p-4"
+          {/* Query input */}
+          <form onSubmit={handleSubmit} className="w-full max-w-2xl">
+            <div className="relative">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Type or speak your message..."
+                className="w-full bg-cell/50 backdrop-blur-sm border border-membrane rounded-2xl px-6 py-4 text-nucleus placeholder-vacuole focus:outline-none focus:border-enzyme focus:ring-2 focus:ring-enzyme/20 transition-all"
+              />
+              <button
+                type="submit"
+                disabled={!query.trim()}
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-enzyme text-void font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <pre className="text-sm text-cytoplasm overflow-x-auto">
-                  {JSON.stringify(msg, null, 2)}
-                </pre>
-              </div>
+                Send
+              </button>
+            </div>
+          </form>
+
+          {/* Server-driven UI components (C007) */}
+          <div className="w-full max-w-2xl mt-8 space-y-4">
+            {values?.ui?.map((ui: any) => (
+              <LoadExternalComponent
+                key={ui.id}
+                message={ui}
+                fallback={
+                  <div className="bg-cell/50 backdrop-blur-sm border border-membrane rounded-2xl p-6">
+                    <div className="animate-pulse text-vacuole">Loading widget...</div>
+                  </div>
+                }
+              />
             ))}
           </div>
-        )}
+        </div>
       </div>
     </main>
   );

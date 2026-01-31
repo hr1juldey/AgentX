@@ -38,10 +38,10 @@ class KyutaiMessage(BaseModel):
     model_config = {"populate_by_name": True}
 
     def to_json(self) -> str:
-        """Convert to JSON string with camelCase keys."""
+        """Convert to JSON string with snake_case keys (Kyutai protocol)."""
         import json
 
-        return json.dumps(self.model_dump(by_alias=True))
+        return json.dumps(self.model_dump())
 
     @classmethod
     def from_json(cls, json_str: str) -> "KyutaiMessage":
@@ -52,8 +52,8 @@ class KyutaiMessage(BaseModel):
         return cls(**data)
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary with camelCase keys."""
-        return self.model_dump(by_alias=True)
+        """Convert to dictionary with snake_case keys (Kyutai protocol)."""
+        return self.model_dump()
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "KyutaiMessage":

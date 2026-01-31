@@ -12,8 +12,8 @@ from agentx.application.dtos.voice_gateway_dtos import (
 
 
 # Kyutai server endpoints
-KYUTAI_STT_URL = "ws://localhost:16000/api/v1/ws/stt?encoding=json"
-KYUTAI_TTS_URL = "ws://localhost:16000/api/v1/ws/tts?encoding=json"
+KYUTAI_STT_URL = "ws://localhost:16000/api/v1/ws/stt"
+KYUTAI_TTS_URL = "ws://localhost:16000/api/v1/ws/tts"
 
 
 def create_config_message(session_id: UUID | str, **config: Any) -> KyutaiMessage:

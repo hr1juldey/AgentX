@@ -125,44 +125,64 @@ export function useStream(options: UseStreamOptions): UseStreamReturn {
   useEffect(() => {
     if (!clientRef.current || !threadId) return;
 
-    const eventSource = new EventSource(`${apiUrl}/threads/${threadId}/stream`);
-    eventSourceRef.current = eventSource;
+    let eventSource: EventSource | null = null;
+    let hasOpened = false;
 
-    eventSource.onopen = () => {
-      setStatus('streaming');
-      setError(null);
-    };
-
-    eventSource.onerror = (err) => {
-      console.error('EventSource error:', err);
-      setStatus('error');
-      setError(new Error('Stream connection failed'));
-      onError?.(new Error('Stream connection failed'));
-    };
-
-    eventSource.onmessage = (event) => {
+    // Delay connection to prevent immediate errors
+    const timeoutId = setTimeout(() => {
       try {
-        const data = JSON.parse(event.data);
+        eventSource = new EventSource(`${apiUrl}/threads/${threadId}/stream`);
+        eventSourceRef.current = eventSource;
 
-        // Handle custom events (UI messages, etc.)
-        if (data.event === 'custom' && onCustomEvent) {
-          onCustomEvent(data.data, { mutate });
-        }
+        eventSource.onopen = () => {
+          hasOpened = true;
+          setStatus('streaming');
+          setError(null);
+        };
 
-        // Handle message updates
-        if (data.event === 'messages/partial' || data.event === 'messages/complete') {
-          mutate((state) => ({
-            ...state,
-            messages: addMessages(state.messages, data.data.messages ?? []),
-          }));
-        }
+        eventSource.onerror = (err) => {
+          // Only log error if we had successfully connected before
+          // This prevents console spam when backend isn't running
+          if (hasOpened) {
+            console.error('EventSource error:', err);
+            setStatus('error');
+            setError(new Error('Stream connection failed'));
+            onError?.(new Error('Stream connection failed'));
+          }
+          // Close the event source to stop retrying
+          eventSource?.close();
+          eventSourceRef.current = null;
+        };
+
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+
+            // Handle custom events (UI messages, etc.)
+            if (data.event === 'custom' && onCustomEvent) {
+              onCustomEvent(data.data, { mutate });
+            }
+
+            // Handle message updates
+            if (data.event === 'messages/partial' || data.event === 'messages/complete') {
+              mutate((state) => ({
+                ...state,
+                messages: addMessages(state.messages, data.data.messages ?? []),
+              }));
+            }
+          } catch (err) {
+            console.error('Failed to parse stream event:', err);
+          }
+        };
       } catch (err) {
-        console.error('Failed to parse stream event:', err);
+        // Silently fail - backend might not be running
+        console.debug('LangGraph backend not available:', err);
       }
-    };
+    }, 100);
 
     return () => {
-      eventSource.close();
+      clearTimeout(timeoutId);
+      eventSource?.close();
       eventSourceRef.current = null;
     };
   }, [apiUrl, threadId, onCustomEvent, mutate, onError]);

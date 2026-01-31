@@ -62,6 +62,8 @@ class VoiceGatewayService:
 
     async def handle_session(self, frontend_ws: WebSocket, session_id: UUID) -> None:
         """Handle a voice session WebSocket connection."""
+        logger.info(f"[VoiceGateway] Starting session {session_id}")
+
         if len(self._sessions) >= self._config.max_concurrent_sessions:
             raise VoiceGatewayError("Max concurrent sessions reached")
 
@@ -88,12 +90,22 @@ class VoiceGatewayService:
             return
 
         # Direct WebSocket mode (original implementation)
+        logger.info(f"[VoiceGateway] Connecting to STT: {self._config.stt_url}")
         stt_ws = await websockets.connect(self._config.stt_url)
+        logger.info(f"[VoiceGateway] Connected to STT")
+
+        logger.info(f"[VoiceGateway] Connecting to TTS: {self._config.tts_url}")
         tts_ws = await websockets.connect(self._config.tts_url)
+        logger.info(f"[VoiceGateway] Connected to TTS")
 
         config_msg = create_config_message(session_id, streaming_mode="both")
+        logger.info(f"[VoiceGateway] Sending config to STT: {config_msg.to_json()}")
         await stt_ws.send(config_msg.to_json())
+        logger.info(f"[VoiceGateway] Config sent to STT")
+
+        logger.info(f"[VoiceGateway] Sending config to TTS")
         await tts_ws.send(config_msg.to_json())
+        logger.info(f"[VoiceGateway] Config sent to TTS")
 
         session = VoiceSession(
             session_id=session_id,
@@ -102,13 +114,18 @@ class VoiceGatewayService:
             tts_ws=tts_ws,
         )
         self._sessions[session_id] = session
+        logger.info(f"[VoiceGateway] Session created, starting input/output tasks")
 
         try:
             await asyncio.gather(
                 self._input_task(session),
                 self._output_task(session),
             )
+        except Exception as e:
+            logger.error(f"[VoiceGateway] Error in session tasks: {e}", exc_info=True)
+            raise
         finally:
+            logger.info(f"[VoiceGateway] Cleaning up session {session_id}")
             await cleanup_session(session_id, self._sessions, self._text_handler)
 
     def _agent_callback(self, user_text: str) -> str:
