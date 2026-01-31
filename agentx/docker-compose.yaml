@@ -1,0 +1,72 @@
+# AgentX v0.1 - Infrastructure Services
+# Qdrant (vector DB) and Redis (cache/sessions)
+#
+# Usage: docker-compose up -d
+# Stop: docker-compose down
+# View logs: docker-compose logs -f
+#
+# Ports:
+# - Qdrant HTTP: 6335 (avoiding conflict with dspy-compounding on 6333)
+# - Redis: 6380 (avoiding conflict with wapibot on 6379)
+
+services:
+  # Qdrant - Vector Database for RAG
+  qdrant:
+    image: qdrant/qdrant:v1.13.6
+    container_name: agentx-qdrant
+    ports:
+      - "6335:6333"  # HTTP API (host:container - using 6335 to avoid conflict)
+      - "6336:6334"  # gRPC API (optional)
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT_TELEMETRY_DISABLED: "true"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 10s bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - agentx-network
+
+  # Redis - Caching and Session Storage
+  redis:
+    image: valkey/valkey:8-alpine
+    container_name: agentx-redis
+    ports:
+      - "6380:6379"  # (host:container - using 6380 to avoid conflict)
+    volumes:
+      - redis_data:/data
+    command: >
+      valkey-server
+      --appendonly yes
+      --appendfsync everysec
+      --dir /data
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - agentx-network
+
+networks:
+  agentx-network:
+    driver: bridge
+
+volumes:
+  qdrant_data:
+    driver: local
+  redis_data:
+    driver: local

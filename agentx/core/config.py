@@ -25,9 +25,9 @@ class DatabaseConfig(BaseSettings):
         env_prefix="DATABASE__",
     )
 
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: str = "redis://localhost:6380/0"
     sqlite_path: Path = Field(default_factory=lambda: Path("data/agentx.db"))
-    qdrant_url: str = "http://localhost:6333"
+    qdrant_url: str = "http://localhost:6335"
 
 
 class LLMConfig(BaseSettings):
