@@ -27,6 +27,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     settings = get_settings()
     print(f"Starting {settings.app_name} v{settings.app_version}")
     print(f"Debug mode: {settings.debug}")
+    print(f"LLM: {settings.llm.provider}/{settings.llm.model}")
+
+    # Configure DSPy with Ollama
+    from agentx.core.dependencies import ensure_dspy_configured
+
+    ensure_dspy_configured()
+    print("DSPy configured successfully")
+
     yield
     # Shutdown
     print("Shutting down...")
@@ -47,13 +55,16 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS middleware - allow localhost and network IP
+    # CORS middleware - allow frontend, network IP, and kyutai voice-server
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
             "http://localhost:3015",
             "http://127.0.0.1:3015",
             "http://192.168.1.4:3015",
+            "http://localhost:16000",  # Kyutai voice-server
+            "ws://localhost:16000",  # Kyutai WebSocket
+            "http://192.168.1.4:16000",  # Kyutai network access
         ],
         allow_credentials=True,
         allow_methods=["*"],

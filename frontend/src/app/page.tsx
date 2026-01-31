@@ -18,6 +18,13 @@ import { MetaballBackground } from '@/components/metaball-canvas';
 import { VoiceButton } from '@/components/voice-button';
 import { useWebSocket } from '@/hooks/useWebSocket';
 
+// Backend API configuration - supports both localhost and network IP
+const BACKEND_URL = 'http://localhost:8015/api/v1';
+const BACKEND_WS_URL = 'ws://localhost:8015/api/v1/ws';
+// Alternative: Use network IP for mobile access
+// const BACKEND_URL = 'http://192.168.1.4:8015/api/v1';
+// const BACKEND_WS_URL = 'ws://192.168.1.4:8015/api/v1/ws';
+
 /**
  * Main page component.
  *
@@ -32,13 +39,11 @@ export default function HomePage() {
   const [threadId, setThreadId] = useState<string | null>(null);
 
   // WebSocket connection for real-time updates
-  const { isConnected, sendMessage, messages } = useWebSocket(
-    'ws://localhost:8015/api/v1/ws'
-  );
+  const { isConnected, sendMessage, messages } = useWebSocket(BACKEND_WS_URL);
 
   // LangGraph stream integration (C007)
   const { thread, values } = useStream({
-    apiUrl: 'http://localhost:8015/api/v1',
+    apiUrl: BACKEND_URL,
     threadId: threadId || undefined,
     onCustomEvent: useCallback((event: any, options: any) => {
       // Handle UI component events from server-driven UI
