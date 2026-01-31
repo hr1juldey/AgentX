@@ -14,6 +14,7 @@ from agentx.core.config import get_settings
 from agentx.presentation.api.v1.agent_routes import router as agent_router
 from agentx.presentation.api.v1.health import router as health_router
 from agentx.presentation.api.v1.thread_routes import router as thread_router
+from agentx.presentation.api.v1.websocket_routes import router as websocket_router
 
 
 @asynccontextmanager
@@ -46,10 +47,14 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS middleware
+    # CORS middleware - allow localhost and network IP
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3015", "http://127.0.0.1:3015"],
+        allow_origins=[
+            "http://localhost:3015",
+            "http://127.0.0.1:3015",
+            "http://192.168.1.4:3015",
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -59,6 +64,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router, prefix="/api/v1", tags=["health"])
     app.include_router(agent_router, prefix="/api/v1/agent", tags=["agent"])
     app.include_router(thread_router, prefix="/api/v1/threads", tags=["threads"])
+    app.include_router(websocket_router, prefix="/api/v1", tags=["websocket"])
 
     return app
 
