@@ -3,7 +3,7 @@
 Action button widget descriptor.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Any
 
 from agentx.ui.descriptors.base import BaseUIDescriptor, UIDescriptorType
@@ -20,7 +20,9 @@ class ActionDescriptor(BaseUIDescriptor):
     label: str = Field(description="Button label")
     action: str = Field(description="Action identifier")
     primary: bool = Field(default=True, description="Whether button is primary style")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     class Config:
         populate_by_name = True

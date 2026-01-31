@@ -20,7 +20,7 @@ async def test_tts_output():
     """Test TTS output with kyutai server - capture full audio."""
     session_id = str(uuid4())
 
-    print(f"🎤 Testing TTS Output (FULL AUDIO)")
+    print("🎤 Testing TTS Output (FULL AUDIO)")
     print(f"📡 Connecting to {KYUTAI_TTS_URL}")
 
     tts_ws = None
@@ -67,7 +67,7 @@ async def test_tts_output():
                 print(f"   Chunk {chunk_count}: {len(audio_data)} bytes", end="\r")
 
             elif msg_type == "Eos":
-                print(f"\n\n✅ EOS received - synthesis complete!")
+                print("\n\n✅ EOS received - synthesis complete!")
                 break
 
             elif msg_type == "Text" and message.get("data", {}).get("source") == "tts":
@@ -86,7 +86,7 @@ async def test_tts_output():
             duration = len(combined) / (24000 * 2)  # bytes / (sample_rate * bytes_per_sample)
             print(f"\n💾 Saved {len(combined)} bytes to {filename}")
             print(f"   Duration: {duration:.2f} seconds @ 24000 Hz")
-            print(f"\n▶️  Playing audio...")
+            print("\n▶️  Playing audio...")
 
             # Play the audio
             import subprocess

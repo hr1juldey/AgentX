@@ -13,7 +13,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from agentx.core.config import get_settings
 from agentx.presentation.api.v1.agent_routes import router as agent_router
 from agentx.presentation.api.v1.health import router as health_router
+from agentx.presentation.api.v1.memory_routes import router as memory_router
 from agentx.presentation.api.v1.thread_routes import router as thread_router
+from agentx.presentation.api.v1.voice_routes import router as voice_router
 from agentx.presentation.api.v1.websocket_routes import router as websocket_router
 
 
@@ -76,6 +78,8 @@ def create_app() -> FastAPI:
     app.include_router(agent_router, prefix="/api/v1/agent", tags=["agent"])
     app.include_router(thread_router, prefix="/api/v1/threads", tags=["threads"])
     app.include_router(websocket_router, prefix="/api/v1", tags=["websocket"])
+    app.include_router(memory_router, prefix="/api/v1/memory", tags=["memory"])
+    app.include_router(voice_router)  # Already has prefix="/api/v1/voice" in definition
 
     return app
 

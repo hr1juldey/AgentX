@@ -2,7 +2,7 @@
  * Conversation state helpers for voice interactions.
  */
 
-import { ConversationMessage, ConversationSession } from '../../types/voice-protocol';
+import { ConversationMessage, ConversationSession } from '../../../types/voice-protocol';
 
 /**
  * Create a new conversation session.

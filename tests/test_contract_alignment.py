@@ -8,11 +8,9 @@ import json
 from uuid import UUID, uuid4
 from datetime import datetime
 
-import pytest
 
 from agentx.domain.entities.enums import UIComponentType
 from agentx.ui.descriptors.base import (
-    BaseUIDescriptor,
     MarkdownDescriptor,
     CardDescriptor,
 )

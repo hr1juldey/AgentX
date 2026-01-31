@@ -4,7 +4,7 @@ Voice input/output widget descriptor.
 """
 
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Any
 
 from agentx.ui.descriptors.base import BaseUIDescriptor, UIDescriptorType
@@ -27,9 +27,13 @@ class VoiceDescriptor(BaseUIDescriptor):
 
     descriptor_id: str = Field(alias="id")
     descriptor_type: UIDescriptorType = Field(default=UIDescriptorType.VOICE)
-    state: VoiceState = Field(default=VoiceState.IDLE, description="Current voice state")
+    state: VoiceState = Field(
+        default=VoiceState.IDLE, description="Current voice state"
+    )
     transcript: str = Field(default="", description="Voice transcript text")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     class Config:
         populate_by_name = True

@@ -1,38 +1,43 @@
 """Execute agent query use case.
 
-Orchestrates the agent query processing workflow.
+Orchestrates the agent query processing workflow using LangGraph.
 Following the use case pattern from mimicus.
 """
 
 from uuid import UUID
 
+from langchain_core.messages import HumanMessage
 
+from agentx.agent.graph import get_graph
 from agentx.application.dtos.agent_dtos import (
     ExecuteAgentQueryRequest,
     ExecuteAgentQueryResponse,
 )
 from agentx.application.dtos.ui_dtos import UIComponentDTO
 from agentx.application.mappers.agent_session_mapper import AgentSessionMapper
-from agentx.core.dependencies import get_agent_session_repository
+from agentx.core.dependencies import (
+    ensure_dspy_configured,
+    get_agent_session_repository,
+)
 from agentx.domain.entities.agent_session import AgentSessionEntity, SHA256Hash
 
 
 class ExecuteAgentQueryUseCase:
     """Use case for executing agent queries.
 
-    Orchestrates the complete query processing workflow:
+    Orchestrates the complete query processing workflow via LangGraph:
     1. Retrieve or create session
-    2. Analyze query with analyst agent
-    3. Retrieve context from memory
-    4. Process query with main agent
-    5. Select UI widgets with designer agent
-    6. Return response with UI components
+    2. Ensure DSPy is configured
+    3. Invoke LangGraph with user query
+    4. Extract response and UI components from final state
+    5. Return response with UI components
     """
 
     def __init__(self) -> None:
         """Initialize the use case with dependencies."""
         self._session_repository = get_agent_session_repository()
         self._session_mapper = AgentSessionMapper()
+        self._graph = get_graph().compile()  # type: ignore[arg-type]
 
     async def execute(
         self, request: ExecuteAgentQueryRequest
@@ -45,37 +50,50 @@ class ExecuteAgentQueryUseCase:
         Returns:
             ExecuteAgentQueryResponse: The query response DTO.
         """
-        # Step 1: Get or create session
+        # Step 1: Ensure DSPy is configured
+        ensure_dspy_configured()
+
+        # Step 2: Get or create session
         session = await self._get_or_create_session(request)
 
-        # Step 2: Analyze query (would use analyst agent)
-        # analysis = await self._analyst_agent.analyze(query=request.query)
+        # Step 3: Build initial state for LangGraph
+        initial_state = {
+            "messages": [HumanMessage(content=request.query)],
+            "ui": [],
+            "session_id": str(session.session_id),
+            "reasoning_steps": 0,
+            "total_tool_calls": 0,
+        }
 
-        # Step 3: Retrieve context from memory (would use memory agent)
-        # context = await self._memory_agent.retrieve(query=request.query, session_id=session.session_id)
+        # Step 4: Invoke LangGraph (this runs the 7-pipeline agent sequence)
+        final_state = await self._graph.ainvoke(initial_state)
 
-        # Step 4: Process with main agent (would use DSPy agent)
-        # response = await self._main_agent(query=request.query, context=context)
+        # Step 5: Extract response from final state
+        messages = final_state.get("messages", [])
+        response_text = ""
+        reasoning = ""
 
-        # Placeholder response
-        response_text = f"Processed: {request.query}"
+        for msg in messages:
+            if hasattr(msg, "content") and isinstance(msg.content, str):
+                if not response_text:
+                    response_text = msg.content
+                else:
+                    reasoning += msg.content + "\n"
 
-        # Step 5: Select UI components (would use designer agent)
-        # ui_components = []  # Would be populated by designer agent
+        if not response_text:
+            response_text = "No response generated."
 
-        # Step 6: Build response
+        # Step 6: Extract UI components from state
+        ui_messages = final_state.get("ui", [])
+        ui_components = _extract_ui_components(ui_messages)
+
+        # Step 7: Build response
         return ExecuteAgentQueryResponse(
             session_id=str(session.session_id),
             response=response_text,
-            reasoning="Placeholder reasoning",
-            ui_components=[
-                UIComponentDTO(
-                    component_id="placeholder",
-                    component_type="markdown",
-                    props={"content": response_text},
-                )
-            ],
-            tool_calls=[],
+            reasoning=reasoning or "Agent processing complete.",
+            ui_components=ui_components,
+            tool_calls=[],  # TODO: Extract from state if needed
         )
 
     async def _get_or_create_session(
@@ -101,3 +119,34 @@ class ExecuteAgentQueryUseCase:
         session = AgentSessionEntity.create(user_hash)
         await self._session_repository.save(session)
         return session
+
+
+def _extract_ui_components(ui_messages: list) -> list[UIComponentDTO]:
+    """Extract UI components from LangGraph UI messages.
+
+    Args:
+        ui_messages: List of UI messages from LangGraph state.
+
+    Returns:
+        list[UIComponentDTO]: List of UI component DTOs.
+    """
+    components = []
+
+    for msg in ui_messages:
+        # Extract UI component data from message
+        if hasattr(msg, "content"):
+            content = msg.content
+            if isinstance(content, dict):
+                component_type = content.get("type", "markdown")
+                props = content.get("props", {})
+                component_id = content.get("id", f"component-{len(components)}")
+
+                components.append(
+                    UIComponentDTO(
+                        component_id=component_id,
+                        component_type=component_type,
+                        props=props,
+                    )
+                )
+
+    return components

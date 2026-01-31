@@ -65,3 +65,16 @@ class MemoryType(str, Enum):
     EPISODIC = "episodic"  # Conversation history
     SEMANTIC = "semantic"  # Vector embeddings
     PROCEDURAL = "procedural"  # User preferences
+
+
+class TemporalType(str, Enum):
+    """Temporal memory types for time-aware RAG.
+
+    From C005 temporal-rag spec.
+    """
+
+    PREFERENCE = "preference"
+    STATE = "state"
+    EVENT = "event"
+    PLAN = "plan"
+    FACT = "fact"

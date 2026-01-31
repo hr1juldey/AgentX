@@ -158,7 +158,11 @@ async def _pass_2_judgment(
     needs_more = quality_result["needs_more_research"]
 
     # Create judgment message
-    missing_text = f"Missing Elements: {missing}" if missing else "All required information available."
+    missing_text = (
+        f"Missing Elements: {missing}"
+        if missing
+        else "All required information available."
+    )
 
     judgment_content = f"""Data Quality Assessment (Pass 2):
 

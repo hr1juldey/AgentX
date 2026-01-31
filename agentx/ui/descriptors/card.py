@@ -27,8 +27,12 @@ class CardDescriptor(BaseUIDescriptor):
     descriptor_type: UIDescriptorType = Field(default=UIDescriptorType.CARD)
     title: str = Field(description="Card title")
     content: str = Field(description="Card body content (markdown supported)")
-    actions: List[CardAction] = Field(default_factory=list, description="Action buttons")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    actions: List[CardAction] = Field(
+        default_factory=list, description="Action buttons"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     class Config:
         populate_by_name = True

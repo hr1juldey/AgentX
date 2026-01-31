@@ -6,7 +6,7 @@ All values can be overridden via environment variables or .env file.
 
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Get the agentx package directory (parent of core/)

@@ -3,7 +3,7 @@
 Confirmation dialog with confirm/cancel buttons.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 from typing import Any
 
 from agentx.ui.descriptors.base import BaseUIDescriptor, UIDescriptorType
@@ -22,7 +22,9 @@ class ConfirmationDescriptor(BaseUIDescriptor):
     confirm_label: str = Field(default="Confirm", description="Confirm button label")
     cancel_label: str = Field(default="Cancel", description="Cancel button label")
     on_confirm: str = Field(description="Action to execute on confirm")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     class Config:
         populate_by_name = True

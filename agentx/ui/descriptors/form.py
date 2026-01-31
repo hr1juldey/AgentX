@@ -31,7 +31,9 @@ class FormField(BaseModel):
     field_type: FormFieldType = Field(description="Field type")
     placeholder: str = Field(default="", description="Placeholder text")
     required: bool = Field(default=False, description="Whether field is required")
-    options: List[str] = Field(default_factory=list, description="Options for select/radio")
+    options: List[str] = Field(
+        default_factory=list, description="Options for select/radio"
+    )
     default_value: Any = Field(default=None, description="Default value")
 
 
@@ -47,7 +49,9 @@ class FormDescriptor(BaseUIDescriptor):
     fields: List[FormField] = Field(description="Form fields")
     submit_url: str = Field(description="URL to submit form to")
     method: str = Field(default="POST", description="HTTP method (GET/POST)")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     class Config:
         populate_by_name = True
