@@ -1,8 +1,38 @@
 # Tasks Artifact: async-dspy-langgraph-fix
 
-**Generated**: 2026-02-01
+**Generated**: 2026-02-02
 **Change**: async-dspy-langgraph-fix
 **Schema**: spec-factory v1.0.0
+
+---
+
+## 0. Spec Structure Overview (Overview/Implementation Split)
+
+This change uses **33 specs organized in an overview/implementation split**:
+
+**Overview Specs (9)** - High-level architecture that references granular specs:
+- `query-complexity-assessment` → Dynamic query planning overview
+- `dynamic-routing` → Send API routing overview
+- `episodic-memory` → Agent memory (Store) overview
+- `graph-memory` → Graph memory (Checkpointers) overview
+- `stt-preprocessing` → STT input handling (self-contained)
+- `transient-ux` → UX patterns overview
+- `adaptive-widget-selection` → Widget selection overview
+- `react-agent-hierarchy` → ReAct agent overview
+- `dspy_performance` → DSPy benchmarks (self-contained)
+
+**Granular Implementation Specs (24)** - Detailed implementation:
+- **Planning** (2): query-planner, execution-plan-models
+- **Routing** (3): send-api-workers, evaluator-optimizer, conditional-routing
+- **Memory** (7): agent-memory-store, checkpointers-integration, state-accumulation, c005-temporal-metadata, colbert-embedder, mem0-consolidation, semantic-memory-search
+- **Agents** (5): coordinator-agent, research-sub-agent, widget-sub-agent, synthesis-sub-agent, memory-sub-agent
+- **Voice** (3): voice-state, voice-nodes, voice-cleanup
+- **UX** (4): streaming-events, progress-tracking, skeleton-screens, progressive-disclosure-ux
+- **Widgets** (3): content-pattern-detection, widget-mapping, progressive-disclosure-ux
+
+**No Double Execution**: Overview specs provide high-level guidance and reference granular specs for implementation details.
+
+**Implementation Phases Below**: Each phase implements the granular specs referenced by the overview specs.
 
 ---
 
@@ -791,9 +821,11 @@ Phases are designed to be **independent but cumulative**:
 
 ---
 
-**Total Estimated Time**: ~30-35 hours (spread across 6 phases)
+**Total Estimated Time**: ~60-70 hours (spread across 13 phases)
 
-**Recommended Sprint Allocation**: 1-2 weeks with testing
+**Recommended Sprint Allocation**: 2-3 weeks with testing
+
+**Spec Coverage**: 33 specs (9 overview + 24 granular)
 
 ---
 
