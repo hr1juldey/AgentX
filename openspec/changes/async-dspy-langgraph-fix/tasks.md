@@ -229,6 +229,274 @@
 
 ---
 
+### 1.7 Phase 7: ReAct Agent Hierarchy
+
+**Goal**: Implement Coordinator Agent that deploys specialized sub-agents with limited tools (3-5 per agent).
+
+| Task | File | Est. Time | Status | Verification |
+|------|------|-----------|--------|--------------|
+| **Core Models** | | | | |
+| Create CoordinatorSignature with class-based DSPy signature | `agentx/agent/react_agents/coordinator_agent.py` | 20m | ⬜ | ruff, pyrefly |
+| Create BaseReActAgent with tool limit enforcement | `agentx/agent/react_agents/base_agent.py` | 30m | ⬜ | ruff, pyrefly |
+| Define MAX_TOOLS_PER_AGENT constant | `agentx/agent/react_agents/base_agent.py` | 5m | ⬜ | ruff check |
+| **Research Agent** | | | | |
+| Create ResearchAgent (3 tools: search, scrape, cite) | `agentx/agent/react_agents/research_agent.py` | 30m | ⬜ | ruff, pyrefly |
+| Create SearXNGSearch tool wrapper | `agentx/agent/tools/researcher/searxng_search.py` | 20m | ⬜ | ruff, pyrefly |
+| Create WebScraper tool wrapper | `agentx/agent/tools/researcher/web_scraper.py` | 20m | ⬜ | ruff, pyrefly |
+| Create CitationBuilder tool wrapper | `agentx/agent/tools/researcher/citation_builder.py` | 10m | ⬜ | ruff, pyrefly |
+| **Widget Agent** | | | | |
+| Create WidgetAgent (3 tools: select, render_card, show_chart) | `agentx/agent/react_agents/widget_agent.py` | 30m | ⬜ | ruff, pyrefly |
+| Create WidgetSelector tool wrapper | `agentx/agent/tools/widgets/widget_selector.py` | 20m | ⬜ | ruff, pyrefly |
+| Create CardRenderer tool wrapper | `agentx/agent/tools/widgets/card_renderer.py` | 15m | ⬜ | ruff, pyrefly |
+| Create ChartRenderer tool wrapper | `agentx/agent/tools/widgets/chart_renderer.py` | 15m | ⬜ | ruff, pyrefly |
+| **Synthesis Agent** | | | | |
+| Create SynthesisAgent (3 tools: summarize, format, check_quality) | `agentx/agent/react_agents/synthesis_agent.py` | 30m | ⬜ | ruff, pyrefly |
+| Create Summarizer tool wrapper | `agentx/agent/tools/synthesis/summarizer.py` | 15m | ⬜ | ruff, pyrefly |
+| Create TextFormatter tool wrapper | `agentx/agent/tools/synthesis/text_formatter.py` | 10m | ⬜ | ruff, pyrefly |
+| Create QualityChecker tool wrapper | `agentx/agent/tools/synthesis/quality_checker.py` | 15m | ⬜ | ruff, pyrefly |
+| **Memory Agent** | | | | |
+| Create MemoryAgent (3 tools: store, search, consolidate) | `agentx/agent/react_agents/memory_agent.py` | 30m | ⬜ | ruff, pyrefly |
+| **Coordinator Integration** | | | | |
+| Create CoordinatorAgent with sub-agent routing | `agentx/agent/react_agents/coordinator_agent.py` | 30m | ⬜ | ruff, pyrefly |
+| Add coordinator reasoning output | `agentx/agent/react_agents/coordinator_agent.py` | 15m | ⬜ | ruff, pyrefly |
+| Update research_worker_node to use Coordinator | `agentx/agent/nodes/research_worker.py` | 20m | ⬜ | ruff, pyrefly |
+
+**Phase 7 Acceptance**:
+- [ ] Each sub-agent has max 5 tools (preferably 3)
+- [ ] BaseReActAgent raises ValueError if > 5 tools
+- [ ] All DSPy signatures are class-based (no inline strings)
+- [ ] All forward() methods return dspy.Prediction
+- [ ] Coordinator provides reasoning for agent selection
+- [ ] Sub-agents use max_iters=3
+- [ ] Ruff and pyrefly checks pass
+
+---
+
+### 1.8 Phase 8: ColBERT Memory (Qdrant Semantic Search)
+
+**Goal**: Implement Qdrant + ColBERTv2 for token-level semantic search with multivectors.
+
+| Task | File | Est. Time | Status | Verification |
+|------|------|-----------|--------|--------------|
+| **Infrastructure** | | | | |
+| Create ColBERTEmbedder class with lazy-loading | `agentx/infrastructure/external/colbert_embedder.py` | 45m | ⬜ | ruff, pyrefly |
+| Add fastembed dependency | `pyproject.toml` | 5m | ⬜ | uv sync |
+| Create Qdrant multivector collection config | `agentx/infrastructure/external/colbert_embedder.py` | 20m | ⬜ | ruff, pyrefly |
+| **Embedding** | | | | |
+| Implement embed_text() method (multivectors) | `agentx/infrastructure/external/colbert_embedder.py` | 20m | ⬜ | ruff, pyrefly |
+| Implement query_embed() method (optimized) | `agentx/infrastructure/external/colbert_embedder.py` | 15m | ⬜ | ruff, pyrefly |
+| Implement ensure_collection() with MultiVectorConfig | `agentx/infrastructure/external/colbert_embedder.py` | 20m | ⬜ | ruff, pyrefly |
+| **Search** | | | | |
+| Implement search() method with MaxSim operation | `agentx/infrastructure/external/colbert_embedder.py` | 25m | ⬜ | ruff, pyrefly |
+| Add user_id filter support | `agentx/infrastructure/external/colbert_embedder.py` | 10m | ⬜ | ruff, pyrefly |
+| **Integration** | | | | |
+| Update MemoryManager to use ColBERT | `agentx/infrastructure/memory/langgraph_store_adapter.py` | 20m | ⬜ | ruff, pyrefly |
+| Store research results in Qdrant with multivectors | `agentx/infrastructure/memory/langgraph_store_adapter.py` | 25m | ⬜ | ruff, pyrefly |
+| Add semantic search to query planner cache check | `agentx/agent/tools/planner/query_planner.py` | 20m | ⬜ | ruff, pyrefly |
+| **Configuration** | | | | |
+| Add ColBERT settings to memory_config.py | `agentx/core/memory_config.py` | 10m | ⬜ | ruff check |
+| Add Qdrant URL configuration | `agentx/core/config.py` | 5m | ⬜ | ruff check |
+
+**Phase 8 Acceptance**:
+- [ ] ColBERT model lazy-loads on first use
+- [ ] Multivector embeddings (128-dim per token)
+- [ ] Qdrant collection created with MultiVectorConfig
+- [ ] Semantic search returns relevant results
+- [ ] User isolation enforced (user_id filter)
+- [ ] Research results stored in both Store and Qdrant
+- [ ] Ruff and pyrefly checks pass
+
+---
+
+### 1.9 Phase 9: Adaptive Widget Selection
+
+**Goal**: Implement content-driven widget selection (not arbitrary dump) with adaptive count.
+
+| Task | File | Est. Time | Status | Verification |
+|------|------|-----------|--------|--------------|
+| **Core Models** | | | | |
+| Create WidgetSpecification model | `agentx/domain/models/widget_selection.py` | 15m | ⬜ | pyrefly check |
+| Create WidgetType enum (DATA_TABLE, TIMELINE, MAP, etc.) | `agentx/domain/models/widget_selection.py` | 10m | ⬜ | pyrefly check |
+| Create ContentPattern enum (COMPARISON, TEMPORAL, GEOGRAPHIC) | `agentx/domain/models/widget_selection.py` | 10m | ⬜ | pyrefly check |
+| Create SelectWidgetsSignature (class-based) | `agentx/agent/tools/widgets/widget_selector.py` | 15m | ⬜ | ruff, pyrefly |
+| **DSPy Tool** | | | | |
+| Create WidgetSelectorModule with pattern → widget mapping | `agentx/agent/tools/widgets/widget_selector.py` | 30m | ⬜ | ruff, pyrefly |
+| Implement adaptive count logic (0 tasks → 0 widgets, 6+ tasks → 6-7) | `agentx/agent/tools/widgets/widget_selector.py` | 20m | ⬜ | ruff, pyrefly |
+| **Integration** | | | | |
+| Update WidgetAgent to pass accumulated_findings | `agentx/agent/react_agents/widget_agent.py` | 15m | ⬜ | ruff, pyrefly |
+| Add widget selection to synthesizer_node | `agentx/agent/nodes/synthesizer.py` | 20m | ⬜ | ruff, pyrefly |
+| Add selected_widgets to AgentState | `agentx/domain/models/graph_state.py` | 10m | ⬜ | pyrefly check |
+| **Frontend** | | | | |
+| Create ProgressiveDisclosure component | `frontend/components/ProgressiveDisclosure.tsx` | 30m | ⬜ | tsc --noEmit |
+| Create DataTable component | `frontend/components/widgets/DataTable.tsx` | 30m | ⬜ | tsc --noEmit |
+| Create Timeline component | `frontend/components/widgets/Timeline.tsx` | 30m | ⬜ | tsc --noEmit |
+| Create Map component | `frontend/components/widgets/Map.tsx` | 30m | ⬜ | tsc --noEmit |
+
+**Phase 9 Acceptance**:
+- [ ] Widgets selected based on accumulated_findings
+- [ ] Pattern → Widget mapping works (comparison → DATA_TABLE, etc.)
+- [ ] Widget count adapts to task count (0-7 widgets)
+- [ ] Simple queries get text-only (0 widgets)
+- [ ] Complex queries get relevant widgets
+- [ ] Progressive disclosure shows 3 initially, "Show More" for rest
+- [ ] Ruff, pyrefly, tsc checks pass
+
+---
+
+### 1.10 Phase 10: Mem0 Consolidation
+
+**Goal**: Implement Mem0AI integration for advanced memory consolidation with quality filtering.
+
+| Task | File | Est. Time | Status | Verification |
+|------|------|-----------|--------|--------------|
+| **Infrastructure** | | | | |
+| Create Mem0MemoryAdapter class | `agentx/infrastructure/memory/mem0_adapter.py` | 30m | ⬜ | ruff, pyrefly |
+| Add mem0ai dependency | `pyproject.toml` | 5m | ⬜ | uv sync |
+| Configure Mem0 with Qdrant backend | `agentx/infrastructure/memory/mem0_adapter.py` | 15m | ⬜ | ruff, pyrefly |
+| **Quality Filtering** | | | | |
+| Implement confidence filter (>= 0.6) | `agentx/infrastructure/memory/mem0_adapter.py` | 15m | ⬜ | ruff, pyrefly |
+| Implement length filter (>= 50 chars) | `agentx/infrastructure/memory/mem0_adapter.py` | 10m | ⬜ | ruff, pyrefly |
+| Implement duplicate detection | `agentx/infrastructure/memory/mem0_adapter.py` | 15m | ⬜ | ruff, pyrefly |
+| **Consolidation** | | | | |
+| Implement consolidate_if_needed() method | `agentx/infrastructure/memory/mem0_adapter.py` | 20m | ⬜ | ruff, pyrefly |
+| Create ConsolidateMemoryUseCase | `agentx/application/use_cases/manage_memory.py` | 25m | ⬜ | ruff, pyrefly |
+| Add consolidation threshold (100 memories) | `agentx/infrastructure/memory/mem0_adapter.py` | 10m | ⬜ | ruff check |
+| **Integration** | | | | |
+| Update research_worker_node to store via Mem0 | `agentx/agent/nodes/research_worker.py` | 15m | ⬜ | ruff, pyrefly |
+| Add consolidation endpoint | `agentx/presentation/api/v1/memory.py` | 15m | ⬜ | ruff, pyrefly |
+
+**Phase 10 Acceptance**:
+- [ ] Low-confidence results (< 0.6) not stored
+- [ ] Trivial results (< 50 chars) not stored
+- [ ] Duplicates detected and skipped
+- [ ] Consolidation triggers at 100 memories
+- [ ] Consolidated summaries stored back
+- [ ] Qdrant used as Mem0 backend
+- [ ] Ruff and pyrefly checks pass
+
+---
+
+### 1.11 Phase 11: Voice Subgraph
+
+**Goal**: Implement LangGraph voice subgraph with guaranteed cleanup for TTS/STT sessions.
+
+| Task | File | Est. Time | Status | Verification |
+|------|------|-----------|--------|--------------|
+| **Core Models** | | | | |
+| Create VoiceState TypedDict | `agentx/domain/models/voice_state.py` | 20m | ⬜ | pyrefly check |
+| Define voice session states (connect, listen, transcribe, etc.) | `agentx/domain/models/voice_state.py` | 10m | ⬜ | pyrefly check |
+| **Voice Nodes** | | | | |
+| Create connect_kyutai_node | `agentx/agent/nodes/voice/voice_nodes.py` | 30m | ⬜ | ruff, pyrefly |
+| Create listen_audio_node with VAD | `agentx/agent/nodes/voice/voice_nodes.py` | 30m | ⬜ | ruff, pyrefly |
+| Create transcribe_node | `agentx/agent/nodes/voice/voice_nodes.py` | 20m | ⬜ | ruff, pyrefly |
+| Create process_agent_node (invokes main graph) | `agentx/agent/nodes/voice/voice_nodes.py` | 25m | ⬜ | ruff, pyrefly |
+| Create synthesize_node with interrupt check | `agentx/agent/nodes/voice/voice_nodes.py` | 25m | ⬜ | ruff, pyrefly |
+| Create stream_audio_node | `agentx/agent/nodes/voice/voice_nodes.py` | 15m | ⬜ | ruff, pyrefly |
+| Create check_interrupt_node | `agentx/agent/nodes/voice/voice_nodes.py` | 15m | ⬜ | ruff, pyrefly |
+| **Cleanup Node** | | | | |
+| Create cleanup_node (CRITICAL - must always run) | `agentx/agent/nodes/voice/voice_nodes.py` | 25m | ⬜ | ruff, pyrefly |
+| Implement WebSocket closing (STT, TTS) | `agentx/agent/nodes/voice/voice_nodes.py` | 15m | ⬜ | ruff, pyrefly |
+| Implement session state clearing | `agentx/agent/nodes/voice/voice_nodes.py` | 10m | ⬜ | ruff, pyrefly |
+| **Voice Subgraph** | | | | |
+| Create build_voice_subgraph() function | `agentx/agent/nodes/voice/voice_subgraph.py` | 30m | ⬜ | ruff, pyrefly |
+| Wire ALL paths to cleanup node | `agentx/agent/nodes/voice/voice_subgraph.py` | 20m | ⬜ | ruff, pyrefly |
+| Add cleanup → END edge | `agentx/agent/nodes/voice/voice_subgraph.py` | 5m | ⬜ | ruff check |
+| **Integration** | | | | |
+| Create voice_input_node for main graph | `agentx/agent/nodes/voice/voice_integration.py` | 25m | ⬜ | ruff, pyrefly |
+| Add voice subgraph to main graph | `agentx/agent/graph/dynamic_agent_graph.py` | 15m | ⬜ | ruff, pyrefly |
+
+**Phase 11 Acceptance**:
+- [ ] VoiceState TypedDict defined
+- [ ] ALL conditional edges lead to cleanup node
+- [ ] Cleanup closes STT WebSocket
+- [ ] Cleanup closes TTS WebSocket
+- [ ] Cleanup clears session state
+- [ ] User interrupt flows to cleanup
+- [ ] Connection error flows to cleanup
+- [ ] Normal completion flows to cleanup
+- [ ] Ruff and pyrefly checks pass
+
+---
+
+### 1.12 Phase 12: Progressive Disclosure
+
+**Goal**: Implement progressive disclosure for widgets (3 visible, "Show More" button).
+
+| Task | File | Est. Time | Status | Verification |
+|------|------|-----------|--------|--------------|
+| **Frontend Components** | | | | |
+| Create ProgressiveDisclosure component | `frontend/components/ProgressiveDisclosure.tsx` | 30m | ⬜ | tsc --noEmit |
+| Create ShowMoreButton component | `frontend/components/ShowMoreButton.tsx` | 15m | ⬜ | tsc --noEmit |
+| Create WidgetCard wrapper component | `frontend/components/WidgetCard.tsx` | 20m | ⬜ | tsc --noEmit |
+| **Backend Support** | | | | |
+| Add priority field to WidgetSpecification | `agentx/domain/models/widget_selection.py` | 10m | ⬜ | pyrefly check |
+| Sort widgets by priority in synthesizer | `agentx/agent/nodes/synthesizer.py` | 15m | ⬜ | ruff, pyrefly |
+| Emit WidgetRevealEvent for each widget | `agentx/agent/nodes/synthesizer.py` | 20m | ⬜ | ruff, pyrefly |
+| **Integration** | | | | |
+| Update WebSocket to stream widgets | `agentx/presentation/api/v1/streaming.py` | 20m | ⬜ | ruff, pyrefly |
+| Update StreamingResponse to handle widgets | `frontend/components/StreamingResponse.tsx` | 25m | ⬜ | tsc --noEmit |
+
+**Phase 12 Acceptance**:
+- [ ] Progressive disclosure shows 3 widgets initially
+- [ ] "Show More" button appears when > 3 widgets
+- [ ] Clicking "Show More" reveals all widgets
+- [ ] Widgets sorted by priority (highest first)
+- [ ] WidgetRevealEvent emitted for each widget
+- [ ] Ruff, pyrefly, tsc checks pass
+
+---
+
+### 1.13 Phase 13: Final Integration and Testing
+
+**Goal**: End-to-end integration testing of all 13 phases together.
+
+| Task | Description | Est. Time | Status | Verification |
+|------|-------------|-----------|--------|--------------|
+| **Full Stack Integration** | | | | |
+| Test TEXT input flow through all phases | Full pipeline | 30m | ⬜ | Manual |
+| Test STT input flow through all phases | Full pipeline with voice | 30m | ⬜ | Manual |
+| Test voice subgraph cleanup guarantee | Force error, verify cleanup | 30m | ⬜ | Manual |
+| Test ReAct hierarchy routing | Complex query, verify coordinator | 30m | ⬜ | Manual |
+| **Three Memory Verification** | | | | |
+| Test graph memory (Checkpointers) | Verify state persistence | 20m | ⬜ | Manual |
+| Test agent memory (Store) | Verify cache hit | 15m | ⬜ | Manual |
+| Test semantic memory (Qdrant+ColBERT) | Verify semantic search | 20m | ⬜ | Manual |
+| Verify memory separation | Check no confusion between types | 15m | ⬜ | Manual |
+| **Widget Verification** | | | | |
+| Test adaptive widget selection | Vary task count, verify widget count | 20m | ⬜ | Manual |
+| Test progressive disclosure | Verify 3 visible, Show More works | 15m | ⬜ | Manual |
+| Verify widgets use research findings | Check accumulated_findings passed | 15m | ⬜ | Manual |
+| **DSPy Best Practices Verification** | | | | |
+| Scan for inline signatures | grep for inline strings | 15m | ⬜ | Should find 0 |
+| Scan for dict returns in DSPy modules | grep for "return {" | 15m | ⬜ | Should find 0 in tools/ |
+| Verify all DSPy returns are Prediction | Check all forward() methods | 20m | ⬜ | Manual |
+| **Performance Verification** | | | | |
+| Test simple query latency | Should be < 5s | 15m | ⬜ | Manual |
+| Test complex query latency | Should be < 60s | 30m | ⬜ | Manual |
+| Test cache hit latency | Should be < 1s | 15m | ⬜ | Manual |
+| Test voice cleanup guarantee | All paths cleanup < 1s | 15m | ⬜ | Manual |
+| **Code Quality Final Check** | | | | |
+| Run ruff check --fix on all files | All pass | 15m | ⬜ | ruff |
+| Run ruff format on all files | All pass | 10m | ⬜ | ruff |
+| Run pyrefly check --summarize-errors | All pass | 20m | ⬜ | pyrefly |
+| Check file sizes (< 150 lines) | All pass | 10m | ⬜ | wc -l |
+| Check imports (no relative) | All pass | 10m | ⬜ | grep |
+
+**Phase 13 Acceptance**:
+- [ ] All 12 previous phases working together
+- [ ] Three memory types verified separated
+- [ ] Voice cleanup guaranteed (all paths tested)
+- [ ] ReAct hierarchy working (coordinator deploys sub-agents)
+- [ ] Adaptive widgets working (content-driven)
+- [ ] Progressive disclosure working (3 + Show More)
+- [ ] All DSPy best practices verified (0 inline signatures, 0 dict returns)
+- [ ] Performance targets met
+- [ ] Ruff, pyrefly, tsc checks pass
+- [ ] File sizes within limits
+- [ ] No relative imports
+
+---
+
 ## 2. Verification Steps
 
 ### 2.1 Code Quality (Run After Each Phase)
