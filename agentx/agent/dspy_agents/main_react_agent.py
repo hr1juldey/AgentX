@@ -7,7 +7,7 @@ Following DSPy tutorial patterns from /home/riju279/Downloads/dspy-main/dspy-mai
 import dspy
 from dspy import Example
 
-from agentx.agent.dspy_signatures.main_signatures import MainAgentSignature
+from agentx.agent.dspy_signatures.main_signatures import MainAgentSignature, AnalystSignature, DesignerSignature, MemorySignature
 from agentx.agent.tools.main_tools import AVAILABLE_TOOLS
 from agentx.core.dependencies import ensure_dspy_configured
 
@@ -48,9 +48,7 @@ class AnalystAgent(dspy.Module):
     def __init__(self) -> None:
         """Initialize the analyst agent."""
         super().__init__()
-        self.analyze = dspy.Predict(
-            "agentx/agent/dspy_signatures/main_signatures.py::AnalystSignature"
-        )
+        self.analyze = dspy.Predict(AnalystSignature)
 
     def forward(self, query: str) -> dict:
         """Analyze user query to extract intent and entities.
@@ -79,9 +77,7 @@ class DesignerAgent(dspy.Module):
     def __init__(self) -> None:
         """Initialize the designer agent."""
         super().__init__()
-        self.design = dspy.Predict(
-            "agentx/agent/dspy_signatures/main_signatures.py::DesignerSignature"
-        )
+        self.design = dspy.Predict(DesignerSignature)
 
     def forward(self, query: str, response: str, existing_widgets: list[str]) -> dict:
         """Select appropriate UI widget based on query and context.
@@ -94,9 +90,7 @@ class DesignerAgent(dspy.Module):
         Returns:
             dict: Widget recommendation with type and props.
         """
-        result = self.design(
-            query=query, response=response, existing_widgets=existing_widgets
-        )
+        result = self.design(query=query, response=response, existing_widgets=existing_widgets)
         return {
             "recommended_widget": result.recommended_widget,
             "widget_props": result.widget_props,
@@ -112,9 +106,7 @@ class MemoryAgent(dspy.Module):
     def __init__(self) -> None:
         """Initialize the memory agent."""
         super().__init__()
-        self.retrieve = dspy.Predict(
-            "agentx/agent/dspy_signatures/main_signatures.py::MemorySignature"
-        )
+        self.retrieve = dspy.Predict(MemorySignature)
 
     def forward(self, query: str, session_id: str) -> dict:
         """Retrieve relevant context from memory.

@@ -21,54 +21,54 @@ The system is NOT a fixed pipeline. It's a **dynamically assembled execution gra
 
 ### 1.2 High-Level Architecture
 
-```
+```bash
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    Dynamic Query-Driven Agent                         │
+│                    Dynamic Query-Driven Agent                           │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│   ┌─────────────┐     ┌──────────────┐     ┌─────────────────────┐   │
-│   │ User Input  │────▶│ Query Planner │────▶│  Execution Plan      │   │
-│   │ (TEXT/STT)  │     │  (LLM)        │     │  (0 to N tasks)       │   │
-│   └─────────────┘     └──────────────┘     └──────────┬──────────┘   │
-│                                                     │                │
-│                         ┌─────────────────────────┴────────┐   │
-│                         ▼                                  │   │
-│              ┌───────────────────────┐                   │   │
-│              │  Agent Memory Check   │                   │   │
-│              │  (Store: Search cached│                   │   │
-│              │   research results)  │                   │   │
-│              └───────────┬───────────┘                   │   │
-│                          │ cached tasks?                  │   │
-│              ┌───────────▼────────────┐                  │   │
-│              │ Route by Plan           │                  │   │
-│              │ 0 tasks → Direct Answer  │                  │   │
-│              │ N tasks → Send Workers   │                  │   │
-│              └───────────┬────────────┘                  │   │
-│                          │                               │   │
-│         ┌────────────────┼────────────────┐                │   │
-│         ▼                ▼                ▼                │   │
-│   ┌──────────┐    ┌───────────┐    ┌──────────┐           │   │
-│   │  Direct  │    │  Send API │    │ Research │           │   │
-│   │  Answer  │    │  Dynamic  │    │  Workers │           │   │
-│   │  Node    │    │  Workers  │    │ (0 to N) │           │   │
-│   └──────────┘    └─────┬─────┘    └─────┬─────┘           │   │
-│                       │                 │                   │   │
-│                       │                 └──────┬──────┐       │   │
-│                       │                        │          │       │   │
-│                       │                        ▼          │       │   │
-│                       │              ┌──────────────────┐   │   │
-│                       │              │ Graph Memory     │   │   │
-│                       │              │ (Checkpointers)  │   │   │
-│                       │              │ - Accumulate     │   │   │
-│                       │              │ - State-driven   │   │   │
-│                       │              │   routing        │   │   │
-│                       │              └────────┬─────────┘   │   │
-│                       │                       │             │   │
-│                       │              ┌────────▼─────────┐   │   │
-│                       │              │  Evaluator       │   │   │
-│                       │              │  (LLM: "Enough?") │   │   │
-│                       │              └────────┬─────────┘   │   │
-│                       │                       │             │   │
+│   ┌─────────────┐     ┌──────────────┐     ┌─────────────────────┐      │
+│   │ User Input  │────▶│ Query Planner │────▶│  Execution Plan    │      │
+│   │ (TEXT/STT)  │     │  (LLM)        │     │  (0 to N tasks)    │      │
+│   └─────────────┘     └──────────────┘     └──────────┬──────────┘      │
+│                                                     │                   │
+│                         ┌─────────────────────────┴────────┐            │
+│                         ▼                                  │            │
+│              ┌───────────────────────┐                     │            │
+│              │  Agent Memory Check   │                     │            │
+│              │  (Store: Search cached│                     │            │
+│              │   research results)   │                     │            │
+│              └───────────┬───────────┘                     │            │
+│                          │ cached tasks?                   │            │
+│              ┌───────────▼────────────┐                    │            │
+│              │ Route by Plan          │                    │            │
+│              │ 0 tasks → Direct Answer│                    │            │
+│              │ N tasks → Send Workers │                    │            │
+│              └───────────┬────────────┘                    │            │
+│                          │                                 │            │
+│         ┌────────────────┼────────────────┐                │            │
+│         ▼                ▼                ▼                │            │
+│   ┌──────────┐    ┌───────────┐    ┌──────────┐            │            │
+│   │  Direct  │    │  Send API │    │ Research │            │            │
+│   │  Answer  │    │  Dynamic  │    │  Workers │            │            │
+│   │  Node    │    │  Workers  │    │ (0 to N) │            │            │
+│   └──────────┘    └─────┬─────┘    └─────┬─────┘           │            │
+│                       │                 │                  │            │
+│                       │                 └──────┬──────┐    │            │
+│                       │                        │      │    │            │
+│                       │                        ▼      │    │            │
+│                       │              ┌──────────────────┐   │           │
+│                       │              │ Graph Memory     │   │           │
+│                       │              │ (Checkpointers)  │   │           │
+│                       │              │ - Accumulate     │   │           │
+│                       │              │ - State-driven   │   │           │
+│                       │              │   routing        │   │           │
+│                       │              └────────┬─────────┘   │           │
+│                       │                       │             │           │
+│                       │              ┌────────▼─────────┐   │           │
+│                       │              │  Evaluator       │   │           │
+│                       │              │  (LLM: "Enough?")│   │           │
+│                       │              └────────┬─────────┘   │           │
+│                       │                       │             │           │
 │                       │        ┌──────────────┴──────┐  │   │
 │                       │        ▼                     ▼  │   │
 │                       │   ┌──────────┐      ┌──────────┐│   │
@@ -90,7 +90,7 @@ The system is NOT a fixed pipeline. It's a **dynamically assembled execution gra
 
 ### 1.3 Clean Architecture Layer Structure
 
-```
+```bash
 agentx/
 ├── core/                          # Configuration
 │   ├── config.py                  # DSPy + memory settings
@@ -504,6 +504,7 @@ Our graph mirrors this:
 **User insight**: "Even if a task takes 15 minutes, humans won't wait and will leave."
 
 **Solution**: Keep users engaged with transient UX patterns:
+
 - Skeleton screens (appear within 300ms)
 - Streaming responses (token-by-token)
 - Progress events (every 1-2s)
