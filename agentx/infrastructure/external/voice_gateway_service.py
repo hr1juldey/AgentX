@@ -92,20 +92,20 @@ class VoiceGatewayService:
         # Direct WebSocket mode (original implementation)
         logger.info(f"[VoiceGateway] Connecting to STT: {self._config.stt_url}")
         stt_ws = await websockets.connect(self._config.stt_url)
-        logger.info(f"[VoiceGateway] Connected to STT")
+        logger.info("[VoiceGateway] Connected to STT")
 
         logger.info(f"[VoiceGateway] Connecting to TTS: {self._config.tts_url}")
         tts_ws = await websockets.connect(self._config.tts_url)
-        logger.info(f"[VoiceGateway] Connected to TTS")
+        logger.info("[VoiceGateway] Connected to TTS")
 
         config_msg = create_config_message(session_id, streaming_mode="both")
         logger.info(f"[VoiceGateway] Sending config to STT: {config_msg.to_json()}")
         await stt_ws.send(config_msg.to_json())
-        logger.info(f"[VoiceGateway] Config sent to STT")
+        logger.info("[VoiceGateway] Config sent to STT")
 
-        logger.info(f"[VoiceGateway] Sending config to TTS")
+        logger.info("[VoiceGateway] Sending config to TTS")
         await tts_ws.send(config_msg.to_json())
-        logger.info(f"[VoiceGateway] Config sent to TTS")
+        logger.info("[VoiceGateway] Config sent to TTS")
 
         session = VoiceSession(
             session_id=session_id,
@@ -114,7 +114,7 @@ class VoiceGatewayService:
             tts_ws=tts_ws,
         )
         self._sessions[session_id] = session
-        logger.info(f"[VoiceGateway] Session created, starting input/output tasks")
+        logger.info("[VoiceGateway] Session created, starting input/output tasks")
 
         try:
             await asyncio.gather(
