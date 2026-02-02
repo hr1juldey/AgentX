@@ -17,14 +17,14 @@ logger = logging.getLogger(__name__)
 async def cleanup_session(
     session_id: UUID,
     sessions: dict[UUID, VoiceSession],
-    text_handler: "TextStreamHandler",
+    text_handler: "TextStreamHandler | None" = None,
 ) -> None:
     """Clean up a voice session.
 
     Args:
         session_id: The session ID to clean up.
         sessions: The sessions dictionary to remove from.
-        text_handler: The text handler for cleanup.
+        text_handler: The text handler for cleanup (optional).
     """
     session = sessions.pop(session_id, None)
     if session:
@@ -32,8 +32,9 @@ async def cleanup_session(
             await session.stt_ws.close()  # type: ignore[union-attr]
         if session.tts_ws:
             await session.tts_ws.close()  # type: ignore[union-attr]
-    # Clean up text handler state
-    text_handler.cleanup_session(session_id)
+    # Clean up text handler state if provided
+    if text_handler:
+        text_handler.cleanup_session(session_id)
 
 
 async def check_kyutai_health(stt_url: str) -> bool:

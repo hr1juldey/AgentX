@@ -2,25 +2,19 @@
 
 Orchestrates the agent query processing workflow using LangGraph.
 Following the use case pattern from mimicus.
+
+Actual implementation has been moved to the query/ subdirectory.
+This facade maintains backward compatibility with existing imports.
 """
 
 import logging
-from uuid import UUID
 
-from langchain_core.messages import HumanMessage
-
-from agentx.agent.graph import get_graph
 from agentx.application.dtos.agent_dtos import (
     ExecuteAgentQueryRequest,
     ExecuteAgentQueryResponse,
 )
-from agentx.application.dtos.ui_dtos import UIComponentDTO
-from agentx.application.mappers.agent_session_mapper import AgentSessionMapper
-from agentx.core.dependencies import (
-    ensure_dspy_configured,
-    get_agent_session_repository,
-)
-from agentx.domain.entities.agent_session import AgentSessionEntity, SHA256Hash
+from agentx.application.use_cases.query import get_or_create_session
+from agentx.application.use_cases.query.query_execution import execute_query
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +31,8 @@ class ExecuteAgentQueryUseCase:
     """
 
     def __init__(self) -> None:
-        """Initialize the use case with dependencies."""
-        self._session_repository = get_agent_session_repository()
-        self._session_mapper = AgentSessionMapper()
-        self._graph = get_graph().compile()  # type: ignore[arg-type]
+        """Initialize the use case."""
+        pass
 
     async def execute(
         self, request: ExecuteAgentQueryRequest
@@ -57,113 +49,38 @@ class ExecuteAgentQueryUseCase:
             f"[ExecuteAgentQuery] Starting query execution: {request.query[:100]}..."
         )
 
-        # Step 1: Ensure DSPy is configured
-        ensure_dspy_configured()
-        logger.debug("[ExecuteAgentQuery] DSPy configured")
-
-        # Step 2: Get or create session
-        session = await self._get_or_create_session(request)
+        # Step 1: Get or create session
+        session = await get_or_create_session(request)
         logger.info(f"[ExecuteAgentQuery] Session ID: {session.session_id}")
 
-        # Step 3: Build initial state for LangGraph
-        initial_state = {
-            "messages": [HumanMessage(content=request.query)],
-            "ui": [],
-            "session_id": str(session.session_id),
-            "reasoning_steps": 0,
-            "total_tool_calls": 0,
-        }
-
-        # Step 4: Invoke LangGraph (this runs the 7-pipeline agent sequence)
-        logger.info("[ExecuteAgentQuery] Invoking LangGraph...")
-        final_state = await self._graph.ainvoke(initial_state)
-        logger.info(
-            f"[ExecuteAgentQuery] LangGraph execution complete. Total tool calls: {final_state.get('total_tool_calls', 0)}"
+        # Step 2: Execute query
+        response_text, reasoning, ui_components, tool_calls = await execute_query(
+            str(session.session_id), request.query
         )
 
-        # Step 5: Extract response from final state
-        messages = final_state.get("messages", [])
-        response_text = ""
-        reasoning = ""
-
-        for msg in messages:
-            if hasattr(msg, "content") and isinstance(msg.content, str):
-                if not response_text:
-                    response_text = msg.content
-                else:
-                    reasoning += msg.content + "\n"
-
-        if not response_text:
-            response_text = "No response generated."
-            logger.warning("[ExecuteAgentQuery] No response text generated")
-
-        logger.debug(f"[ExecuteAgentQuery] Response length: {len(response_text)} chars")
-
-        # Step 6: Extract UI components from state
-        ui_messages = final_state.get("ui", [])
-        ui_components = _extract_ui_components(ui_messages)
-        logger.info(f"[ExecuteAgentQuery] Extracted {len(ui_components)} UI components")
-
-        # Step 7: Build response
+        # Step 3: Build response
         return ExecuteAgentQueryResponse(
             session_id=str(session.session_id),
             response=response_text,
-            reasoning=reasoning or "Agent processing complete.",
+            reasoning=reasoning,
             ui_components=ui_components,
             tool_calls=[],  # TODO: Extract from state if needed
         )
 
-    async def _get_or_create_session(
-        self, request: ExecuteAgentQueryRequest
-    ) -> AgentSessionEntity:
-        """Get existing session or create new one.
 
-        Args:
-            request: The query request DTO.
+async def _get_or_create_session_legacy(request):
+    """Legacy function for backward compatibility.
 
-        Returns:
-            AgentSessionEntity: The session entity.
-        """
-        if request.session_id:
-            session = await self._session_repository.find_by_id(
-                UUID(request.session_id)
-            )
-            if session:
-                return session
-
-        # Create new session
-        user_hash = SHA256Hash.from_string(request.user_id or "anonymous")
-        session = AgentSessionEntity.create(user_hash)
-        await self._session_repository.save(session)
-        return session
-
-
-def _extract_ui_components(ui_messages: list) -> list[UIComponentDTO]:
-    """Extract UI components from LangGraph UI messages.
-
-    Args:
-        ui_messages: List of UI messages from LangGraph state.
-
-    Returns:
-        list[UIComponentDTO]: List of UI component DTOs.
+    Deprecated: Use get_or_create_session from query module instead.
     """
-    components = []
+    return await get_or_create_session(request)
 
-    for msg in ui_messages:
-        # Extract UI component data from message
-        if hasattr(msg, "content"):
-            content = msg.content
-            if isinstance(content, dict):
-                component_type = content.get("type", "markdown")
-                props = content.get("props", {})
-                component_id = content.get("id", f"component-{len(components)}")
 
-                components.append(
-                    UIComponentDTO(
-                        component_id=component_id,
-                        component_type=component_type,
-                        props=props,
-                    )
-                )
+def _extract_ui_components_legacy(ui_messages):
+    """Legacy function for backward compatibility.
 
-    return components
+    Deprecated: Use extract_ui_components from query module instead.
+    """
+    from agentx.application.use_cases.query.ui_extraction import extract_ui_components
+
+    return extract_ui_components(ui_messages)

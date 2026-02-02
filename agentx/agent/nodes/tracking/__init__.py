@@ -2,17 +2,16 @@
 
 This module tracks progress and emits events every 1-2 seconds
 to keep users engaged during long-running AI tasks.
-
-Actual implementation has been moved to the tracking/ subdirectory.
-This facade maintains backward compatibility with existing imports.
 """
 
-from agentx.agent.nodes.tracking import (
+from agentx.agent.nodes.tracking.events import (
+    get_progress_message,
+    progress_tracker_node,
+)
+from agentx.agent.nodes.tracking.tracker import (
     ProgressStatus,
     ProgressTracker,
     _async_sleep,
-    get_progress_message,
-    progress_tracker_node,
 )
 
 __all__ = [
