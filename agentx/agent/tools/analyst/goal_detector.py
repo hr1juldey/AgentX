@@ -7,6 +7,11 @@ Detects the goal and scope of the query using 3 parallel Predict calls.
 
 import dspy
 
+from agentx.agent.dspy_signatures.analyst import (
+    DetectDepth,
+    DetectGoal,
+    DetectScope,
+)
 from agentx.agent.tools.common.dspy_helpers import safe_extract
 
 
@@ -22,9 +27,9 @@ class GoalDetectorModule(dspy.Module):
     def __init__(self) -> None:
         """Initialize the goal detector."""
         super().__init__()
-        self.detect_goal = dspy.Predict("query, insights -> goal")
-        self.detect_scope = dspy.Predict("query -> scope")
-        self.detect_depth = dspy.Predict("query, goal -> depth")
+        self.detect_goal = dspy.Predict(DetectGoal)
+        self.detect_scope = dspy.Predict(DetectScope)
+        self.detect_depth = dspy.Predict(DetectDepth)
 
     def forward(self, query: str, insights: list) -> dict:
         """Detect goal and scope.

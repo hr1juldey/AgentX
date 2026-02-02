@@ -8,6 +8,7 @@ Includes relevance scoring and source credibility assessment.
 
 import dspy
 
+from agentx.agent.dspy_signatures.researcher import AssessRelevance
 from agentx.agent.tools.common.dspy_helpers import safe_extract
 from agentx.agent.tools.common.type_utils import _to_float
 
@@ -25,7 +26,7 @@ class CitationBuilderModule(dspy.Module):
     def __init__(self) -> None:
         """Initialize the citation builder."""
         super().__init__()
-        self.assessor = dspy.Predict("query, source -> relevance_score")
+        self.assessor = dspy.Predict(AssessRelevance)
 
     def forward(self, structured_data: list[dict], query: str) -> dict:
         """Build citations from structured data.

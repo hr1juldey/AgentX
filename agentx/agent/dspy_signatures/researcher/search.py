@@ -117,3 +117,19 @@ class ExtractSearchQuery(dspy.Signature):
         Each query should be 2-5 words with temporal/domain qualifiers.
         Format: query_1, query_2, query_3, ... (comma-separated)"""
     )
+
+
+class AssessRelevance(dspy.Signature):
+    """Assess the relevance of a source to the user query.
+
+    Used in citation building to score and rank sources by relevance.
+    """
+
+    query: str = dspy.InputField(desc="Original user query for context")
+    source: str = dspy.InputField(
+        desc="Source text (title + snippet) to assess relevance"
+    )
+
+    relevance_score: float = dspy.OutputField(
+        desc="Relevance score from 0.0 (not relevant) to 1.0 (highly relevant)"
+    )

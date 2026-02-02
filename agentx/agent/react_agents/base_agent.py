@@ -6,6 +6,8 @@ enforced tool limits to prevent hallucination.
 
 import dspy
 
+from agentx.agent.dspy_signatures.main_signatures import BaseReActSignature
+
 # Hard limit to prevent hallucination
 MAX_TOOLS_PER_AGENT = 5
 
@@ -37,7 +39,7 @@ class BaseReActAgent(dspy.Module):
 
         # Create ReAct with limited toolset
         self.react = dspy.ReAct(
-            "query -> result",  # type: ignore[arg-type]
+            BaseReActSignature,  # type: ignore[arg-type]
             tools=tools,  # type: ignore[arg-type]
             max_iters=3,  # Limited iterations
         )

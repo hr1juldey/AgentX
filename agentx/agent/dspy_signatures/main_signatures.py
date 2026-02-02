@@ -7,6 +7,17 @@ Following DSPy tutorial patterns from /home/riju279/Downloads/dspy-main/dspy-mai
 import dspy
 
 
+class BaseReActSignature(dspy.Signature):
+    """Base ReAct signature for simple query-result processing.
+
+    Used as the default signature for ReAct agents with limited toolsets.
+    Prevents hallucination by enforcing simple query->result flow.
+    """
+
+    query = dspy.InputField(desc="User's question or request")
+    result = dspy.OutputField(desc="Agent's result or answer")
+
+
 class MainAgentSignature(dspy.Signature):
     """Main agent signature for query processing.
 
