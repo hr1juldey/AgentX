@@ -35,7 +35,7 @@ async def test_websocket_query():
                 "message_type": "query",
                 "session_id": session_id,
                 "timestamp": datetime.now().timestamp(),
-                "data": {"query": query}
+                "data": {"query": query},
             }
 
             print(f"[{datetime.now()}] Sending query...")
