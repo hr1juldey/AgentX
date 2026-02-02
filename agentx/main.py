@@ -37,7 +37,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     ensure_dspy_configured()
     print("DSPy configured successfully")
 
-    yield
+    # Initialize LangGraph Redis connections
+    from agentx.infrastructure.memory.redis_lifespan import redis_lifespan
+
+    DB_URI = "redis://localhost:6380"
+    async with redis_lifespan(DB_URI):
+        print("LangGraph Redis connections initialized")
+        yield
+
     # Shutdown
     print("Shutting down...")
 

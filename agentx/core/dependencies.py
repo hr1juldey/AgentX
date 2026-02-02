@@ -36,4 +36,15 @@ __all__ = [
     "get_voice_gateway_service",
     "get_conversation_state_manager",
     "get_text_stream_handler",
+    "reset_dependencies",
 ]
+
+
+def reset_dependencies() -> None:
+    """Reset all dependency singletons.
+
+    Useful for testing to ensure clean state between tests.
+    """
+    from agentx.core.dependency_facades import reset_all_dependencies
+
+    reset_all_dependencies()

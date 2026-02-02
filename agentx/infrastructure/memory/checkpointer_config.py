@@ -2,15 +2,17 @@
 
 This module provides the checkpointer for graph memory (procedural routing).
 Graph memory stores AgentState snapshots for time-travel debugging.
+
+Redis checkpointer is managed by the application lifespan context.
 """
 
-from functools import lru_cache
+from langgraph.checkpoint.redis.aio import AsyncRedisSaver  # type: ignore[import]
 
-from langgraph.checkpoint.postgres import PostgresSaver  # type: ignore[import]
+# Global checkpointer instance (set by lifespan)
+_checkpointer: AsyncRedisSaver | None = None
 
 
-@lru_cache
-def get_checkpointer() -> PostgresSaver:
+def get_checkpointer() -> AsyncRedisSaver:
     """Get checkpointer for graph memory.
 
     Graph Memory (Checkpointers):
@@ -19,7 +21,25 @@ def get_checkpointer() -> PostgresSaver:
     - Stores: AgentState snapshots, execution path, routing history
 
     Returns:
-        PostgresSaver: LangGraph checkpointer instance
+        AsyncRedisSaver: LangGraph checkpointer instance
+
+    Raises:
+        RuntimeError: If checkpointer is not initialized (lifespan not started)
     """
-    DB_URI = "postgresql://postgres:postgres@localhost:5442/postgres?sslmode=disable"
-    return PostgresSaver.from_conn_string(DB_URI)
+    global _checkpointer
+    if _checkpointer is None:
+        msg = "Checkpointer not initialized. Start the application to initialize Redis connections."
+        raise RuntimeError(msg)
+    return _checkpointer
+
+
+def set_checkpointer(checkpointer: AsyncRedisSaver) -> None:
+    """Set the global checkpointer instance.
+
+    Called by lifespan context manager during startup.
+
+    Args:
+        checkpointer: LangGraph checkpointer instance
+    """
+    global _checkpointer
+    _checkpointer = checkpointer

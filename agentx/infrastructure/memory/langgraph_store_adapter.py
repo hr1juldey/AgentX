@@ -1,15 +1,16 @@
 """Agent memory adapter using LangGraph Store.
 
-This module provides the PostgresStore adapter for agent memory (cached research).
+This module provides the AsyncRedisStore adapter for agent memory (cached research).
 Agent memory stores research results for cross-thread reuse.
+
+Redis store is managed by the application lifespan context.
 """
 
 import hashlib
 import uuid
 from datetime import datetime
-from functools import lru_cache
 
-from langgraph.store.postgres import PostgresStore  # type: ignore[import]
+from langgraph.store.redis.aio import AsyncRedisStore  # type: ignore[import]
 
 from agentx.domain.models.episodic_memory import (
     EpisodicMemory,
@@ -17,6 +18,9 @@ from agentx.domain.models.episodic_memory import (
     TemporalMetadata,
     TemporalType,
 )
+
+# Global store instance (set by lifespan)
+_store: AsyncRedisStore | None = None
 
 
 class EpisodicMemoryStore:
@@ -28,11 +32,11 @@ class EpisodicMemoryStore:
     - Stores: Research results with C005 temporal metadata
     """
 
-    def __init__(self, store: PostgresStore):
+    def __init__(self, store: AsyncRedisStore):
         """Initialize episodic memory store.
 
         Args:
-            store: LangGraph PostgresStore instance
+            store: LangGraph AsyncRedisStore instance
         """
         self.store = store
 
@@ -112,12 +116,29 @@ class EpisodicMemoryStore:
         return [EpisodicMemory(**item.value) for item in items]
 
 
-@lru_cache
-def get_store() -> PostgresStore:
+def get_store() -> AsyncRedisStore:
     """Get LangGraph Store for agent memory.
 
     Returns:
-        PostgresStore: LangGraph store instance
+        AsyncRedisStore: LangGraph store instance
+
+    Raises:
+        RuntimeError: If store is not initialized (lifespan not started)
     """
-    DB_URI = "postgresql://postgres:postgres@localhost:5442/postgres?sslmode=disable"
-    return PostgresStore.from_conn_string(DB_URI)
+    global _store
+    if _store is None:
+        msg = "Store not initialized. Start the application to initialize Redis connections."
+        raise RuntimeError(msg)
+    return _store
+
+
+def set_store(store: AsyncRedisStore) -> None:
+    """Set the global store instance.
+
+    Called by lifespan context manager during startup.
+
+    Args:
+        store: LangGraph store instance
+    """
+    global _store
+    _store = store

@@ -43,4 +43,17 @@ __all__ = [
     "get_text_stream_handler",
     "get_voice_gateway_service",
     "reset_voice_dependencies",
+    # All
+    "reset_all_dependencies",
 ]
+
+
+def reset_all_dependencies() -> None:
+    """Reset all dependency singletons.
+
+    Useful for testing to ensure clean state between tests.
+    """
+    reset_dspy()
+    reset_database_dependencies()
+    reset_application_dependencies()
+    reset_voice_dependencies()
