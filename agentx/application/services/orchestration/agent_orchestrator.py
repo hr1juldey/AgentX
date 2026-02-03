@@ -6,7 +6,6 @@ Following the service pattern from mimicus.
 
 from uuid import UUID
 
-from agentx.agent.graph import get_graph
 from agentx.agent.state import AgentState
 from agentx.core.dependencies import ensure_dspy_configured
 
@@ -24,6 +23,9 @@ class AgentOrchestrator:
     def __init__(self) -> None:
         """Initialize the orchestrator with dependencies."""
         ensure_dspy_configured()
+        # Lazy import to avoid circular dependency with agentx.agent.graph
+        from agentx.agent.graph import get_graph
+
         self._graph = get_graph()
 
     async def execute_query(
