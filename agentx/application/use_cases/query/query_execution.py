@@ -34,6 +34,8 @@ async def execute_query(
     # Step 2: Build initial state for LangGraph
     initial_state = {
         "messages": [HumanMessage(content=query_text)],
+        "query": query_text,  # Required by AgentState and query_planner_node
+        "user_id": "default",  # Required by AgentState
         "ui": [],
         "session_id": session_id,
         "reasoning_steps": 0,
