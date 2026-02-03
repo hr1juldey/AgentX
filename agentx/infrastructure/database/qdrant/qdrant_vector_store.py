@@ -1,6 +1,8 @@
 """Qdrant vector store for Real AgentX v0.1.
 
 Composes all Qdrant services into a single interface.
+
+Phase 2 Fix: Updated to use unified ColBERTEmbedder from colbert/colbert_embedder.py.
 """
 
 from uuid import UUID
@@ -10,7 +12,9 @@ from qdrant_client import QdrantClient
 from agentx.core.config import get_settings
 from agentx.core.memory_config import get_memory_config
 from agentx.domain.entities.enums import MemoryType, TemporalType
-from agentx.infrastructure.database.qdrant.embedding_service import ColBERTEmbedder
+from agentx.infrastructure.external.colbert.colbert_embedder import (
+    ColBERTEmbedder,
+)
 from agentx.infrastructure.database.qdrant.models import MemoryMetadata
 from agentx.infrastructure.database.qdrant.retrieve import (
     get_all_memories as _get_all_memories,
@@ -25,6 +29,8 @@ class QdrantVectorStore:
     """Qdrant adapter for ColBERT multivector storage.
 
     Supports Tier 2 (session-scoped) and Tier 3 (persistent) memories.
+
+    Phase 2 Fix: Now uses unified ColBERTEmbedder from colbert/colbert_embedder.py.
     """
 
     def __init__(self) -> None:
@@ -36,7 +42,9 @@ class QdrantVectorStore:
     @property
     def embedder(self) -> ColBERTEmbedder:
         if self._embedder is None:
-            self._embedder = ColBERTEmbedder(self.memory_config.colbert_model_name)
+            # FIX: Use qdrant_url from settings instead of model_name
+            settings = get_settings()
+            self._embedder = ColBERTEmbedder(qdrant_url=settings.database.qdrant_url)
         return self._embedder
 
     async def store_memory(
