@@ -28,7 +28,8 @@
 │  │  │  ┌────────────┐  ┌────────────┐  ┌────────────┐        │     │    │
 │  │  │  │ RAGContext │  │  Analyst   │  │ Researcher │        │     │    │
 │  │  │  │ Generator  │  │   Agent    │  │   Agent    │        │     │    │
-│  │  │  │ (Real RAG) │  │ (Enhanced) │  │ (Enhanced) │        │     │    │
+│  │  │  │(Real RAG:  │  │ (Enhanced) │  │ (Enhanced) │        │     │    │
+│  │  │  │QdrantColB) │  │            │  │            │        │     │    │
 │  │  │  └────────────┘  └────────────┘  └────────────┘        │     │    │
 │  │  └────────────────────────────────────────────────────────┘     │    │
 │  └─────────────────────────────────────────────────────────────────┘    │
@@ -49,13 +50,16 @@
 │  │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │    │
 │  │  │ MemoryRecord │    │    Mem0      │    │   Qdrant     │       │    │
 │  │  │   (NEW)      │◀──▶│   Adapter    │◀──▶│ VectorStore  │       │    │
-│  │  │              │    │  (Enhanced)  │    │(ColBERTv2)   │       │    │
+│  │  │              │    │(Management   │    │(ColBERTv2    │       │    │
+│  │  │              │    │ Only:        │    │ Direct for   │       │    │
+│  │  │              │    │consolidate,  │    │Retrieval!)   │       │    │
+│  │  │              │    │categorize)   │    │              │       │    │
 │  │  └──────────────┘    └──────────────┘    └──────────────┘       │    │
 │  │                                                                 │    │
 │  │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │    │
-│  │  │ContextRotMgr │    │Reinforcement │    │ Mem0DSPy     │       │    │
-│  │  │   (NEW)      │    │   Tracker    │    │  Retriever   │       │    │
-│  │  │              │    │    (NEW)     │    │    (NEW)     │       │    │
+│  │  │ContextRotMgr │    │Reinforcement │    │ QdrantColB   │       │    │
+│  │  │   (NEW)      │    │   Tracker    │    │  ertRetriever│       │    │
+│  │  │              │    │    (NEW)     │    │   (NEW)      │       │    │
 │  │  └──────────────┘    └──────────────┘    └──────────────┘       │    │
 │  │                                                                 │    │
 │  │  ┌──────────────┐    ┌──────────────┐                          │    │
@@ -103,11 +107,11 @@ agentx/
 │                               #       rag_conflict_resolution_service.py, search_term_pattern_service.py
 │
 ├── infrastructure/               # External concerns (PRESERVED + EXTENDED)
-│   ├── retrieval/                # ✨ NEW: mem0_dspy_retriever.py
+│   ├── retrieval/                # ✨ NEW: qdrant_colbert_retriever.py
 │   ├── memory/                   # ✏️ ADD: context_rot_manager.py, reinforcement_tracker.py
-│   │   └── mem0_adapter.py       # ✏️ EDIT: Enhance with work-experience support
+│   │   └── mem0_adapter.py       # ✏️ EDIT: Memory management ONLY (consolidate, categorize, TTL)
 │   └── database/qdrant/
-│       └── qdrant_vector_store.py # ✅ PRESERVED (ColBERTv2)
+│       └── qdrant_vector_store.py # ✅ PRESERVED (ColBERTv2 for retrieval)
 │
 ├── agent/                        # DSPy agents (✏️ HEAVY EDITS)
 │   ├── dspy_signatures/          # ✨ NEW: Class-based signatures
@@ -186,10 +190,14 @@ agentx/
 │  Research Workers with Real RAG (FIXED)                     │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │ RAGContextGenerator (was RAGDSPyAgent)               │   │
-│  │  └─▶ Mem0DSPyRetriever(query, user_id)               │   │
-│  │      └─▶ Mem0MemoryAdapter.search_memories()         │   │
-│  │         └─▶ QdrantVectorStore (ColBERTv2)            │   │
+│  │  └─▶ QdrantColBERTRetriever(query, k=10)             │   │
+│  │      └─▶ QdrantVectorStore.search_memories()         │   │
+│  │         └─▶ ColBERTEmbedder.embed_text()             │   │
 │  │            └─▶ Returns: RetrievedMemory[]            │   │
+│  │                                                         │   │
+│  │ NOTE: Mem0 used for memory MANAGEMENT only            │   │
+│  │       (consolidation, categorization, TTL)            │   │
+│  │       NOT for embeddings/retrieval                    │   │
 │  └──────────────────────────────────────────────────────┘   │
 │                                                             │
 │  ┌──────────────────────────────────────────────────────┐   │
@@ -238,11 +246,15 @@ agentx/
 ┌─────────────────────────────────────────────────────────────┐
 │  Memory Retrieval (Adaptive)                                │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │ Mem0DSPyRetriever.__call__(query, k=20)              │   │
-│  │  1. Get k candidates from Mem0                       │   │
-│  │  2. Filter: quality >= threshold OR i < min_results  │   │
-│  │  3. Return filtered list                             │   │
+│  │ QdrantColBERTRetriever.__call__(query, k=20)         │   │
+│  │  1. Call QdrantVectorStore.search_memories()        │   │
+│  │  2. ColBERTEmbedder.embed_text(query)                │   │
+│  │  3. Filter: quality >= threshold OR i < min_results │   │
+│  │  4. Return filtered list                             │   │
 │  └──────────────────────────────────────────────────────┘   │
+│                                                             │
+│  NOTE: Mem0 handles memory MANAGEMENT (consolidation,       │
+│        categorization, expiration) NOT retrieval           │
 └─────────────────────────────────────────────────────────────┘
        │
        ▼
@@ -267,7 +279,7 @@ agentx/
 
 | Decision | Option Chosen | Alternatives | Rationale |
 |----------|---------------|--------------|-----------|
-| **Retrieval Architecture** | DSPy wraps Mem0, Mem0 wraps Qdrant | Direct dspy-qdrant | Single embedding source (ColBERTv2), avoids duplication |
+| **Retrieval Architecture** | DSPy wraps QdrantVectorStore (ColBERTv2) directly, Mem0 for management only | DSPy wraps Mem0 for retrieval | ColBERTv2 multivectors incompatible with Mem0's FastEmbed (TextEmbedding), Mem0 provides memory management services (consolidate, categorize, expire) |
 | **Memory Schema** | Work-experience only (not facts) | Fact/knowledge storage | User requirement: "AGENTS REMEMBER WHAT THEY DID" |
 | **Search Planning** | ENHANCE QueryPlanner (not replace) | Replace with memory-driven | PRESERVES existing ExecutionPlan 0-to-N pattern |
 | **Signature Style** | Class-based (not inline) | Keep inline strings | Weak LLM compatible (gemma3:4b) |
@@ -300,35 +312,36 @@ agentx/
 - **Inconsistent search**: Same query returns different results from DSPy vs Mem0
 - **Memory fragmentation**: Work-experience memories separate from RAG memories
 
-### 4.2 Approach B: Mem0DSPyRetriever (CHOSEN)
+### 4.2 Approach B: QdrantColBERTRetriever (CHOSEN)
 
 | Aspect | Rating | Notes |
 |--------|--------|-------|
-| Simplicity | ⭐⭐ | Additional wrapper layer |
-| Performance | ⭐⭐ | One indirection via Mem0 |
-| Maintainability | ⭐⭐⭐ | Single embedding source |
-| Consistency | ⭐⭐⭐ | Same embeddings everywhere |
+| Simplicity | ⭐⭐⭐ | Direct Qdrant access |
+| Performance | ⭐⭐⭐ | No unnecessary indirection |
+| Maintainability | ⭐⭐⭐ | Clear separation: retrieval vs management |
+| Consistency | ⭐⭐⭐ | Single ColBERTv2 embedding source |
 
 **Pros**:
 
-- **Single embedding source**: ColBERTv2 used consistently
-- **Unified memory**: All memories in one place (Mem0)
-- **DSPy-compatible**: Returns format DSPy expects (long_text attribute)
-- **Work-experience tracking**: Mem0 can store work patterns
+- **Direct ColBERTv2 access**: QdrantVectorStore with LateInteractionTextEmbedding
+- **Clear separation**: Retrieval (Qdrant/ColBERT) vs Management (Mem0 consolidation)
+- **No embedding duplication**: Single ColBERTv2 source
+- **DSPy-compatible**: Returns format DSPy expects
+- **Mem0 for management**: Consolidation, categorization, TTL, graph memory
 
 **Cons**:
 
-- Additional layer (Mem0DSPyRetriever)
-- Dependent on Mem0 adapter
+- Mem0 cannot use ColBERT (uses FastEmbed TextEmbedding for internal indexing)
+- Two separate systems to manage (Qdrant for retrieval, Mem0 for management)
 
-### 4.3 Decision: Approach B (Mem0DSPyRetriever)
+### 4.3 Decision: Approach B (QdrantColBERTRetriever)
 
 **Rationale**:
 
-1. **User requirement**: "AGENTS REMEMBER WHAT THEY DID" - unified memory is essential
-2. **Architecture consistency**: Single ColBERTv2 source prevents fragmentation
-3. **DSPy compatibility**: Wrapper returns format DSPy expects
-4. **Preserves existing**: Mem0 adapter already working, just wrap it
+1. **ColBERT incompatibility**: Mem0's FastEmbed uses `TextEmbedding` (single dense vectors) while ColBERT requires `LateInteractionTextEmbedding` (multivector matrices) - fundamentally incompatible
+2. **Architecture separation**: Clear separation of concerns - retrieval precision (ColBERT via Qdrant) vs memory management (Mem0 consolidation/categorization)
+3. **User requirement**: "AGENTS REMEMBER WHAT THEY DID" - Mem0 handles management (what to consolidate/categorize), Qdrant handles retrieval (semantic search)
+4. **DSPy compatibility**: Direct QdrantVectorStore wrapper for DSPy
 
 ---
 
@@ -342,7 +355,8 @@ agentx/
 | `SessionPerformance` | Route tracking for LangGraph decisions | dataclasses, UUID, RouteOutcome enum |
 | `RoutingDecisionService` | Suggest routing strategies based on history | SessionPerformance, Mem0 |
 | `SearchGuidanceModule` | Retrieve user preferences for search guidance | DSPy, Mem0 |
-| `Mem0DSPyRetriever` | DSPy-compatible retriever wrapping Mem0 | Mem0MemoryAdapter, QdrantVectorStore |
+| `QdrantColBERTRetriever` | DSPy-compatible retriever wrapping QdrantVectorStore | QdrantVectorStore, ColBERTEmbedder |
+| `Mem0MemoryAdapter` | Memory management ONLY (consolidation, categorization, TTL, graph memory) | Mem0 client |
 | `ContextRotManager` | TTL, decay, supersede management | MemoryRecord, datetime |
 | `ReinforcementTracker` | Retrieval outcome tracking for TTL adjustment | UUID, bool outcomes |
 | `SynthesisService` | Combine multiple research sources | DSPy ChainOfThought |
@@ -350,7 +364,7 @@ agentx/
 | `HybridSearchService` | Decision logic: RAG vs SearXNG vs both | DSPy, SearchTermPatternService |
 | `SearchTermPatternService` | Learn from past searches, predict terms for new queries | SearchTermPattern, Mem0 |
 | `SearchTermPattern` | Pattern entity: topic_type, search_terms, success_count, avg_quality_score | dataclasses, UUID, datetime |
-| RAGContextGenerator | Real RAG using Mem0 (was fake) | Mem0DSPyRetriever |
+| RAGContextGenerator | Real RAG using QdrantVectorStore (ColBERTv2) | QdrantColBERTRetriever |
 | All 24 tool modules | Fixed: class signatures + dspy.Prediction returns | DSPy signatures |
 
 ### 5.2 Port Assignments
@@ -456,18 +470,18 @@ class SourceType(str, Enum):
 Batch 0a: MemoryRecord + enums
 Batch 0b: SessionPerformance + RoutingDecisionService
 Batch 0b-a: SearchGuidanceModule (enhances QueryPlanner)
-Batch 0c: Adaptive Retrieval (Mem0DSPyRetriever)
+Batch 0c: Adaptive Retrieval (QdrantColBERTRetriever)
 Batch 0d: ContextRotManager + ReinforcementTracker
 ```
 
 **Risk**: None (NEW files, no existing code changed)
 
-### 8.2 Phase 1: Critical Content Quality (3 files modified)
+### 8.2 Phase 1: Critical Content Quality (3 files modified, 1 NEW)
 
 ```
-Batch 1: rag_agent.py (dspy.Predict → Mem0DSPyRetriever)
-Batch 2: agents/memory.py (dspy.Predict → Mem0MemoryAdapter)
-Batch 3: Specialist agents Mem0 integration
+Batch 1: rag_agent.py (dspy.Predict → QdrantColBERTRetriever)
+Batch 2: agents/memory.py (dspy.Predict → QdrantVectorStore direct access)
+Batch 3: Specialist agents QdrantVectorStore integration
 Batch 4: SynthesisService (NEW)
 ```
 

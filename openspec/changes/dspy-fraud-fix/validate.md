@@ -17,7 +17,7 @@
 | No architectural violations | ✅ PASS | Specs follow Clean Architecture layers |
 
 **Verification Examples from Spec Drafts**:
-- ✅ `from agentx.infrastructure.retrieval.mem0_dspy_retriever import Mem0DSPyRetriever`
+- ✅ `from agentx.infrastructure.retrieval.qdrant_colbert_retriever import QdrantColBERTRetriever`
 - ✅ `from agentx.agent.dspy_signatures.analyst import QueryAnalysisSignature`
 - ✅ `from agentx.domain.entities.memory_record import MemoryRecord`
 
@@ -58,6 +58,8 @@ pyrefly check agentx/ --summarize-errors
 | Import hacks | ✅ ABSENT | All imports are explicit and absolute |
 
 **Examples of Good Patterns from Specs**:
+- ✅ `QdrantColBERTRetriever` wraps QdrantVectorStore for DSPy (single responsibility)
+- ✅ `Mem0MemoryAdapter` handles memory management only (consolidation, categorization, TTL)
 - ✅ `ContextRotManager` handles TTL, decay, supersede (single responsibility)
 - ✅ `ReinforcementTracker` logs retrieval outcomes (single responsibility)
 - ✅ `SynthesisService` combines research sources (single responsibility)
@@ -91,7 +93,8 @@ pyrefly check agentx/ --summarize-errors
 **Examples of Clear Requirements**:
 - ✅ "Memory stores WORK EXPERIENCE, NOT FACTS" (clear prohibition)
 - ✅ "ENHANCE QueryPlannerModule, NOT REPLACE" (clear action type)
-- ✅ "All components use SAME ColBERTv2" (clear constraint)
+- ✅ "QdrantVectorStore with ColBERTv2 for retrieval, Mem0 for management only" (clear separation)
+- ✅ "ColBERTv2 multivectors incompatible with Mem0's FastEmbed TextEmbedding" (clear technical constraint)
 
 ### 2.3 Feasibility
 
@@ -103,7 +106,8 @@ pyrefly check agentx/ --summarize-errors
 
 **Feasibility Evidence**:
 - ✅ All DSPy patterns from official DSPy docs
-- ✅ Mem0 integration follows existing mem0_adapter.py pattern
+- ✅ QdrantVectorStore with ColBERTEmbedder already exists
+- ✅ Mem0 integration for memory management (not retrieval) is feasible
 - ✅ Clean Architecture follows mimicus patterns (reference hierarchy)
 
 ---
@@ -135,6 +139,7 @@ pyrefly check agentx/ --summarize-errors
 | MemoryRecordEntity | (Not in LLD) | NEW entity for work-experience memory + source_type, confidence_score | Foundation for memory system + conflict resolution |
 | SessionPerformanceEntity | (Not in LLD) | NEW entity for routing history | Foundation for adaptive routing |
 | SearchGuidanceModule | (Not in LLD) | NEW module for memory-guided search | Enhancement to existing QueryPlannerModule |
+| QdrantColBERTRetriever | (Not in LLD) | NEW DSPy-compatible retriever wrapping QdrantVectorStore | Direct ColBERTv2 access (incompatible with Mem0's FastEmbed) |
 | SearchTermPatternEntity | (Not in LLD) | NEW entity for search term learning | Foundation for term pattern memory |
 | RAGConflictResolutionService | (Not in LLD) | NEW service for 4-tier conflict resolution | Foundation for handling contradictory memories |
 | HybridSearchService | (Not in LLD) | NEW service for RAG vs SearXNG decision | Foundation for hybrid search strategy |
@@ -149,8 +154,8 @@ pyrefly check agentx/ --summarize-errors
 
 | Issue | Location | Fix |
 |-------|----------|-----|
-| Fake RAG (Fraud #1) | rag_agent.py | Replace dspy.Predict with Mem0DSPyRetriever |
-| Fake Memory (Fraud #2) | agents/memory.py | Replace dspy.Predict with Mem0MemoryAdapter |
+| Fake RAG (Fraud #1) | rag_agent.py | Replace dspy.Predict with QdrantColBERTRetriever |
+| Fake Memory (Fraud #2) | agents/memory.py | Replace dspy.Predict with QdrantVectorStore |
 | Inline Signatures (Fraud #6-17) | 12 tool files | Create class-based signatures |
 | Wrong Return Types (Fraud #18-41) | 24 tool modules | Wrap dict in dspy.Prediction |
 | Ignored Quality Scores (Fraud #5) | reranker.py | Add actual filtering logic |
@@ -160,6 +165,8 @@ pyrefly check agentx/ --summarize-errors
 | No Term Pattern Learning | NEW spec | SearchTermPatternService (learn from past searches) |
 
 **Total Critical Fixes**: 75+ issues across 62 files + 3 NEW services
+
+**Architecture Note**: Mem0 used for memory MANAGEMENT (consolidation, categorization, TTL), NOT for retrieval. QdrantVectorStore with ColBERTv2 handles all retrieval operations.
 
 ### 4.2 Optional Improvements
 

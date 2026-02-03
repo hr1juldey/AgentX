@@ -38,9 +38,10 @@ These issues prevent the system from delivering on its architecture promises of 
 
 ### Desired State
 
-- **Real RAG**: Mem0-powered retrieval with ColBERTv2 embeddings
-- **Real Memory**: Direct Mem0 integration for work-experience storage
+- **Real RAG**: QdrantVectorStore with ColBERTv2 embeddings directly (NOT through Mem0)
+- **Real Memory**: QdrantVectorStore for retrieval, Mem0 for memory management (consolidation, categorization)
 - **Proper DSPy**: Class-based signatures, `dspy.Prediction` returns, cache enabled
+- **DSPy with Qdrant Retriever**: Configure `dspy.configure(rm=QdrantColBertRetriever())` directly
 - **Adaptive Retrieval**: Quality-score-based filtering (not fixed k=10)
 - **Smart Routing**: LangGraph routes based on session performance history
 - **Memory Hygiene**: TTL, supersede, decay, and reinforcement mechanisms

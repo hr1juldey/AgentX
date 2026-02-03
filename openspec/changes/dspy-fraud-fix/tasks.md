@@ -70,9 +70,9 @@ assert record.access_count == 1
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create Mem0DSPyRetriever | `agentx/infrastructure/retrieval/mem0_dspy_retriever.py` | ✅ | Wraps Mem0MemoryAdapter |
-| Add quality filtering | `agentx/infrastructure/retrieval/mem0_dspy_retriever.py` | ✅ | k=20, threshold=0.6, min_results=3 |
-| Update Mem0MemoryAdapter | `agentx/infrastructure/memory/mem0_adapter.py` | ✅ | Support quality filtering |
+| Create QdrantColBERTRetriever | `agentx/infrastructure/retrieval/qdrant_colbert_retriever.py` | ✅ | Wraps QdrantVectorStore with ColBERTEmbedder |
+| Add quality filtering | `agentx/infrastructure/retrieval/qdrant_colbert_retriever.py` | ✅ | k=20, threshold=0.6, min_results=3 |
+| Configure DSPy with retriever | `agentx/core/dependency_facades/dspy.py` | ✅ | dspy.configure(rm=QdrantColBERTRetriever()) |
 | Run verification | Verification script | ✅ | All checks pass |
 
 #### Batch 0d: Context Rotting Prevention
@@ -92,33 +92,53 @@ assert record.access_count == 1
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create Mem0DSPyRetriever | `agentx/infrastructure/retrieval/mem0_dspy_retriever.py` | ✅ | Wraps Mem0, uses ColBERTv2 |
-| Replace dspy.Predict with real retrieval | `agentx/agent/dspy_agents/rag_agent.py` | ✅ | Use Mem0DSPyRetriever |
+| Create QdrantColBERTRetriever | `agentx/infrastructure/retrieval/qdrant_colbert_retriever.py` | ✅ | Wraps QdrantVectorStore with ColBERTEmbedder |
+| Replace dspy.Predict with real retrieval | `agentx/agent/dspy_agents/rag_agent.py` | ✅ | Use QdrantColBERTRetriever |
 | Rename RAGDSPyAgent → RAGContextGenerator | `agentx/agent/dspy_agents/rag_agent.py` | ✅ | Optional (misleading name) |
-| Verify real retrieval | Manual test | ✅ | Actual memories from Mem0 |
+| Verify real retrieval | Manual test | ✅ | Actual memories from Qdrant (ColBERTv2) |
 
 **Fraud Fixed**: #1 - Fake RAG
+
+**Acceptance Criteria**:
+```python
+from agentx.agent.dspy_agents.rag_agent import RAGDSPyAgent
+agent = RAGDSPyAgent()
+result = agent.retrieve_context('test query', user_id='test_user')
+print(f'Retrieved {len(result.retrieved_memories)} memories via Qdrant/ColBERTv2')
+```
 
 #### Batch 2: MemoryAgent Real Integration
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
 | Update MemorySignature | `agentx/agent/dspy_signatures/main_signatures.py` | ⬜ | Explicit for gemma3:4b |
-| Replace dspy.Predict with Mem0 | `agentx/agent/dspy_agents/agents/memory.py` | ⬜ | Use Mem0MemoryAdapter |
-| Verify real memory access | Manual test | ⬜ | Actual memories from Mem0 |
+| Replace dspy.Predict with QdrantVectorStore | `agentx/agent/dspy_agents/agents/memory.py` | ⬜ | Use QdrantVectorStore directly |
+| Verify real memory access | Manual test | ⬜ | Actual memories from Qdrant (ColBERTv2) |
 
 **Fraud Fixed**: #2 - Fake Memory
 
-#### Batch 3: Specialist Agents Mem0 Integration
+**Acceptance Criteria**:
+```python
+from agentx.agent.dspy_agents.agents.memory import MemoryAgent
+agent = MemoryAgent()
+result = await agent.forward('test query', session_id='test123')
+print(f'Context: {result.context[:100]}...')
+print(f'Sources: {result.sources}')
+print(f'Via QdrantVectorStore with ColBERTv2 embeddings')
+```
+
+#### Batch 3: Specialist Agents QdrantVectorStore Integration
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Add Mem0 pre-retrieval | `agentx/agent/dspy_agents/agents/main.py` | ⬜ | Pre-retrieve user history |
-| Add Mem0 pre-retrieval | `agentx/agent/dspy_agents/agents/analyst.py` | ⬜ | Pre-retrieve user context |
-| Add Mem0 pre-retrieval | `agentx/agent/dspy_agents/agents/designer.py` | ⬜ | Pre-retrieve UI preferences |
-| Create memory tools | `agentx/agent/tools/memory_tools.py` | ⬜ | retrieve_memory_tool, store_memory_tool |
-| Update AVAILABLE_TOOLS | `agentx/agent/tools/main_tools.py` | ⬜ | Add memory tools |
+| Add QdrantVectorStore pre-retrieval | `agentx/agent/dspy_agents/agents/main.py` | ⬜ | Pre-retrieve user history via ColBERTv2 |
+| Add QdrantVectorStore pre-retrieval | `agentx/agent/dspy_agents/agents/analyst.py` | ⬜ | Pre-retrieve user context via ColBERTv2 |
+| Add QdrantVectorStore pre-retrieval | `agentx/agent/dspy_agents/agents/designer.py` | ⬜ | Pre-retrieve UI preferences via ColBERTv2 |
+| Create memory management tools | `agentx/agent/tools/memory_tools.py` | ⬜ | Mem0 management tools (consolidate, categorize) |
+| Update AVAILABLE_TOOLS | `agentx/agent/tools/main_tools.py` | ⬜ | Add memory management tools |
 | Run verification | Manual test | ⬜ | Tools available in ReAct |
+
+**Note**: Memory tools use Mem0 for MANAGEMENT (consolidation, categorization), NOT retrieval
 
 #### Batch 4: Multi-Source Synthesis
 
@@ -510,7 +530,7 @@ fi
 |-----------|-------------|-----------------|
 | MemoryRecord stores work-experience | Unit test | Fields: data_input, instruction_input, reasoning_done, output_produced |
 | SessionPerformance tracks routes | Unit test | RouteOutcome, AgentStep recorded |
-| Real RAG retrieves from Mem0 | Integration test | Actual memories returned (not fake) |
+| Real RAG retrieves from Qdrant (ColBERTv2) | Integration test | Actual memories returned (not fake) |
 | No inline signatures | Verification script | 0 matches |
 | No dict returns | Verification script | 0 matches |
 | DSPy cache enabled | Grep check | cache=True in dspy.py |
@@ -530,8 +550,8 @@ fi
 
 | Fraud ID | Description | Verification |
 |----------|-------------|--------------|
-| #1 | Fake RAG (dspy.Predict) | Mem0DSPyRetriever used |
-| #2 | Fake Memory (dspy.Predict) | Mem0MemoryAdapter used |
+| #1 | Fake RAG (dspy.Predict) | QdrantColBERTRetriever used |
+| #2 | Fake Memory (dspy.Predict) | QdrantVectorStore used directly |
 | #5 | Ignored Quality Scores | Filtering logic in reranker.py |
 | #6-17 | Inline Signatures | 0 inline signatures found |
 | #18-41 | Wrong Return Types | 0 dict returns found |
@@ -615,7 +635,7 @@ This change unlocks:
 | Pyrefly errors | 0 | `pyrefly check` |
 | Inline signatures | 0 | Verification script |
 | Dict returns | 0 | Verification script |
-| Real RAG operational | 100% | Integration test |
+| Real RAG operational (Qdrant/ColBERTv2) | 100% | Integration test |
 | End-to-end latency | < 60s | Benchmark |
 
 ---
