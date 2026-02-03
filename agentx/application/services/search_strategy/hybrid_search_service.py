@@ -11,17 +11,15 @@ Decision Logic:
 
 from dataclasses import dataclass, field
 
-from agentx.application.services.query_characteristic_analyzer import (
+from agentx.application.services.search_strategy.query_characteristic_analyzer import (
     QueryCharacteristicAnalyzer,
     QueryCharacteristics,
 )
-from agentx.application.services.search_strategy_decider import (
+from agentx.application.services.search_strategy.search_strategy_decider import (
     SearchStrategy,
     SearchStrategyDecider,
 )
-from agentx.application.services.search_term_pattern_service import (
-    SearchTermPatternService,
-)
+from agentx.application.services.search_patterns import SearchTermPatternService
 
 
 @dataclass

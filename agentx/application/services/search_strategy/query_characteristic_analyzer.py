@@ -9,7 +9,7 @@ from enum import Enum
 import dspy
 
 from agentx.agent.dspy_signatures.main_signatures import MainAgentSignature
-from agentx.application.services.query_keywords import (
+from agentx.application.services.search_strategy.query_keywords import (
     CONTRADICTING_KEYWORDS,
     CURRENT_EVENT_KEYWORDS,
     ESTABLISHED_KEYWORDS,

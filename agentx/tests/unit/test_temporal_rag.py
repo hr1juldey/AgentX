@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from agentx.application.services.temporal_rag_service import TemporalRAGService
+from agentx.application.services.temporal_rag import TemporalRAGService
 from agentx.domain.entities.enums import TemporalType
 
 

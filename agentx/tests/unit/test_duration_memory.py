@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from agentx.application.services.duration_memory_service import DurationMemoryService
+from agentx.application.services.duration import DurationMemoryService
 from agentx.domain.entities.enums import TemporalType
 from agentx.domain.entities.memory_consolidation import MemoryConsolidationEntity
 

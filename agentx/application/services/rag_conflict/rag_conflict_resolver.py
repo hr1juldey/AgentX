@@ -9,27 +9,15 @@ Delegates to:
 - LLMFallbackSynthesizer for tier 4 (LLM fallback)
 """
 
-from dataclasses import dataclass
-from typing import Optional
-
-from agentx.application.services.conflict_detector import ConflictDetector
-from agentx.application.services.llm_fallback_synthesizer import (
+from agentx.application.services.rag_conflict.conflict_detector import (
+    ConflictDetector,
+)
+from agentx.application.services.rag_conflict.llm_fallback_synthesizer import (
     LLMFallbackSynthesizer,
 )
-from agentx.application.services.tier_resolver import TierResolver
+from agentx.application.services.rag_conflict.models import ConflictResolutionResult
+from agentx.application.services.rag_conflict.tier_resolver import TierResolver
 from agentx.domain.entities.memory_record import MemoryRecord
-
-
-@dataclass
-class ConflictResolutionResult:
-    """Result of conflict resolution process."""
-
-    resolved_memory: Optional[MemoryRecord] = None
-    conflicts_detected: int = 0
-    conflicts_resolved: int = 0
-    llm_fallback_used: bool = False
-    resolution_tier: str = "none"
-    reasoning: str = ""
 
 
 class RAGConflictResolver:

@@ -9,9 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from agentx.application.services.duration_memory_service import (
-    DurationMemoryService,
-)
+from agentx.application.services.duration import DurationMemoryService
 from agentx.domain.entities.memory_consolidation import MemoryConsolidationEntity
 from agentx.infrastructure.database.qdrant_vector_store import QdrantVectorStore
 

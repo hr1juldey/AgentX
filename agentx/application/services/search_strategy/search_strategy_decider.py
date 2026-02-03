@@ -6,7 +6,7 @@ Decides which search strategy to use based on query characteristics.
 from dataclasses import dataclass
 from enum import Enum
 
-from agentx.application.services.query_characteristic_analyzer import (
+from agentx.application.services.search_strategy.query_characteristic_analyzer import (
     CharacteristicAnalysis,
     QueryCharacteristics,
 )

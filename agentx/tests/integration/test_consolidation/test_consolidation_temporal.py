@@ -7,9 +7,7 @@ from uuid import uuid4
 
 import pytest
 
-from agentx.application.services.duration_memory_service import (
-    DurationMemoryService,
-)
+from agentx.application.services.duration import DurationMemoryService
 from agentx.domain.entities.enums import TemporalType
 
 

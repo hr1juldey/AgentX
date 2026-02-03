@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from agentx.application.services.temporal_rag_service import TemporalRAGService
+from agentx.application.services.temporal_rag import TemporalRAGService
 from agentx.domain.entities.enums import TemporalType
 from agentx.infrastructure.database.qdrant_vector_store import QdrantVectorStore
 

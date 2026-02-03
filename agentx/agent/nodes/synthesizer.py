@@ -6,7 +6,7 @@ and streams tokens to the frontend for progressive disclosure.
 
 from typing import AsyncGenerator
 
-from agentx.application.services.synthesis_service import SynthesisService
+from agentx.application.services.synthesis import SynthesisService
 from agentx.domain.models.graph_state import AgentState
 from agentx.domain.models.streaming_events import (
     CompleteEvent,

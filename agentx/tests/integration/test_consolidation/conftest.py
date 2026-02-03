@@ -9,10 +9,8 @@ from agentx.application.use_cases.consolidate_memory_use_case import (
     ConsolidateMemoryUseCase,
 )
 from agentx.application.use_cases.store_memory_use_case import StoreMemoryUseCase
-from agentx.application.services.duration_memory_service import (
-    DurationMemoryService,
-)
-from agentx.application.services.temporal_rag_service import TemporalRAGService
+from agentx.application.services.duration import DurationMemoryService
+from agentx.application.services.temporal_rag import TemporalRAGService
 from agentx.infrastructure.database.qdrant_vector_store import QdrantVectorStore
 
 

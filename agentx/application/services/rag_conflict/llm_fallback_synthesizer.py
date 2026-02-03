@@ -13,7 +13,7 @@ from agentx.agent.dspy_signatures.synthesis_signatures import (
 )
 from agentx.core.config import get_settings
 from agentx.domain.entities.memory_record import MemoryRecord, SourceType
-from agentx.application.services.rag_conflict_resolver import ConflictResolutionResult
+from agentx.application.services.rag_conflict.models import ConflictResolutionResult
 
 settings = get_settings()
 

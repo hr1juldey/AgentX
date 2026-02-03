@@ -6,8 +6,12 @@ for future queries based on topic patterns.
 
 from typing import Optional
 
-from agentx.application.services.pattern_storage import PatternStorage
-from agentx.application.services.topic_detector import TopicDetector
+from agentx.application.services.search_patterns.pattern_storage import (
+    PatternStorage,
+)
+from agentx.application.services.search_patterns.topic_detector import (
+    TopicDetector,
+)
 from agentx.core.config import get_settings
 from agentx.domain.entities.search_term_pattern import (
     SearchTermPattern,

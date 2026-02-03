@@ -3,7 +3,7 @@
 Auto-detects topic type from query keywords.
 """
 
-from agentx.application.services.topic_keywords import (
+from agentx.application.services.search_patterns.topic_keywords import (
     FINANCE_KEYWORDS,
     HEALTH_KEYWORDS,
     SCIENCE_KEYWORDS,
