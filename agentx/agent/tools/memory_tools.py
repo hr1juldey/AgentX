@@ -6,6 +6,7 @@ Fixes Fraud #2.1: Fake memory tools that return strings without doing anything.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 
 from agentx.infrastructure.memory.unified_mem0_adapter import UnifiedMem0Adapter
@@ -41,14 +42,14 @@ def consolidate_memories(user_id: str = "default", session_id: str = "") -> str:
     try:
         adapter = _get_adapter()
 
-        # Get all memories for user
-        memories = await adapter.get_memories(user_id, limit=1000)
+        # Get all memories for user (run async in sync context)
+        memories = asyncio.run(adapter.get_memories(user_id, limit=1000))
 
         if not memories:
             return f"No memories to consolidate for user {user_id}"
 
-        # Consolidate using Mem0
-        consolidated = await adapter.consolidate_memories(memories, user_id)
+        # Consolidate using Mem0 (run async in sync context)
+        consolidated = asyncio.run(adapter.consolidate_memories(memories, user_id))
 
         return f"Consolidated {len(consolidated)} memories for user {user_id} in session {session_id or 'default'}"
     except Exception as e:

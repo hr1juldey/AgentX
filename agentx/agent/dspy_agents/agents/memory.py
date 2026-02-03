@@ -1,7 +1,11 @@
 """Memory agent for RAG operations.
 
 Retrieves relevant context from QdrantVectorStore using ColBERTv2 embeddings.
+
+Phase 3 Fix: Converted async forward() to sync for DSPy compatibility.
 """
+
+import asyncio
 
 import dspy
 
@@ -15,6 +19,8 @@ class MemoryAgent(dspy.Module):
 
     Architecture Note: QdrantVectorStore handles retrieval with ColBERTv2.
     Mem0 is used for memory management only (consolidation, categorization, TTL).
+
+    Phase 3 Fix: Now uses sync forward() for DSPy compatibility.
     """
 
     def __init__(self) -> None:
@@ -22,10 +28,13 @@ class MemoryAgent(dspy.Module):
         super().__init__()
         self.vector_store = QdrantVectorStore()
 
-    async def forward(
+    def forward(
         self, query: str, session_id: str, user_id: str = "default"
     ) -> dspy.Prediction:
         """Retrieve relevant context from QdrantVectorStore (real retrieval).
+
+        Phase 3 Fix: Converted from async to sync for DSPy compatibility.
+        DSPy does not support async forward() methods.
 
         Args:
             query: User's question or request.
@@ -35,11 +44,13 @@ class MemoryAgent(dspy.Module):
         Returns:
             dspy.Prediction: Retrieved context with source references.
         """
-        # REAL QdrantVectorStore search (uses ColBERTv2 via ColBERTEmbedder)
-        memories = await self.vector_store.search_memories(
-            query=query,
-            user_id=user_id,
-            limit=10,
+        # Run async search_memories in event loop
+        memories = asyncio.run(
+            self.vector_store.search_memories(
+                query=query,
+                user_id=user_id,
+                limit=10,
+            )
         )
 
         # Format context from memories
@@ -51,3 +62,6 @@ class MemoryAgent(dspy.Module):
             sources=sources,
             retrieval_count=len(memories),
         )
+
+
+__all__ = ["MemoryAgent"]

@@ -2,7 +2,11 @@
 
 Server-driven UI pattern - selects widgets with state awareness.
 Enhanced with QdrantVectorStore pre-retrieval for UI preferences.
+
+Phase 3 Fix: Converted async forward() to sync for DSPy compatibility.
 """
+
+import asyncio
 
 import dspy
 
@@ -15,6 +19,8 @@ class DesignerAgent(dspy.Module):
 
     Server-driven UI pattern from C007.
     Enhanced with QdrantVectorStore pre-retrieval for UI preferences.
+
+    Phase 3 Fix: Now uses sync forward() for DSPy compatibility.
     """
 
     def __init__(self) -> None:
@@ -23,7 +29,7 @@ class DesignerAgent(dspy.Module):
         self.vector_store = QdrantVectorStore()
         self.design = dspy.Predict(DesignerSignature)
 
-    async def forward(
+    def forward(
         self,
         query: str,
         response: str,
@@ -31,6 +37,9 @@ class DesignerAgent(dspy.Module):
         user_id: str = "default",
     ) -> dspy.Prediction:
         """Select appropriate UI widget based on query and context.
+
+        Phase 3 Fix: Converted from async to sync for DSPy compatibility.
+        DSPy does not support async forward() methods.
 
         Args:
             query: User's question or request.
@@ -41,13 +50,15 @@ class DesignerAgent(dspy.Module):
         Returns:
             dspy.Prediction: Widget recommendation with type and props.
         """
-        # Pre-retrieve UI preferences from QdrantVectorStore (ColBERTv2)
+        # Run async search_memories in event loop
         ui_context = ""
         try:
-            memories = await self.vector_store.search_memories(
-                query="UI preferences widget choices design style format",
-                user_id=user_id,
-                limit=5,
+            memories = asyncio.run(
+                self.vector_store.search_memories(
+                    query="UI preferences widget choices design style format",
+                    user_id=user_id,
+                    limit=5,
+                )
             )
             if memories:
                 ui_context = "\n".join([m.get("content", "") for m in memories])
@@ -69,3 +80,6 @@ class DesignerAgent(dspy.Module):
             recommended_widget=result.recommended_widget,  # type: ignore[attr-defined]
             widget_props=result.widget_props,  # type: ignore[attr-defined]
         )
+
+
+__all__ = ["DesignerAgent"]

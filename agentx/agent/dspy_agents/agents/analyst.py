@@ -2,7 +2,11 @@
 
 Extracts intent and entities from user queries.
 Enhanced with QdrantVectorStore pre-retrieval for user context.
+
+Phase 3 Fix: Converted async forward() to sync for DSPy compatibility.
 """
+
+import asyncio
 
 import dspy
 
@@ -14,6 +18,8 @@ class AnalystAgent(dspy.Module):
     """Analyst agent for query understanding and intent extraction.
 
     Enhanced with QdrantVectorStore pre-retrieval for user context.
+
+    Phase 3 Fix: Now uses sync forward() for DSPy compatibility.
     """
 
     def __init__(self) -> None:
@@ -22,8 +28,11 @@ class AnalystAgent(dspy.Module):
         self.vector_store = QdrantVectorStore()
         self.analyze = dspy.Predict(AnalystSignature)
 
-    async def forward(self, query: str, user_id: str = "default") -> dspy.Prediction:
+    def forward(self, query: str, user_id: str = "default") -> dspy.Prediction:
         """Analyze user query to extract intent and entities.
+
+        Phase 3 Fix: Converted from async to sync for DSPy compatibility.
+        DSPy does not support async forward() methods.
 
         Args:
             query: User's question or request.
@@ -32,13 +41,15 @@ class AnalystAgent(dspy.Module):
         Returns:
             dspy.Prediction: Analysis results with intent, entities, tool needs.
         """
-        # Pre-retrieve user context from QdrantVectorStore (ColBERTv2)
+        # Run async search_memories in event loop
         user_context = ""
         try:
-            memories = await self.vector_store.search_memories(
-                query="user query patterns intent extraction history",
-                user_id=user_id,
-                limit=3,
+            memories = asyncio.run(
+                self.vector_store.search_memories(
+                    query="user query patterns intent extraction history",
+                    user_id=user_id,
+                    limit=3,
+                )
             )
             if memories:
                 user_context = "\n".join([m.get("content", "") for m in memories])
@@ -58,3 +69,6 @@ class AnalystAgent(dspy.Module):
             tool_needed=result.tool_needed,  # type: ignore[attr-defined]
             tool_name=result.tool_name,  # type: ignore[attr-defined]
         )
+
+
+__all__ = ["AnalystAgent"]
