@@ -4,6 +4,8 @@ This module contains the routing functions that determine execution flow
 based on the execution plan and Send API for dynamic worker creation.
 """
 
+from typing import Any
+
 from langgraph.types import Send  # type: ignore[import]
 
 from agentx.domain.models.graph_state import AgentState
@@ -33,7 +35,7 @@ def route_by_plan(state: AgentState) -> RoutingPath:
         return RoutingPath.CREATE_WORKERS
 
 
-def assign_workers(state: AgentState) -> list[Send]:
+def _create_worker_sends(state: AgentState) -> list[Send]:
     """Create DYNAMIC workers via Send API based on execution plan.
 
     This is NOT a fixed pipeline. Workers are created DYNAMICALLY based on:
@@ -63,6 +65,23 @@ def assign_workers(state: AgentState) -> list[Send]:
     return [
         Send("research_worker", {"current_task": t.model_dump()}) for t in ready_tasks
     ]
+
+
+def assign_workers_node(state: AgentState) -> dict[str, Any]:
+    """Node that triggers worker creation - returns state updates for LangGraph.
+
+    The actual Send objects are created by the conditional edge routing function
+    (_create_worker_sends) that runs after this node completes.
+
+    Args:
+        state: Current agent state
+
+    Returns:
+        dict: Empty state updates (routing is handled by conditional edge)
+    """
+    # The conditional edge will call _create_worker_sends to generate Send objects
+    # This node just needs to complete successfully
+    return {}
 
 
 def should_continue_routing(state: AgentState) -> str:

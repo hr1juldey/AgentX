@@ -10,7 +10,11 @@ from agentx.agent.nodes.evaluator import evaluator_node, should_continue_researc
 from agentx.agent.nodes.progress_tracker import progress_tracker_node
 from agentx.agent.nodes.query_planner import query_planner_node
 from agentx.agent.nodes.research_worker import research_worker_node
-from agentx.agent.nodes.routing import assign_workers, route_by_plan
+from agentx.agent.nodes.routing import (
+    _create_worker_sends,
+    assign_workers_node,
+    route_by_plan,
+)
 from agentx.agent.nodes.stt_preprocessor import (
     route_by_input_path as stt_route_by_input_path,
     stt_preprocessor_node,
@@ -27,7 +31,7 @@ def register_nodes(builder: StateGraph) -> None:
     builder.add_node("stt_preprocessor", stt_preprocessor_node)  # type: ignore[arg-type]
     builder.add_node("query_planner", query_planner_node)  # type: ignore[arg-type]
     builder.add_node("cache_lookup", cache_lookup_node)  # type: ignore[arg-type]
-    builder.add_node("assign_workers", assign_workers)  # type: ignore[arg-type]
+    builder.add_node("assign_workers", assign_workers_node)  # type: ignore[arg-type]
     builder.add_node("direct_answer", direct_answer_node)  # type: ignore[arg-type]
     builder.add_node("research_worker", research_worker_node)  # type: ignore[arg-type]
     builder.add_node("evaluator", evaluator_node)  # type: ignore[arg-type]
@@ -70,7 +74,7 @@ def register_edges(builder: StateGraph) -> None:
     # Send API: create dynamic workers
     builder.add_conditional_edges(
         "assign_workers",
-        assign_workers,  # Returns list[Send]
+        _create_worker_sends,  # Returns list[Send]
         ["research_worker"],  # Dynamic target
     )
 
