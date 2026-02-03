@@ -2,19 +2,11 @@
 
 Uses Mem0's search which already uses ColBERTv2 via QdrantVectorStore.
 This ensures DSPy, Mem0, and Qdrant all use the SAME embeddings.
+
+Fixes Fraud #3.2: Returns list[str] instead of list[RetrievedMemory] for DSPy compatibility.
 """
 
-from dataclasses import dataclass
 from typing import Any
-
-
-@dataclass
-class RetrievedMemory:
-    """A retrieved memory formatted for DSPy."""
-
-    long_text: str
-    score: float
-    metadata: dict[str, Any]
 
 
 class Mem0DSPyRetriever:
@@ -22,6 +14,8 @@ class Mem0DSPyRetriever:
 
     Uses Mem0's search which already uses ColBERTv2 via QdrantVectorStore.
     This ensures DSPy, Mem0, and Qdrant all use the SAME embeddings.
+
+    FIX: Now returns list[str] for DSPy RM compatibility.
     """
 
     def __init__(
@@ -44,8 +38,10 @@ class Mem0DSPyRetriever:
         k: int | None = None,
         user_id: str = "default_user",
         **kwargs: Any,
-    ) -> list[RetrievedMemory]:
+    ) -> list[str]:
         """Retrieve memories using Mem0's ColBERTv2-powered search.
+
+        FIX: Returns list[str] for DSPy RM compatibility (not list[RetrievedMemory]).
 
         Args:
             query: Search query
@@ -54,21 +50,23 @@ class Mem0DSPyRetriever:
             **kwargs: Additional arguments
 
         Returns:
-            List of retrieved memories filtered by quality
+            list[str]: List of retrieved memory text content (DSPy format)
         """
-        from agentx.infrastructure.memory.mem0_adapter import Mem0MemoryAdapter
+        from agentx.infrastructure.memory.unified_mem0_adapter import (
+            UnifiedMem0Adapter,
+        )
 
         k = k or self.k
-        mem0_adapter = Mem0MemoryAdapter()
+        adapter = UnifiedMem0Adapter()
 
         # Call Mem0's search (uses ColBERTv2 via QdrantVectorStore)
-        memories = await mem0_adapter.search_memories(
+        memories = await adapter.search_memories(
             query=query,
             user_id=user_id,
             limit=k,
         )
 
-        # Filter by quality score (adaptive retrieval)
+        # Filter by quality score and return text content only (DSPy format)
         results = []
         for i, mem in enumerate(memories):
             score = mem.get("score", 0.0)
@@ -76,23 +74,22 @@ class Mem0DSPyRetriever:
 
             # Always include at least min_results
             if i < self.min_results or score >= self.quality_threshold:
-                results.append(
-                    RetrievedMemory(
-                        long_text=content,
-                        score=score,
-                        metadata=mem.get("metadata", {}),
-                    )
-                )
+                results.append(content)
 
         return results
 
     def retrieve_sync(
         self, query: str, k: int | None = None, **kwargs: Any
-    ) -> list[RetrievedMemory]:
+    ) -> list[str]:
         """Synchronous wrapper for DSPy compatibility.
+
+        FIX: Returns list[str] for DSPy RM compatibility.
 
         DSPy may call this synchronously, so we need to handle it.
         """
         import asyncio
 
         return asyncio.run(self.__call__(query=query, k=k, **kwargs))
+
+
+__all__ = ["Mem0DSPyRetriever"]

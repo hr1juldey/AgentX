@@ -45,7 +45,7 @@ class MainDSPyReActAgent(dspy.Module):
         user_context = ""
         try:
             memories = await self.vector_store.search_memories(
-                query="previous queries conversation history user preferences",
+                query=query,  # FIX: Use actual user query instead of hardcoded string
                 user_id=user_id,
                 limit=3,
             )

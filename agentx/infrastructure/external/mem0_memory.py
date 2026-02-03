@@ -1,11 +1,16 @@
 """Mem0AI memory adapter for advanced consolidation.
 
+⚠️ DEPRECATED: This file is deprecated.
+Use agentx.infrastructure.memory.unified_mem0_adapter.UnifiedMem0Adapter instead.
+
+This file will be removed in Phase 2 of the memory fraud fixes.
 Implements Tier 3 persistent memory with Mem0AI.
 From C005 memory-rag change.
 """
 
 from __future__ import annotations
 
+import warnings
 from datetime import datetime
 from uuid import UUID, uuid4
 
@@ -39,7 +44,15 @@ class Mem0MemoryAdapter:
 
         Note: Mem0AI requires API configuration.
         Falls back to local storage if not configured.
+
+        DEPRECATED: Use UnifiedMem0Adapter instead.
         """
+        warnings.warn(
+            "Mem0MemoryAdapter from external/mem0_memory.py is deprecated. "
+            "Use UnifiedMem0Adapter from infrastructure/memory/unified_mem0_adapter.py instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         settings = get_settings()
 
         # Initialize Mem0AI

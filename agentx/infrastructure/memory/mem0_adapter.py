@@ -1,9 +1,15 @@
 """Mem0 adapter with safeguards against memory hoarding.
 
+⚠️ DEPRECATED: This file is deprecated.
+Use agentx.infrastructure.memory.unified_mem0_adapter.UnifiedMem0Adapter instead.
+
+This file will be removed in Phase 2 of the memory fraud fixes.
+
 This module provides the Mem0AI adapter with quality filtering
 to prevent storing low-quality or duplicate memories.
 """
 
+import warnings
 from datetime import datetime
 from typing import TYPE_CHECKING
 
@@ -21,7 +27,16 @@ class Mem0MemoryAdapter:
     """
 
     def __init__(self):
-        """Initialize Mem0 adapter with Qdrant backend."""
+        """Initialize Mem0 adapter with Qdrant backend.
+
+        DEPRECATED: Use UnifiedMem0Adapter instead.
+        """
+        warnings.warn(
+            "Mem0MemoryAdapter from memory/mem0_adapter.py is deprecated. "
+            "Use UnifiedMem0Adapter from infrastructure/memory/unified_mem0_adapter.py instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.client = Memory.from_config(
             {
                 "vector_store": {
