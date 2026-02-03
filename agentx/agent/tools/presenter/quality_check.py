@@ -4,6 +4,8 @@ Ported from R014: services/tools/presenter/quality_check.py
 
 Performs quality validation of presented findings.
 Wraps dspy.Predict(QualityCheck) as a testable module.
+
+Fraud #12 fix: Returns dspy.Prediction instead of dict.
 """
 
 import dspy
@@ -20,6 +22,8 @@ class QualityCheckModule(dspy.Module):
     - Quality score (0.0 to 1.0)
     - Approval status
     - Any issues found
+
+    Fraud #12 fix: Returns dspy.Prediction instead of dict.
     """
 
     def __init__(self) -> None:
@@ -27,7 +31,7 @@ class QualityCheckModule(dspy.Module):
         super().__init__()
         self.qa_checker = dspy.Predict(QualityCheck)
 
-    def forward(self, presentation: str, user_query: str) -> dict:
+    def forward(self, presentation: str, user_query: str) -> dspy.Prediction:
         """Perform quality check on presentation.
 
         Args:
@@ -35,7 +39,7 @@ class QualityCheckModule(dspy.Module):
             user_query: Original user query
 
         Returns:
-            dict with 'quality_score', 'approved', and 'issues' keys
+            dspy.Prediction with 'quality_score', 'approved', and 'issues' keys
         """
         result = self.qa_checker(
             presentation=presentation,
@@ -48,8 +52,8 @@ class QualityCheckModule(dspy.Module):
         issues = safe_extract(result, "issues", "")
         approved = _to_bool(safe_extract(result, "approved", True), default=True)
 
-        return {
-            "quality_score": quality_score,
-            "approved": approved,
-            "issues": issues,
-        }
+        return dspy.Prediction(
+            quality_score=quality_score,
+            approved=approved,
+            issues=issues,
+        )

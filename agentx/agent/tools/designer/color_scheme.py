@@ -3,6 +3,8 @@
 Ported from R014: services/tools/designer/color_scheme.py
 
 Designs color schemes for UI widgets based on content purpose.
+
+Fraud #14 fix: Returns dspy.Prediction instead of dict.
 """
 
 import dspy
@@ -18,6 +20,8 @@ class ColorSchemeModule(dspy.Module):
     - Content type (data, text, media)
     - User intent (inform, alert, guide)
     - Purpose (info, warning, success, error)
+
+    Fraud #14 fix: Returns dspy.Prediction instead of dict.
     """
 
     def __init__(self) -> None:
@@ -29,7 +33,7 @@ class ColorSchemeModule(dspy.Module):
         self,
         widget_type: str,
         content_purpose: str = "info",
-    ) -> dict:
+    ) -> dspy.Prediction:
         """Design color scheme for widget.
 
         Args:
@@ -37,7 +41,7 @@ class ColorSchemeModule(dspy.Module):
             content_purpose: Purpose of the content (default: "info")
 
         Returns:
-            dict with color scheme (primary, secondary, background, text, border)
+            dspy.Prediction with color scheme (primary, secondary, background, text, border)
         """
         # Run color designer
         result = self.designer(
@@ -63,4 +67,4 @@ class ColorSchemeModule(dspy.Module):
                 "border": "#333333",
             }
 
-        return color_scheme
+        return dspy.Prediction(**color_scheme)

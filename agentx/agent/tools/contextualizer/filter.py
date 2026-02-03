@@ -3,6 +3,8 @@
 Ported from R014: services/tools/contextualizer/filter.py
 
 Filters out irrelevant, redundant, or low-quality context chunks.
+
+Fraud #19 fix: Returns dspy.Prediction instead of dict.
 """
 
 import dspy
@@ -24,6 +26,8 @@ class ContextFilterModule(dspy.Module):
     - Duplicates and near-duplicates
     - Low quality or unreliable sources
     - Redundant information
+
+    Fraud #19 fix: Returns dspy.Prediction instead of dict.
     """
 
     def __init__(self) -> None:
@@ -31,7 +35,7 @@ class ContextFilterModule(dspy.Module):
         super().__init__()
         self.filter = dspy.Predict(FilterContext)
 
-    def forward(self, query: str, context_chunks: list[dict]) -> dict:
+    def forward(self, query: str, context_chunks: list[dict]) -> dspy.Prediction:
         """Filter context chunks to keep only relevant ones.
 
         Args:
@@ -39,18 +43,18 @@ class ContextFilterModule(dspy.Module):
             context_chunks: List of context dicts
 
         Returns:
-            dict with 'filtered_context' (list) and 'stats' (dict)
+            dspy.Prediction with 'filtered_context' (list) and 'stats' (dict)
         """
         if not context_chunks:
-            return {
-                "filtered_context": [],
-                "stats": {
+            return dspy.Prediction(
+                filtered_context=[],
+                stats={
                     "total": 0,
                     "kept": 0,
                     "removed": 0,
-                    "removal_reasons": [],
+                    "removal_rate": 0.0,
                 },
-            }
+            )
 
         # Build context string for DSPy
         context_str = format_context(context_chunks)
@@ -69,12 +73,12 @@ class ContextFilterModule(dspy.Module):
         total_count = len(context_chunks)
         kept_count = len(filtered_context)
 
-        return {
-            "filtered_context": filtered_context,
-            "stats": {
+        return dspy.Prediction(
+            filtered_context=filtered_context,
+            stats={
                 "total": total_count,
                 "kept": kept_count,
                 "removed": removed_count,
                 "removal_rate": removed_count / total_count if total_count > 0 else 0.0,
             },
-        }
+        )

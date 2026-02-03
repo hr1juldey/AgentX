@@ -4,6 +4,8 @@ Ported from R014: services/tools/researcher/data_structurer.py
 
 Structures raw search results into organized, queryable data format.
 Uses explicit signatures with named fields for robust extraction.
+
+Fraud #9 fix: Returns dspy.Prediction instead of dict.
 """
 
 import dspy
@@ -22,6 +24,8 @@ class DataStructurerModule(dspy.Module):
     - Relevance scores
 
     Uses explicit DSPy signatures with named fields for type safety.
+
+    Fraud #9 fix: Returns dspy.Prediction instead of dict.
     """
 
     def __init__(self) -> None:
@@ -29,7 +33,7 @@ class DataStructurerModule(dspy.Module):
         super().__init__()
         self.structurer = dspy.ChainOfThought(StructureData)
 
-    def forward(self, raw_results: str, query_context: str) -> dict:
+    def forward(self, raw_results: str, query_context: str) -> dspy.Prediction:
         """Structure raw search results into organized data.
 
         Args:
@@ -37,7 +41,7 @@ class DataStructurerModule(dspy.Module):
             query_context: Original query context for relevance filtering
 
         Returns:
-            dict with 'structured_data' (list of dict) and 'sources_count' (int)
+            dspy.Prediction with 'structured_data' (list of dict) and 'sources_count' (int)
         """
         # Run the data structuring
         result = self.structurer(raw_results=raw_results, query_context=query_context)
@@ -48,10 +52,10 @@ class DataStructurerModule(dspy.Module):
         # Parse the structured data into a list of dicts
         structured_list = self._parse_structured_data(structured_str)
 
-        return {
-            "structured_data": structured_list,
-            "sources_count": len(structured_list),
-        }
+        return dspy.Prediction(
+            structured_data=structured_list,
+            sources_count=len(structured_list),
+        )
 
     def _parse_structured_data(self, structured_str: str) -> list[dict]:
         """Parse structured data string into list of dicts.

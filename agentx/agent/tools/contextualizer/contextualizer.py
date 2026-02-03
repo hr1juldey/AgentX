@@ -4,6 +4,8 @@ Ported from R014: services/tools/contextualizer/contextualizer.py
 
 Injects relevant context into research findings.
 Enriches findings with additional context from various sources.
+
+Fraud #18 fix: Returns dspy.Prediction instead of dict.
 """
 
 import dspy
@@ -20,6 +22,8 @@ class ContextInjectorModule(dspy.Module):
     - Adding citations for all sources
     - Maintaining coherence and readability
     - Preserving original findings structure
+
+    Fraud #18 fix: Returns dspy.Prediction instead of dict.
     """
 
     def __init__(self) -> None:
@@ -32,7 +36,7 @@ class ContextInjectorModule(dspy.Module):
         findings: str,
         context: list[dict],
         query: str,
-    ) -> dict:
+    ) -> dspy.Prediction:
         """Inject context into research findings.
 
         Args:
@@ -41,13 +45,13 @@ class ContextInjectorModule(dspy.Module):
             query: Original user query
 
         Returns:
-            dict with 'enriched_findings' (str) and 'injected_count' (int)
+            dspy.Prediction with 'enriched_findings' (str) and 'injected_count' (int)
         """
         if not context:
-            return {
-                "enriched_findings": findings,
-                "injected_count": 0,
-            }
+            return dspy.Prediction(
+                enriched_findings=findings,
+                injected_count=0,
+            )
 
         # Build context string
         context_str = self._format_context(context)
@@ -65,10 +69,10 @@ class ContextInjectorModule(dspy.Module):
         # Count how many context chunks were used
         injected_count = self._count_injected_context(enriched_findings, context)
 
-        return {
-            "enriched_findings": enriched_findings,
-            "injected_count": injected_count,
-        }
+        return dspy.Prediction(
+            enriched_findings=enriched_findings,
+            injected_count=injected_count,
+        )
 
     def _format_context(self, context: list[dict]) -> str:
         """Format context list as string.

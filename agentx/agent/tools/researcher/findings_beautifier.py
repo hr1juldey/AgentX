@@ -4,6 +4,8 @@ Ported from R014: services/tools/researcher/findings_beautifier.py
 
 Beautifies research findings into readable Markdown format.
 Transforms structured data into user-friendly presentation.
+
+Fraud #9 fix: Returns dspy.Prediction instead of dict.
 """
 
 import dspy
@@ -20,6 +22,8 @@ class FindingsBeautifierModule(dspy.Module):
     - Key findings (bullet points)
     - Source citations with URLs
     - Confidence level assessment
+
+    Fraud #9 fix: Returns dspy.Prediction instead of dict.
     """
 
     def __init__(self) -> None:
@@ -29,7 +33,7 @@ class FindingsBeautifierModule(dspy.Module):
 
     def forward(
         self, structured_data: list[dict], citations: list[dict], query: str
-    ) -> dict:
+    ) -> dspy.Prediction:
         """Beautify findings into readable format.
 
         Args:
@@ -38,7 +42,7 @@ class FindingsBeautifierModule(dspy.Module):
             query: Original user query
 
         Returns:
-            dict with 'beautified_findings' (str) and 'confidence' (str)
+            dspy.Prediction with 'beautified_findings' (str) and 'confidence' (str)
         """
         # Build structured data string
         data_str = self._format_structured_data(structured_data, citations)
@@ -52,10 +56,10 @@ class FindingsBeautifierModule(dspy.Module):
         # Assess confidence based on citation quality
         confidence = self._assess_confidence(citations)
 
-        return {
-            "beautified_findings": findings,
-            "confidence": confidence,
-        }
+        return dspy.Prediction(
+            beautified_findings=findings,
+            confidence=confidence,
+        )
 
     def _format_structured_data(
         self, structured_data: list[dict], citations: list[dict]

@@ -4,6 +4,8 @@ Ported from R014: services/tools/designer/hierarchy.py
 
 Designs visual hierarchy for complex widgets.
 Determines layout and information architecture.
+
+Fraud #15 fix: Returns dspy.Prediction instead of dict.
 """
 
 import dspy
@@ -19,6 +21,8 @@ class HierarchyDesignerModule(dspy.Module):
     - Primary/secondary/tertiary elements
     - Grouping and spacing
     - Visual flow
+
+    Fraud #15 fix: Returns dspy.Prediction instead of dict.
     """
 
     def __init__(self) -> None:
@@ -30,7 +34,7 @@ class HierarchyDesignerModule(dspy.Module):
         self,
         widget_type: str,
         content_structure: str,
-    ) -> dict:
+    ) -> dspy.Prediction:
         """Design hierarchy for widget.
 
         Args:
@@ -38,7 +42,7 @@ class HierarchyDesignerModule(dspy.Module):
             content_structure: Structure of the content
 
         Returns:
-            dict with hierarchy plan (primary, secondary, tertiary, spacing, grouping)
+            dspy.Prediction with hierarchy plan (primary, secondary, tertiary, spacing, grouping)
         """
         # Run hierarchy designer
         result = self.designer(
@@ -52,7 +56,7 @@ class HierarchyDesignerModule(dspy.Module):
         # Parse hierarchy plan
         hierarchy = self._parse_hierarchy(hierarchy_plan)
 
-        return hierarchy
+        return dspy.Prediction(**hierarchy)
 
     def _parse_hierarchy(self, plan: str) -> dict:
         """Parse hierarchy plan string into dict.

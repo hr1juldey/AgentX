@@ -4,6 +4,8 @@ Ported from R014: services/tools/designer/pov_generator.py
 
 Generates point of view for UI widget design.
 Selects appropriate widget types based on content and state.
+
+Fraud #16 fix: Returns dspy.Prediction instead of dict.
 """
 
 import dspy
@@ -21,6 +23,8 @@ class POVGeneratorModule(dspy.Module):
     - Rationale for selection
 
     STATE AWARE: Checks existing widgets to avoid duplicates.
+
+    Fraud #16 fix: Returns dspy.Prediction instead of dict.
     """
 
     def __init__(self) -> None:
@@ -33,7 +37,7 @@ class POVGeneratorModule(dspy.Module):
         query: str,
         content: str,
         existing_widgets: list[str],
-    ) -> dict:
+    ) -> dspy.Prediction:
         """Generate point of view for widget design.
 
         Args:
@@ -42,7 +46,7 @@ class POVGeneratorModule(dspy.Module):
             existing_widgets: List of already shown widget types
 
         Returns:
-            dict with widget recommendation and properties
+            dspy.Prediction with widget recommendation and properties
         """
         # Build existing widgets string
         existing_str = ", ".join(existing_widgets) if existing_widgets else "none"
@@ -72,8 +76,8 @@ class POVGeneratorModule(dspy.Module):
         except (json.JSONDecodeError, TypeError, ValueError):
             props_dict = {}
 
-        return {
-            "recommended_widget": recommended_widget,
-            "widget_props": props_dict,
-            "rationale": rationale,
-        }
+        return dspy.Prediction(
+            recommended_widget=recommended_widget,
+            widget_props=props_dict,
+            rationale=rationale,
+        )

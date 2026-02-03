@@ -3,6 +3,8 @@
 Ported from R014: services/tools/contextualizer/reranker.py
 
 Reorders context chunks by relevance to query using semantic similarity.
+
+Fraud #17 fix: Returns dspy.Prediction instead of dict.
 """
 
 import dspy
@@ -25,6 +27,8 @@ class RelevanceScorerModule(dspy.Module):
 
     Returns reordered context from most to least relevant.
     Filters by quality threshold (Fraud #5 fix).
+
+    Fraud #17 fix: Returns dspy.Prediction instead of dict.
     """
 
     def __init__(self, quality_threshold: float = 0.6, min_results: int = 3) -> None:
@@ -40,7 +44,7 @@ class RelevanceScorerModule(dspy.Module):
         self.quality_threshold = quality_threshold
         self.min_results = min_results
 
-    def forward(self, query: str, context_chunks: list[dict]) -> dict:
+    def forward(self, query: str, context_chunks: list[dict]) -> dspy.Prediction:
         """Score and reorder context chunks with quality filtering.
 
         Args:
@@ -48,14 +52,14 @@ class RelevanceScorerModule(dspy.Module):
             context_chunks: List of context dicts with text and source
 
         Returns:
-            dict with 'filtered_results', 'original_count', 'filtered_count'
+            dspy.Prediction with 'filtered_results', 'original_count', 'filtered_count'
         """
         if not context_chunks:
-            return {
-                "filtered_results": [],
-                "original_count": 0,
-                "filtered_count": 0,
-            }
+            return dspy.Prediction(
+                filtered_results=[],
+                original_count=0,
+                filtered_count=0,
+            )
 
         original_count = len(context_chunks)
 
@@ -98,8 +102,8 @@ class RelevanceScorerModule(dspy.Module):
 
         filtered_count = len(filtered_chunks)
 
-        return {
-            "filtered_results": [
+        return dspy.Prediction(
+            filtered_results=[
                 {
                     "chunk": item["chunk"],
                     "quality": item["quality"],
@@ -108,6 +112,6 @@ class RelevanceScorerModule(dspy.Module):
                 }
                 for item in filtered_chunks
             ],
-            "original_count": original_count,
-            "filtered_count": filtered_count,
-        }
+            original_count=original_count,
+            filtered_count=filtered_count,
+        )

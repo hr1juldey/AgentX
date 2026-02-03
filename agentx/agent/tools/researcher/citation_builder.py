@@ -4,6 +4,8 @@ Ported from R014: services/tools/researcher/citation_builder.py
 
 Builds properly formatted citations from structured search results.
 Includes relevance scoring and source credibility assessment.
+
+Fraud #9 fix: Returns dspy.Prediction instead of dict.
 """
 
 import dspy
@@ -21,6 +23,8 @@ class CitationBuilderModule(dspy.Module):
     - Relevance scores for each source
     - Source credibility assessment
     - Direct URLs for verification
+
+    Fraud #9 fix: Returns dspy.Prediction instead of dict.
     """
 
     def __init__(self) -> None:
@@ -28,7 +32,7 @@ class CitationBuilderModule(dspy.Module):
         super().__init__()
         self.assessor = dspy.Predict(AssessRelevance)
 
-    def forward(self, structured_data: list[dict], query: str) -> dict:
+    def forward(self, structured_data: list[dict], query: str) -> dspy.Prediction:
         """Build citations from structured data.
 
         Args:
@@ -36,7 +40,7 @@ class CitationBuilderModule(dspy.Module):
             query: Original user query for relevance scoring
 
         Returns:
-            dict with 'citations' (list of dict) and 'top_sources' (list)
+            dspy.Prediction with 'citations' (list of dict) and 'top_sources' (list)
         """
         citations = []
 
@@ -68,10 +72,10 @@ class CitationBuilderModule(dspy.Module):
         # Extract top sources
         top_sources = [c["title"] for c in citations[:3] if c["relevance_score"] > 0.5]
 
-        return {
-            "citations": citations,
-            "top_sources": top_sources,
-        }
+        return dspy.Prediction(
+            citations=citations,
+            top_sources=top_sources,
+        )
 
     def _assess_relevance(self, query: str, title: str, snippet: str) -> float:
         """Assess relevance of source to query.
