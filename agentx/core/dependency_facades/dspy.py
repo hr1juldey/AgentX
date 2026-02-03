@@ -31,7 +31,7 @@ def configure_dspy() -> None:
         api_key="",  # Ollama doesn't require API key, but DSPy needs empty string
         temperature=settings.llm.temperature,
         max_tokens=settings.llm.max_tokens,
-        cache=False,  # Disable caching to avoid serialization issues with streaming
+        cache=True,  # Enable caching for performance (Fraud #53 fix)
     )
     dspy.configure(lm=lm)
     _dspy_configured = True

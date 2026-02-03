@@ -14,10 +14,10 @@
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create MemoryRecord entity | `agentx/domain/entities/memory_record.py` | ⬜ | @dataclass, <100 lines |
-| Create WorkExperienceType enum | `agentx/domain/entities/memory_record.py` | ⬜ | 4 values |
-| Add validation methods | `agentx/domain/entities/memory_record.py` | ⬜ | is_expired(), record_access() |
-| Run verification | Verification script | ⬜ | See section 2 |
+| Create MemoryRecord entity | `agentx/domain/entities/memory_record.py` | ✅ | @dataclass, <100 lines |
+| Create WorkExperienceType enum | `agentx/domain/entities/memory_record.py` | ✅ | 4 values |
+| Add validation methods | `agentx/domain/entities/memory_record.py` | ✅ | is_expired(), record_access() |
+| Run verification | Verification script | ✅ | All checks pass |
 
 **Acceptance Criteria**:
 ```python
@@ -44,12 +44,12 @@ assert record.access_count == 1
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create SessionPerformance entity | `agentx/domain/entities/session_performance.py` | ⬜ | @dataclass, <100 lines |
-| Create AgentStep dataclass | `agentx/domain/entities/session_performance.py` | ⬜ | agent_name, duration_ms, success, quality_score |
-| Create RouteOutcome enum | `agentx/domain/entities/session_performance.py` | ⬜ | GOOD, AVERAGE, BAD |
-| Create RoutingDecisionService | `agentx/application/services/routing_decision_service.py` | ⬜ | suggest_routing() method |
-| Create routing_performance node | `agentx/agent/nodes/routing_performance.py` | ⬜ | LangGraph node for routing |
-| Run verification | Verification script | ⬜ | See section 2 |
+| Create SessionPerformance entity | `agentx/domain/entities/session_performance.py` | ✅ | @dataclass, <100 lines |
+| Create AgentStep dataclass | `agentx/domain/entities/session_performance.py` | ✅ | agent_name, duration_ms, success, quality_score |
+| Create RouteOutcome enum | `agentx/domain/entities/session_performance.py` | ✅ | GOOD, AVERAGE, BAD |
+| Create RoutingDecisionService | `agentx/application/services/routing_decision_service.py` | ✅ | suggest_routing() method |
+| Create routing_performance node | `agentx/agent/nodes/routing_performance.py` | ✅ | LangGraph node for routing |
+| Run verification | Verification script | ✅ | All checks pass |
 
 #### Batch 0b-a: Memory-Guided Search Planning
 
@@ -70,19 +70,19 @@ assert record.access_count == 1
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create Mem0DSPyRetriever | `agentx/infrastructure/retrieval/mem0_dspy_retriever.py` | ⬜ | Wraps Mem0MemoryAdapter |
-| Add quality filtering | `agentx/infrastructure/retrieval/mem0_dspy_retriever.py` | ⬜ | k=20, threshold=0.6, min_results=3 |
-| Update Mem0MemoryAdapter | `agentx/infrastructure/memory/mem0_adapter.py` | ⬜ | Support quality filtering |
-| Run verification | Verification script | ⬜ | See section 2 |
+| Create Mem0DSPyRetriever | `agentx/infrastructure/retrieval/mem0_dspy_retriever.py` | ✅ | Wraps Mem0MemoryAdapter |
+| Add quality filtering | `agentx/infrastructure/retrieval/mem0_dspy_retriever.py` | ✅ | k=20, threshold=0.6, min_results=3 |
+| Update Mem0MemoryAdapter | `agentx/infrastructure/memory/mem0_adapter.py` | ✅ | Support quality filtering |
+| Run verification | Verification script | ✅ | All checks pass |
 
 #### Batch 0d: Context Rotting Prevention
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create ContextRotManager | `agentx/infrastructure/memory/context_rot_manager.py` | ⬜ | TTL, decay, supersede |
-| Create ReinforcementTracker | `agentx/infrastructure/memory/reinforcement_tracker.py` | ⬜ | log_retrieval_outcome(), get_success_rate() |
-| Add TTL methods | `agentx/infrastructure/memory/context_rot_manager.py` | ⬜ | check_ttl(), apply_decay(), extend_ttl(), shorten_ttl() |
-| Run verification | Verification script | ⬜ | See section 2 |
+| Create ContextRotManager | `agentx/infrastructure/memory/context_rot_manager.py` | ✅ | TTL, decay, supersede |
+| Create ReinforcementTracker | `agentx/infrastructure/memory/reinforcement_tracker.py` | ✅ | log_retrieval_outcome(), get_success_rate() |
+| Add TTL methods | `agentx/infrastructure/memory/context_rot_manager.py` | ✅ | check_ttl(), apply_decay(), extend_ttl(), shorten_ttl() |
+| Run verification | Verification script | ✅ | All checks pass |
 
 ---
 
@@ -92,10 +92,10 @@ assert record.access_count == 1
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create Mem0DSPyRetriever | `agentx/infrastructure/retrieval/mem0_dspy_retriever.py` | ⬜ | Wraps Mem0, uses ColBERTv2 |
-| Replace dspy.Predict with real retrieval | `agentx/agent/dspy_agents/rag_agent.py` | ⬜ | Use Mem0DSPyRetriever |
-| Rename RAGDSPyAgent → RAGContextGenerator | `agentx/agent/dspy_agents/rag_agent.py` | ⬜ | Optional (misleading name) |
-| Verify real retrieval | Manual test | ⬜ | Actual memories from Mem0 |
+| Create Mem0DSPyRetriever | `agentx/infrastructure/retrieval/mem0_dspy_retriever.py` | ✅ | Wraps Mem0, uses ColBERTv2 |
+| Replace dspy.Predict with real retrieval | `agentx/agent/dspy_agents/rag_agent.py` | ✅ | Use Mem0DSPyRetriever |
+| Rename RAGDSPyAgent → RAGContextGenerator | `agentx/agent/dspy_agents/rag_agent.py` | ✅ | Optional (misleading name) |
+| Verify real retrieval | Manual test | ✅ | Actual memories from Mem0 |
 
 **Fraud Fixed**: #1 - Fake RAG
 
@@ -356,8 +356,8 @@ print(f"Predicted terms: {predicted}")
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Change cache=False to cache=True | `agentx/core/dependency_facades/dspy.py` | ⬜ | 1 line change |
-| Run verification | Grep check | ⬜ | `grep "cache=True"` |
+| Change cache=False to cache=True | `agentx/core/dependency_facades/dspy.py` | ✅ | 1 line change |
+| Run verification | Grep check | ✅ | `grep "cache=True"` |
 
 **Fraud Fixed**: #53 - DSPy Cache Disabled
 
@@ -365,9 +365,9 @@ print(f"Predicted terms: {predicted}")
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Add filtering logic | `agentx/agent/tools/contextualizer/reranker.py` | ⬜ | Filter by threshold |
-| Return dspy.Prediction | `agentx/agent/tools/contextualizer/reranker.py` | ⬜ | filtered_results, counts |
-| Run verification | Manual test | ⬜ | Actual filtering works |
+| Add filtering logic | `agentx/agent/tools/contextualizer/reranker.py` | ✅ | Filter by threshold |
+| Return dspy.Prediction | `agentx/agent/tools/contextualizer/reranker.py` | ✅ | filtered_results, counts |
+| Run verification | Manual test | ✅ | Actual filtering works |
 
 **Fraud Fixed**: #5 - Ignored Quality Scores
 

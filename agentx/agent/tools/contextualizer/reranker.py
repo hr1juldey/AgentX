@@ -24,29 +24,40 @@ class RelevanceScorerModule(dspy.Module):
     - Source credibility
 
     Returns reordered context from most to least relevant.
+    Filters by quality threshold (Fraud #5 fix).
     """
 
-    def __init__(self) -> None:
-        """Initialize the relevance scorer."""
+    def __init__(self, quality_threshold: float = 0.6, min_results: int = 3) -> None:
+        """Initialize the relevance scorer.
+
+        Args:
+            quality_threshold: Minimum combined score to keep a chunk
+            min_results: Always return at least this many results
+        """
         super().__init__()
         self.reorder = dspy.Predict(ReorderContext)
         self.assess = dspy.Predict(AssessContextQuality)
+        self.quality_threshold = quality_threshold
+        self.min_results = min_results
 
     def forward(self, query: str, context_chunks: list[dict]) -> dict:
-        """Score and reorder context chunks.
+        """Score and reorder context chunks with quality filtering.
 
         Args:
             query: User's original question
             context_chunks: List of context dicts with text and source
 
         Returns:
-            dict with 'reordered_context' (list) and 'scores' (list)
+            dict with 'filtered_results', 'original_count', 'filtered_count'
         """
         if not context_chunks:
             return {
-                "reordered_context": [],
-                "scores": [],
+                "filtered_results": [],
+                "original_count": 0,
+                "filtered_count": 0,
             }
+
+        original_count = len(context_chunks)
 
         # Score each chunk individually
         scored_chunks = []
@@ -62,36 +73,41 @@ class RelevanceScorerModule(dspy.Module):
             relevance = _to_float(
                 safe_extract(result, "relevance_score", 0.5), default=0.5
             )
-            should_keep = safe_extract(result, "should_keep", True)
 
             # Calculate combined score
             combined_score = (quality * 0.3) + (relevance * 0.7)
 
-            if should_keep:
-                scored_chunks.append(
-                    {
-                        "chunk": chunk,
-                        "quality": quality,
-                        "relevance": relevance,
-                        "combined_score": combined_score,
-                    }
-                )
+            scored_chunks.append(
+                {
+                    "chunk": chunk,
+                    "quality": quality,
+                    "relevance": relevance,
+                    "combined_score": combined_score,
+                }
+            )
 
         # Sort by combined score (descending)
         scored_chunks.sort(key=lambda x: x["combined_score"], reverse=True)
 
-        # Extract reordered context and scores
-        reordered_context = [item["chunk"] for item in scored_chunks]
-        scores = [
-            {
-                "quality": item["quality"],
-                "relevance": item["relevance"],
-                "combined": item["combined_score"],
-            }
-            for item in scored_chunks
-        ]
+        # Filter by quality threshold (Fraud #5 fix: actual filtering)
+        filtered_chunks = []
+        for i, item in enumerate(scored_chunks):
+            # Always include at least min_results, then filter by threshold
+            if i < self.min_results or item["combined_score"] >= self.quality_threshold:
+                filtered_chunks.append(item)
+
+        filtered_count = len(filtered_chunks)
 
         return {
-            "reordered_context": reordered_context,
-            "scores": scores,
+            "filtered_results": [
+                {
+                    "chunk": item["chunk"],
+                    "quality": item["quality"],
+                    "relevance": item["relevance"],
+                    "combined_score": item["combined_score"],
+                }
+                for item in filtered_chunks
+            ],
+            "original_count": original_count,
+            "filtered_count": filtered_count,
         }

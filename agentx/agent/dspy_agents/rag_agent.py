@@ -3,7 +3,7 @@
 Locked from LLD: agent_runtime.md:582-663
 
 Agentic RAG Pattern:
-1. Retrieve relevant memories from vector store
+1. Retrieve relevant memories from vector store (REAL via Mem0DSPyRetriever)
 2. Score context quality (high/low based on relevance)
 3. Decide whether to inject context
 4. Filter and format context for main agent
@@ -12,75 +12,67 @@ This is NOT a simple context dump - the agent decides whether to inject.
 """
 
 import dspy
-from typing import List, Dict, Any
+from typing import Any
 
-from agentx.agent.dspy_signatures.rag_signatures import (
-    ContextInjectionSignature,
-    RetrievalSignature,
-)
+from agentx.agent.dspy_signatures.rag_signatures import ContextInjectionSignature
 from agentx.agent.tools.common.dspy_helpers import safe_extract
+from agentx.infrastructure.retrieval.mem0_dspy_retriever import Mem0DSPyRetriever
 
 
-class RAGDSPyAgent(dspy.Module):
+class RAGContextGenerator(dspy.Module):
     """RAG specialist agent for context retrieval and injection.
 
     Implements agentic RAG pattern (not simple context dump):
-    - Retrieves relevant memories
+    - Retrieves relevant memories (REAL via Mem0DSPyRetriever, not dspy.Predict)
     - Scores context quality
     - Decides whether to inject
     - Filters and formats context
 
     The agent decides whether retrieved context is relevant enough to inject.
+
+    Renamed from RAGDSPyAgent to RAGContextGenerator for clarity.
     """
 
     def __init__(self) -> None:
-        """Initialize the RAG agent with DSPy signatures."""
+        """Initialize the RAG agent with real Mem0 retriever."""
         super().__init__()
 
-        self.context_retriever = dspy.Predict(RetrievalSignature)
+        # REAL retrieval using Mem0 (ColBERTv2-powered)
+        self.retrieve = Mem0DSPyRetriever(k=10, quality_threshold=0.6, min_results=3)
         self.injection_decider = dspy.Predict(ContextInjectionSignature)
 
-    def retrieve_context(
+    async def retrieve_context(
         self,
         query: str,
-        user_context: str,
-        memories: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        """Retrieve and format context from memories.
+        user_id: str = "default_user",
+    ) -> dict[str, Any]:
+        """Retrieve and format context from memories using REAL Mem0 retrieval.
 
         Args:
             query: User query to retrieve context for
-            user_context: Additional user context
-            memories: Retrieved memories from vector store (max 10)
+            user_id: User to retrieve memories for
 
         Returns:
             dict with retrieved_memories, retrieval_summary, context_quality
         """
-        # Format memories for DSPy
-        memory_summaries = [f"- {m.get('content', '')}" for m in memories[:10]]
+        # REAL retrieval via Mem0 (uses ColBERTv2)
+        retrieved = await self.retrieve(query=query, k=10, user_id=user_id)
+
+        # Format for DSPy
+        memory_summaries = [f"- {r.long_text}" for r in retrieved]
         memories_text = "\n".join(memory_summaries)
 
-        # Use DSPy to summarize
-        retrieval = self.context_retriever(
-            query=query,
-            user_context=f"{user_context}\n\nMemories:\n{memories_text}",
-        )
-
-        retrieved_memories = safe_extract(retrieval, "retrieved_memories", memories)
-        retrieval_summary = safe_extract(retrieval, "retrieval_summary", "")
-        context_quality = "high" if len(retrieved_memories) > 3 else "low"
-
         return {
-            "retrieved_memories": retrieved_memories,
-            "retrieval_summary": retrieval_summary,
-            "context_quality": context_quality,
+            "retrieved_memories": retrieved,
+            "retrieval_summary": memories_text,
+            "context_quality": "high" if len(retrieved) > 3 else "low",
         }
 
     def should_inject_context(
         self,
         query: str,
         retrieved_context: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Decide whether to inject retrieved context.
 
         Args:
@@ -105,28 +97,24 @@ class RAGDSPyAgent(dspy.Module):
             "filtered_context": filtered_context,
         }
 
-    def forward(
+    async def forward(
         self,
         query: str,
-        user_context: str,
-        memories: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        """Execute agentic RAG pipeline.
+        user_id: str = "default_user",
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """Execute agentic RAG pipeline with REAL retrieval.
 
         Args:
             query: User query
-            user_context: Additional user context
-            memories: Retrieved memories from vector store
+            user_id: User to retrieve memories for
+            **kwargs: Additional arguments
 
         Returns:
             dict with retrieval results and injection decision
         """
-        # Step 1: Retrieve and format context
-        retrieval = self.retrieve_context(
-            query=query,
-            user_context=user_context,
-            memories=memories,
-        )
+        # Step 1: REAL retrieval via Mem0
+        retrieval = await self.retrieve_context(query=query, user_id=user_id)
 
         # Step 2: Decide whether to inject
         injection = self.should_inject_context(
@@ -138,3 +126,7 @@ class RAGDSPyAgent(dspy.Module):
             **retrieval,
             **injection,
         }
+
+
+# Backward compatibility alias
+RAGDSPyAgent = RAGContextGenerator
