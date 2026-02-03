@@ -26,7 +26,7 @@ class Mem0MemoryAdapter:
             {
                 "vector_store": {
                     "provider": "qdrant",
-                    "config": {"host": "localhost", "port": 6333},
+                    "config": {"host": "localhost", "port": 6335},
                 },
             }
         )

@@ -17,7 +17,7 @@ class ColBERTQdrantManager:
 
     VECTOR_SIZE = 128
 
-    def __init__(self, qdrant_url: str = "http://localhost:6333") -> None:
+    def __init__(self, qdrant_url: str = "http://localhost:6335") -> None:
         """Initialize Qdrant manager.
 
         Args:

@@ -28,7 +28,7 @@ class ColBERTEmbedder:
     MODEL_NAME = "colbert-ir/colbertv2.0"
     VECTOR_SIZE = 128
 
-    def __init__(self, qdrant_url: str = "http://localhost:6333") -> None:
+    def __init__(self, qdrant_url: str = "http://localhost:6335") -> None:
         """Initialize ColBERT embedder.
 
         Args:

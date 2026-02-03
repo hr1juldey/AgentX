@@ -52,7 +52,7 @@ class Mem0MemoryAdapter:
                         "provider": "qdrant",
                         "config": {
                             "host": settings.database.qdrant_url,
-                            "port": 6333,
+                            "port": 6335,
                         },
                     },
                     "history_db_provider": "local",
