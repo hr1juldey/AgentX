@@ -72,7 +72,7 @@ class UnifiedMem0Adapter:
                     "llm": {
                         "provider": "ollama",
                         "config": {
-                            "model": "gemma3:4b",
+                            "model": settings.llm.model,
                             "ollama_base_url": settings.llm.api_base,
                         },
                     },
