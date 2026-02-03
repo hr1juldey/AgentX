@@ -3,6 +3,7 @@
 Composes embedding, Qdrant management, and search/store operations.
 """
 
+from agentx.core.memory_config import get_memory_config
 from agentx.infrastructure.external.colbert.embedding import ColBERTEmbedding
 from agentx.infrastructure.external.colbert.qdrant_manager import (
     ColBERTQdrantManager,
@@ -21,12 +22,11 @@ class ColBERTEmbedder:
     Why ColBERT?
     - Token-level granularity (preserves fine-grained semantics)
     - Late interaction (efficient MaxSim operation)
-    - Multivector output (each token → 128-dim vector)
+    - Multivector output (each token → vector_size-dim vector)
     - State-of-the-art retrieval performance
-    """
 
-    MODEL_NAME = "colbert-ir/colbertv2.0"
-    VECTOR_SIZE = 128
+    Phase 4 Fix: Uses memory_config for model name and vector size (Fraud #3.3).
+    """
 
     def __init__(self, qdrant_url: str = "http://localhost:6335") -> None:
         """Initialize ColBERT embedder.
@@ -43,6 +43,16 @@ class ColBERTEmbedder:
         self._store = ColBERTStoreOperations(
             self.client, self._embedding.embed_text, self._qdrant.ensure_collection
         )
+
+    @property
+    def model_name(self) -> str:
+        """Get ColBERT model name from config."""
+        return get_memory_config().colbert_model_name
+
+    @property
+    def vector_size(self) -> int:
+        """Get ColBERT vector size from config."""
+        return get_memory_config().colbert_vector_size
 
     @property
     def embedder(self):

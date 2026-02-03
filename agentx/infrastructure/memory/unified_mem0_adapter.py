@@ -16,6 +16,7 @@ from mem0 import Memory
 from pydantic import BaseModel
 
 from agentx.core.config import get_settings
+from agentx.core.memory_config import get_memory_config
 
 
 class ConsolidatedMemory(BaseModel):
@@ -40,18 +41,26 @@ class UnifiedMem0Adapter:
     - Duplicate detection and merging
     - Cross-session persistence
     - Quality-based filtering
+    - Degraded mode fallback when Qdrant unavailable
+
+    Phase 4 Fix:
+    - Uses memory_config for thresholds (Fraud #5.5)
+    - Adds degraded mode fallback (Fraud #4.5)
     """
 
-    QUALITY_THRESHOLD: float = 0.6
-    MIN_LENGTH: int = 50
-    CONSOLIDATION_THRESHOLD: int = 100
+    def __init__(self, enable_degraded_mode: bool = True) -> None:
+        """Initialize Mem0AI client with Qdrant and Ollama LLM.
 
-    def __init__(self) -> None:
-        """Initialize Mem0AI client with Qdrant and Ollama LLM."""
+        Args:
+            enable_degraded_mode: If True, fall back to local-only mode on Qdrant failure.
+                                If False, raise exception on init failure.
+        """
         settings = get_settings()
+        self._degraded_mode: bool = False
+        self._client: Memory | None = None
 
         try:
-            self.client = Memory.from_config(
+            self._client = Memory.from_config(
                 {
                     "vector_store": {
                         "provider": "qdrant",
@@ -71,9 +80,58 @@ class UnifiedMem0Adapter:
                 }
             )
         except Exception as e:
-            raise RuntimeError(
-                f"Failed to initialize Mem0 with Qdrant at {settings.database.qdrant_url}: {e}"
-            ) from e
+            if enable_degraded_mode:
+                # Fall back to local-only storage (no vector search)
+                import logging
+
+                logging.warning(
+                    f"Failed to initialize Mem0 with Qdrant at {settings.database.qdrant_url}: {e}. "
+                    "Falling back to degraded mode (local-only storage, no semantic search)."
+                )
+                self._degraded_mode = True
+                try:
+                    # Try with local-only storage
+                    self._client = Memory.from_config(
+                        {
+                            "vector_store": {"provider": "local"},
+                            "llm": {
+                                "provider": "ollama",
+                                "config": {
+                                    "model": "gemma3:4b",
+                                    "ollama_base_url": settings.llm.api_base,
+                                },
+                            },
+                            "history_db_provider": "local",
+                        }
+                    )
+                except Exception as e2:
+                    # Even degraded mode failed, set to None
+                    logging.error(
+                        f"Failed to initialize Mem0 in degraded mode: {e2}. "
+                        "Memory operations will be no-ops."
+                    )
+                    self._client = None
+            else:
+                raise RuntimeError(
+                    f"Failed to initialize Mem0 with Qdrant at {settings.database.qdrant_url}: {e}"
+                ) from e
+
+    @property
+    def client(self) -> Memory:
+        """Get Mem0 client, raising error if not available."""
+        if self._client is None:
+            raise RuntimeError("Mem0 client is not available (initialization failed).")
+        return self._client
+
+    @property
+    def degraded_mode(self) -> bool:
+        """Check if adapter is in degraded mode (local-only storage)."""
+        return self._degraded_mode
+
+    @property
+    def available(self) -> bool:
+        """Check if Mem0 client is available."""
+        return self._client is not None
 
     async def store_execution_result(
         self,
@@ -85,9 +143,11 @@ class UnifiedMem0Adapter:
         """Store result ONLY if it meets quality thresholds.
 
         Prevents hoarding by:
-        1. Filtering low-confidence results (< 0.6)
-        2. Filtering trivial results (< 50 chars)
+        1. Filtering low-confidence results (< config.quality_threshold)
+        2. Filtering trivial results (< config.min_result_length chars)
         3. Checking for duplicates before storing
+
+        Phase 4 Fix: Uses memory_config for thresholds (Fraud #5.5).
 
         Args:
             query: Original query
@@ -98,12 +158,14 @@ class UnifiedMem0Adapter:
         Returns:
             bool: True if stored, False if filtered
         """
+        mem_config = get_memory_config()
+
         # Filter low-confidence results
-        if confidence < self.QUALITY_THRESHOLD:
+        if confidence < mem_config.quality_threshold:
             return False
 
         # Filter trivial results
-        if len(result.strip()) < self.MIN_LENGTH:
+        if len(result.strip()) < mem_config.min_result_length:
             return False
 
         # Check for duplicates
@@ -155,9 +217,9 @@ class UnifiedMem0Adapter:
             if result:
                 consolidated.append(
                     ConsolidatedMemory(
-                        memory_id=result.get("id", ""),
+                        memory_id=result.get("id", ""),  # type: ignore[arg-type]
                         content=content,
-                        metadata=result.get("metadata", {}),
+                        metadata=result.get("metadata", {}),  # type: ignore[arg-type]
                         created_at=datetime.now(),
                     )
                 )
@@ -172,27 +234,54 @@ class UnifiedMem0Adapter:
     ) -> list[dict[str, Any]]:
         """Search memories with ColBERTv2 via Qdrant.
 
+        Phase 4 Fix: In degraded mode, returns recent memories without semantic search.
+
         Args:
-            query: Search query
+            query: Search query (ignored in degraded mode)
             user_id: User ID
             limit: Max results
 
         Returns:
             list[dict]: Search results with correct key names.
         """
+        if not self.available:
+            return []
+
+        if self._degraded_mode:
+            # Degraded mode: return recent memories (no semantic search)
+            import logging
+
+            logging.warning(
+                "Mem0 in degraded mode - returning recent memories without semantic search"
+            )
+            # Type: ignore for _client checked by available property
+            memories = self._client.get_all(user_id=user_id)  # type: ignore[union-attr]
+            results = memories.get("results", [])[:limit]  # type: ignore[index]
+            return [
+                {
+                    "content": r.get("memory", ""),  # type: ignore[attr-defined]
+                    "score": 0.0,  # No score in degraded mode
+                    "metadata": r.get("metadata", {}),  # type: ignore[attr-defined]
+                }
+                for r in results
+            ]
+
+        # Normal mode: semantic search with Qdrant
         results = self.client.search(query, user_id=user_id, limit=limit)
 
         return [
             {
-                "content": r.get("memory", ""),  # Mem0 uses "memory" key
-                "score": r.get("score", 0.0),
-                "metadata": r.get("metadata", {}),
+                "content": r.get("memory", ""),  # type: ignore[attr-defined]
+                "score": r.get("score", 0.0),  # type: ignore[attr-defined]
+                "metadata": r.get("metadata", {}),  # type: ignore[attr-defined]
             }
             for r in results
         ]
 
     async def get_memories(self, user_id: str, limit: int = 10) -> list[dict[str, Any]]:
         """Get memories for a user.
+
+        Phase 4 Fix: Returns empty list if client unavailable.
 
         Args:
             user_id: User ID
@@ -201,11 +290,17 @@ class UnifiedMem0Adapter:
         Returns:
             list[dict]: User memories
         """
+        if not self.available:
+            return []
+
         memories = self.client.get_all(user_id=user_id)
-        return memories.get("results", [])[:limit]
+        return memories.get("results", [])[:limit]  # type: ignore[index]
 
     async def consolidate_if_needed(self, user_id: str) -> int:
         """Consolidate memories if count exceeds threshold.
+
+        Phase 4 Fix: Uses memory_config for threshold (Fraud #5.5).
+        Returns 0 if client unavailable.
 
         Args:
             user_id: User ID
@@ -213,11 +308,15 @@ class UnifiedMem0Adapter:
         Returns:
             int: Number of memories that could be consolidated
         """
-        all_memories = self.client.get_all(user_id=user_id)
-        memory_count = len(all_memories.get("results", []))
+        if not self.available:
+            return 0
 
-        if memory_count > self.CONSOLIDATION_THRESHOLD:
-            return memory_count - self.CONSOLIDATION_THRESHOLD
+        mem_config = get_memory_config()
+        all_memories = self.client.get_all(user_id=user_id)
+        memory_count = len(all_memories.get("results", []))  # type: ignore[arg-type]
+
+        if memory_count > mem_config.consolidation_threshold:
+            return memory_count - mem_config.consolidation_threshold
 
         return 0
 

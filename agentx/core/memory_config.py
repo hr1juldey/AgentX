@@ -45,6 +45,11 @@ class MemoryConfig(BaseSettings):
     consolidation_min_memories: int = 5
     consolidation_max_results: int = 10
 
+    # Quality thresholds (Fraud #5.5)
+    quality_threshold: float = 0.6
+    min_result_length: int = 50
+    consolidation_threshold: int = 100
+
 
 # Global settings instance
 memory_config = MemoryConfig()
