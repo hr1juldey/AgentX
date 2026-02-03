@@ -10,6 +10,10 @@ from enum import Enum
 from typing import Optional
 from uuid import UUID, uuid4
 
+from agentx.core.config import get_settings
+
+settings = get_settings()
+
 
 class TopicType(str, Enum):
     """Type of topic for search term pattern categorization."""
@@ -68,7 +72,10 @@ class SearchTermPattern:
 
     def is_high_quality(self) -> bool:
         """Check if this pattern is high quality."""
-        return self.avg_quality_score >= 0.7 and self.success_count >= 2
+        return (
+            self.avg_quality_score >= settings.memory.high_quality_threshold
+            and self.success_count >= settings.search.min_success_count
+        )
 
 
 @dataclass

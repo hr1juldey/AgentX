@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from agentx.application.dtos.memory_dtos import HealthResponse
-from agentx.infrastructure.database.qdrant_vector_store import QdrantVectorStore
+from agentx.core.dependencies import get_vector_store
 from agentx.presentation.api.v1.memory.dependencies import get_duration_service
 
 
@@ -21,7 +21,7 @@ async def health_check() -> HealthResponse:
     # Check Qdrant connection
     qdrant_connected = True
     try:
-        store = QdrantVectorStore()
+        store = get_vector_store()
         store.client.get_collections()
     except Exception:
         qdrant_connected = False

@@ -100,6 +100,53 @@ class SearXNGConfig(BaseSettings):
     timeout: int = 30
 
 
+class MemoryConfig(BaseSettings):
+    """Memory configuration."""
+
+    model_config = SettingsConfigDict(
+        env_file=str(_ENV_FILE),
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+        env_prefix="MEMORY__",
+    )
+
+    default_quality_score: float = 0.8
+    default_confidence: float = 0.7
+    default_ttl_days: int = 30
+    high_quality_threshold: float = 0.7
+    low_quality_threshold: float = 0.6
+
+
+class SearchConfig(BaseSettings):
+    """Search configuration."""
+
+    model_config = SettingsConfigDict(
+        env_file=str(_ENV_FILE),
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+        env_prefix="SEARCH__",
+    )
+
+    min_success_count: int = 2
+    min_results: int = 3
+
+
+class SessionConfig(BaseSettings):
+    """Session configuration."""
+
+    model_config = SettingsConfigDict(
+        env_file=str(_ENV_FILE),
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+        env_prefix="SESSION__",
+    )
+
+    timeout_seconds: int = 300
+
+
 class Settings(BaseSettings):
     """Application settings with environment variable support."""
 
@@ -115,6 +162,9 @@ class Settings(BaseSettings):
     server: ServerConfig = Field(default_factory=ServerConfig)
     voice: VoiceConfig = Field(default_factory=VoiceConfig)
     searxng: SearXNGConfig = Field(default_factory=SearXNGConfig)
+    memory: MemoryConfig = Field(default_factory=MemoryConfig)
+    search: SearchConfig = Field(default_factory=SearchConfig)
+    session: SessionConfig = Field(default_factory=SessionConfig)
 
     app_name: str = "AgentX"
     app_version: str = "0.1.0"

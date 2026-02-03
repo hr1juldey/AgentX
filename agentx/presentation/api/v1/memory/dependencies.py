@@ -8,11 +8,11 @@ from agentx.application.use_cases.consolidate_memory_use_case import (
 )
 from agentx.application.use_cases.search_memory_use_case import SearchMemoryUseCase
 from agentx.application.use_cases.store_memory_use_case import StoreMemoryUseCase
-from agentx.infrastructure.database.qdrant_vector_store import QdrantVectorStore
 from agentx.application.services.duration_memory_service import (
     DurationMemoryService,
 )
 from agentx.application.services.temporal_rag_service import TemporalRAGService
+from agentx.core.dependencies import get_vector_store
 
 
 def get_store_use_case() -> StoreMemoryUseCase:
@@ -21,7 +21,7 @@ def get_store_use_case() -> StoreMemoryUseCase:
     Returns:
         StoreMemoryUseCase: Use case instance.
     """
-    vector_store = QdrantVectorStore()
+    vector_store = get_vector_store()
     temporal_rag = TemporalRAGService(vector_store=vector_store)
     return StoreMemoryUseCase(vector_store=vector_store, temporal_rag=temporal_rag)
 
@@ -32,7 +32,7 @@ def get_search_use_case() -> SearchMemoryUseCase:
     Returns:
         SearchMemoryUseCase: Use case instance.
     """
-    vector_store = QdrantVectorStore()
+    vector_store = get_vector_store()
     temporal_rag = TemporalRAGService(vector_store=vector_store)
     return SearchMemoryUseCase(vector_store=vector_store, temporal_rag=temporal_rag)
 
@@ -43,7 +43,7 @@ def get_consolidate_use_case() -> ConsolidateMemoryUseCase:
     Returns:
         ConsolidateMemoryUseCase: Use case instance.
     """
-    vector_store = QdrantVectorStore()
+    vector_store = get_vector_store()
     duration_svc = DurationMemoryService()
     return ConsolidateMemoryUseCase(
         vector_store=vector_store, duration_svc=duration_svc

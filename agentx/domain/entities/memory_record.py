@@ -10,6 +10,10 @@ from enum import Enum
 from typing import Optional
 from uuid import UUID, uuid4
 
+from agentx.core.config import get_settings
+
+settings = get_settings()
+
 
 class WorkExperienceType(str, Enum):
     """Type of work experience memory."""
@@ -52,13 +56,13 @@ class MemoryRecord:
     output_produced: str = ""
 
     # Quality tracking
-    quality_score: float = 0.8
+    quality_score: float = settings.memory.default_quality_score
     source_type: SourceType = SourceType.UNKNOWN
-    confidence_score: float = 0.7
+    confidence_score: float = settings.memory.default_confidence
 
     # Memory lifecycle
     access_count: int = 0
-    ttl_days: int = 30
+    ttl_days: int = settings.memory.default_ttl_days
     superseded_by: Optional[UUID] = None
 
     # Timestamps
@@ -88,7 +92,7 @@ class MemoryRecord:
     def is_reliable(self) -> bool:
         """Check if memory is reliable enough for reuse."""
         return (
-            self.quality_score >= 0.7
-            and self.confidence_score >= 0.6
+            self.quality_score >= settings.memory.high_quality_threshold
+            and self.confidence_score >= settings.memory.low_quality_threshold
             and not self.is_expired()
         )

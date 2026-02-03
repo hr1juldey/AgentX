@@ -1,6 +1,6 @@
 """Database-related dependencies.
 
-Provides session adapters and repositories.
+Provides session adapters, repositories, and vector store.
 """
 
 from typing import TYPE_CHECKING
@@ -8,6 +8,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from agentx.domain.repositories.agent_session_repository import (
         AgentSessionRepository,
+    )
+    from agentx.infrastructure.database.qdrant.qdrant_vector_store import (
+        QdrantVectorStore,
     )
     from agentx.infrastructure.database.redis_session_adapter import (
         RedisSessionAdapter,
@@ -21,6 +24,7 @@ if TYPE_CHECKING:
 _redis_adapter: "RedisSessionAdapter | None" = None
 _sqlite_adapter: "SQLiteSessionAdapter | None" = None
 _agent_session_repo: "AgentSessionRepository | None" = None
+_vector_store: "QdrantVectorStore | None" = None
 
 
 def get_redis_session_adapter() -> "RedisSessionAdapter":
@@ -68,12 +72,29 @@ def get_agent_session_repository() -> "AgentSessionRepository":
     return _agent_session_repo
 
 
+def get_vector_store() -> "QdrantVectorStore":
+    """Get the Qdrant vector store singleton.
+
+    Returns:
+        QdrantVectorStore: The vector store instance.
+    """
+    global _vector_store
+    if _vector_store is None:
+        from agentx.infrastructure.database.qdrant.qdrant_vector_store import (
+            QdrantVectorStore,
+        )
+
+        _vector_store = QdrantVectorStore()
+    return _vector_store
+
+
 def reset_database_dependencies() -> None:
     """Reset database dependency singletons.
 
     Useful for testing or clearing state.
     """
-    global _redis_adapter, _sqlite_adapter, _agent_session_repo
+    global _redis_adapter, _sqlite_adapter, _agent_session_repo, _vector_store
     _redis_adapter = None
     _sqlite_adapter = None
     _agent_session_repo = None
+    _vector_store = None

@@ -6,7 +6,12 @@ complexity and generating execution plans with 0 to N research tasks.
 
 import dspy
 
-from agentx.domain.models.query_plan import ExecutionPlan, ResearchTask, TaskType
+from agentx.agent.tools.planner.query_planner_helpers import (
+    build_guidance_context,
+    parse_duration,
+    parse_task_descriptions,
+)
+from agentx.domain.models.query_plan import ExecutionPlan
 
 
 class PlanQuerySignature(dspy.Signature):
@@ -80,25 +85,7 @@ class QueryPlannerModule(dspy.Module):
             dspy.Prediction: Contains ExecutionPlan
         """
         # Build enhanced context from search guidance (if provided)
-        guidance_context = ""
-        if search_guidance:
-            depth = search_guidance.get("search_depth", "medium")
-            terms = search_guidance.get("prioritized_terms", "")
-            sources = search_guidance.get("source_preferences", "")
-            format_pref = search_guidance.get("answer_format", "")
-
-            guidance_parts = []
-            if depth:
-                guidance_parts.append(f"Search depth: {depth}")
-            if terms:
-                guidance_parts.append(f"Priority terms: {terms}")
-            if sources:
-                guidance_parts.append(f"Preferred sources: {sources}")
-            if format_pref:
-                guidance_parts.append(f"Answer format: {format_pref}")
-
-            if guidance_parts:
-                guidance_context = " | ".join(guidance_parts)
+        guidance_context = build_guidance_context(search_guidance)
 
         # Combine conversation context with guidance
         enhanced_context = conversation_context
@@ -114,49 +101,20 @@ class QueryPlannerModule(dspy.Module):
         )
 
         # Parse task descriptions from JSON
-        import json
-
-        tasks: list[ResearchTask] = []
-
-        try:
-            task_data_list = json.loads(result.task_descriptions)  # type: ignore[attr-defined]
-            for task_data in task_data_list:
-                task = ResearchTask(
-                    task_id=task_data.get("task_id", f"task_{len(tasks)}"),
-                    task_type=TaskType(task_data.get("task_type", "search")),
-                    description=task_data.get("description", ""),
-                    query=task_data.get("query", query),
-                    dependencies=task_data.get("dependencies", []),
-                )
-                tasks.append(task)
-        except (json.JSONDecodeError, ValueError):
-            # Default: single search task if parsing fails
-            if result.needs_research.lower() == "true":  # type: ignore[attr-defined]
-                tasks = [
-                    ResearchTask(
-                        task_id="search_1",
-                        task_type=TaskType.SEARCH,
-                        description="Search for information",
-                        query=query,
-                        dependencies=[],
-                    )
-                ]
+        needs_research = result.needs_research.lower() == "true"  # type: ignore[attr-defined]
+        tasks = parse_task_descriptions(
+            result.task_descriptions,  # type: ignore[attr-defined]
+            query,
+            needs_research,
+        )
 
         # Parse duration
-        duration: int | None = None
-        try:
-            duration = (
-                int(result.estimated_duration)  # type: ignore[attr-defined]
-                if result.estimated_duration  # type: ignore[attr-defined]
-                else None
-            )
-        except ValueError:
-            duration = None
+        duration = parse_duration(result.estimated_duration)  # type: ignore[attr-defined]
 
         # Create execution plan
         execution_plan = ExecutionPlan(
             query=query,
-            needs_research=result.needs_research.lower() == "true",  # type: ignore[attr-defined]
+            needs_research=needs_research,
             research_tasks=tasks,
             estimated_duration=duration,
             reasoning=result.reasoning,  # type: ignore[attr-defined]

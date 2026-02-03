@@ -14,6 +14,7 @@ from agentx.core.dependency_facades import (
     get_redis_session_adapter,
     get_sqlite_session_adapter,
     get_text_stream_handler,
+    get_vector_store,
     get_voice_gateway_service,
 )
 from agentx.core.dependency_facades.dspy import (
@@ -32,6 +33,7 @@ __all__ = [
     "get_redis_session_adapter",
     "get_sqlite_session_adapter",
     "get_agent_session_repository",
+    "get_vector_store",
     "ensure_dspy_configured",
     "get_voice_gateway_service",
     "get_conversation_state_manager",

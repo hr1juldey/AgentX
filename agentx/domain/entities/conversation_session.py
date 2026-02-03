@@ -6,6 +6,10 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
+from agentx.core.config import get_settings
+
+settings = get_settings()
+
 
 class MessageRole(str, Enum):
     """Message role in conversation."""
@@ -96,14 +100,16 @@ class ConversationSession:
         """
         return self.messages[-limit:]
 
-    def is_expired(self, timeout_seconds: int = 300) -> bool:
+    def is_expired(self, timeout_seconds: int | None = None) -> bool:
         """Check if session is expired.
 
         Args:
-            timeout_seconds: Timeout in seconds (default: 300 = 5 minutes).
+            timeout_seconds: Timeout in seconds. Uses config default if None.
 
         Returns:
             True if session is expired, False otherwise.
         """
+        if timeout_seconds is None:
+            timeout_seconds = settings.session.timeout_seconds
         delta = _utc_now() - self.last_activity_at
         return delta.total_seconds() > timeout_seconds

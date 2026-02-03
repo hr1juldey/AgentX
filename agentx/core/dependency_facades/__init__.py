@@ -13,6 +13,7 @@ from agentx.core.dependency_facades.database import (
     get_agent_session_repository,
     get_redis_session_adapter,
     get_sqlite_session_adapter,
+    get_vector_store,
     reset_database_dependencies,
 )
 from agentx.core.dependency_facades.dspy import (
@@ -35,6 +36,7 @@ __all__ = [
     "get_redis_session_adapter",
     "get_sqlite_session_adapter",
     "get_agent_session_repository",
+    "get_vector_store",
     "reset_database_dependencies",
     # Application
     "get_conversation_state_manager",

@@ -8,6 +8,17 @@ Used as first pass before LLM-based selection for complex cases.
 
 from typing import Any
 
+from agentx.agent.agents.widget_pattern_library import (
+    WIDGET_CARD,
+    WIDGET_CHART,
+    WIDGET_CONFIRMATION,
+    WIDGET_FORM,
+    WIDGET_MARKDOWN,
+    WIDGET_PATTERNS,
+    WIDGET_PROGRESS,
+    WIDGET_SEARCH_RESULT,
+)
+
 
 class RuleBasedWidgetSelector:
     """Rule-based widget selector for fast common cases.
@@ -23,122 +34,9 @@ class RuleBasedWidgetSelector:
     Falls back to None for complex cases requiring LLM.
     """
 
-    # Widget type constants (from C007)
-    WIDGET_MARKDOWN = "markdown"
-    WIDGET_CARD = "card"
-    WIDGET_FORM = "form"
-    WIDGET_PROGRESS = "progress"
-    WIDGET_ACTION = "action"
-    WIDGET_CONFIRMATION = "confirmation"
-    WIDGET_IMAGE = "image"
-    WIDGET_GALLERY = "gallery"
-    WIDGET_CHART = "chart"
-    WIDGET_SEARCH_RESULT = "searchResult"
-    WIDGET_HOP_PROGRESS = "hopProgress"
-    WIDGET_CITATION_CARD = "citationCard"
-
     def __init__(self) -> None:
         """Initialize the rule-based selector."""
-        # Common patterns for fast matching
-        self.patterns = {
-            # Keywords that suggest markdown
-            "markdown_keywords": {
-                "document",
-                "documentation",
-                "article",
-                "blog",
-                "tutorial",
-                "guide",
-                "explanation",
-                "instructions",
-                "readme",
-                "notes",
-            },
-            # Keywords that suggest card
-            "card_keywords": {
-                "result",
-                "answer",
-                "summary",
-                "information",
-                "details",
-                "overview",
-                "statistic",
-                "fact",
-                "definition",
-                "profile",
-            },
-            # Keywords that suggest form
-            "form_keywords": {
-                "input",
-                "enter",
-                "submit",
-                "fill",
-                "provide",
-                "specify",
-                "choose",
-                "select",
-                "options",
-                "parameters",
-                "settings",
-            },
-            # Keywords that suggest progress
-            "progress_keywords": {
-                "loading",
-                "processing",
-                "progress",
-                "step",
-                "stage",
-                "phase",
-                "downloading",
-                "uploading",
-                "analyzing",
-                "computing",
-                "working",
-            },
-            # Keywords that suggest confirmation
-            "confirmation_keywords": {
-                "confirm",
-                "approve",
-                "deny",
-                "reject",
-                "accept",
-                "decline",
-                "yes",
-                "no",
-                "agree",
-                "disagree",
-                "allow",
-                "permit",
-            },
-            # Keywords that suggest chart
-            "chart_keywords": {
-                "graph",
-                "chart",
-                "plot",
-                "visualization",
-                "trend",
-                "analytics",
-                "statistics",
-                "data",
-                "comparison",
-                "distribution",
-                "metrics",
-            },
-            # Keywords that suggest search result
-            "search_keywords": {
-                "search",
-                "results",
-                "found",
-                "matching",
-                "items",
-                "entries",
-                "query",
-                "look for",
-                "find",
-                "locate",
-                "retrieve",
-            },
-        }
+        self.patterns = WIDGET_PATTERNS
 
     def select(
         self,
@@ -166,10 +64,10 @@ class RuleBasedWidgetSelector:
         if (
             content_type == "text"
             and any(kw in query_lower for kw in self.patterns["markdown_keywords"])
-            and is_available(self.WIDGET_MARKDOWN)
+            and is_available(WIDGET_MARKDOWN)
         ):
             return {
-                "widget": self.WIDGET_MARKDOWN,
+                "widget": WIDGET_MARKDOWN,
                 "confidence": 0.9,
                 "reasoning": "Rule: Text-heavy content matched markdown keywords",
             }
@@ -178,10 +76,10 @@ class RuleBasedWidgetSelector:
         if (
             content_type in ("data", "structured")
             and any(kw in query_lower for kw in self.patterns["card_keywords"])
-            and is_available(self.WIDGET_CARD)
+            and is_available(WIDGET_CARD)
         ):
             return {
-                "widget": self.WIDGET_CARD,
+                "widget": WIDGET_CARD,
                 "confidence": 0.85,
                 "reasoning": "Rule: Structured data matched card keywords",
             }
@@ -189,9 +87,9 @@ class RuleBasedWidgetSelector:
         # Rule 3: User input → form
         if any(
             kw in query_lower for kw in self.patterns["form_keywords"]
-        ) and is_available(self.WIDGET_FORM):
+        ) and is_available(WIDGET_FORM):
             return {
-                "widget": self.WIDGET_FORM,
+                "widget": WIDGET_FORM,
                 "confidence": 0.9,
                 "reasoning": "Rule: User input matched form keywords",
             }
@@ -199,9 +97,9 @@ class RuleBasedWidgetSelector:
         # Rule 4: Progress tracking → progress
         if any(
             kw in query_lower for kw in self.patterns["progress_keywords"]
-        ) and is_available(self.WIDGET_PROGRESS):
+        ) and is_available(WIDGET_PROGRESS):
             return {
-                "widget": self.WIDGET_PROGRESS,
+                "widget": WIDGET_PROGRESS,
                 "confidence": 0.95,
                 "reasoning": "Rule: Progress tracking matched progress keywords",
             }
@@ -209,9 +107,9 @@ class RuleBasedWidgetSelector:
         # Rule 5: Confirmations → confirmation
         if any(
             kw in query_lower for kw in self.patterns["confirmation_keywords"]
-        ) and is_available(self.WIDGET_CONFIRMATION):
+        ) and is_available(WIDGET_CONFIRMATION):
             return {
-                "widget": self.WIDGET_CONFIRMATION,
+                "widget": WIDGET_CONFIRMATION,
                 "confidence": 0.9,
                 "reasoning": "Rule: Confirmation request matched confirmation keywords",
             }
@@ -219,9 +117,9 @@ class RuleBasedWidgetSelector:
         # Rule 6: Data visualization → chart
         if any(
             kw in query_lower for kw in self.patterns["chart_keywords"]
-        ) and is_available(self.WIDGET_CHART):
+        ) and is_available(WIDGET_CHART):
             return {
-                "widget": self.WIDGET_CHART,
+                "widget": WIDGET_CHART,
                 "confidence": 0.85,
                 "reasoning": "Rule: Data visualization matched chart keywords",
             }
@@ -229,12 +127,15 @@ class RuleBasedWidgetSelector:
         # Rule 7: Search results → searchResult
         if any(
             kw in query_lower for kw in self.patterns["search_keywords"]
-        ) and is_available(self.WIDGET_SEARCH_RESULT):
+        ) and is_available(WIDGET_SEARCH_RESULT):
             return {
-                "widget": self.WIDGET_SEARCH_RESULT,
+                "widget": WIDGET_SEARCH_RESULT,
                 "confidence": 0.9,
                 "reasoning": "Rule: Search query matched searchResult keywords",
             }
 
         # No rule matched - return None for LLM fallback
         return None
+
+
+__all__ = ["RuleBasedWidgetSelector"]
