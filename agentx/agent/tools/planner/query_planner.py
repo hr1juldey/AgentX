@@ -51,6 +51,10 @@ class QueryPlannerModule(dspy.Module):
 
     Simple queries (What is 2+2?) → 0 tasks → direct answer
     Complex queries (Compare iPhone vs Pixel) → N tasks → research workers
+
+    ENHANCED with memory-guided search planning:
+    - Optional search_guidance parameter from SearchGuidanceModule
+    - Guidance enhances task generation but PRESERVES 0-to-N pattern
     """
 
     def __init__(self):
@@ -58,20 +62,55 @@ class QueryPlannerModule(dspy.Module):
         super().__init__()
         self.generate_plan = dspy.Predict(PlanQuerySignature)
 
-    def forward(self, query: str, conversation_context: str = "") -> dspy.Prediction:
+    def forward(
+        self,
+        query: str,
+        conversation_context: str = "",
+        search_guidance: dict | None = None,
+    ) -> dspy.Prediction:
         """Generate execution plan for the query.
 
         Args:
             query: User's query
             conversation_context: Previous conversation (optional)
+            search_guidance: Optional memory-guided search parameters from
+                SearchGuidanceModule (enhances planning but PRESERVES 0-to-N pattern)
 
         Returns:
             dspy.Prediction: Contains ExecutionPlan
         """
-        # Generate plan using LLM
+        # Build enhanced context from search guidance (if provided)
+        guidance_context = ""
+        if search_guidance:
+            depth = search_guidance.get("search_depth", "medium")
+            terms = search_guidance.get("prioritized_terms", "")
+            sources = search_guidance.get("source_preferences", "")
+            format_pref = search_guidance.get("answer_format", "")
+
+            guidance_parts = []
+            if depth:
+                guidance_parts.append(f"Search depth: {depth}")
+            if terms:
+                guidance_parts.append(f"Priority terms: {terms}")
+            if sources:
+                guidance_parts.append(f"Preferred sources: {sources}")
+            if format_pref:
+                guidance_parts.append(f"Answer format: {format_pref}")
+
+            if guidance_parts:
+                guidance_context = " | ".join(guidance_parts)
+
+        # Combine conversation context with guidance
+        enhanced_context = conversation_context
+        if guidance_context:
+            enhanced_context = (
+                f"{conversation_context}\n[Memory Guidance: {guidance_context}]"
+            )
+
+        # Generate plan using LLM with enhanced context
         result = self.generate_plan(
             query=query,
-            conversation_context=conversation_context,
+            conversation_context=enhanced_context,
         )
 
         # Parse task descriptions from JSON

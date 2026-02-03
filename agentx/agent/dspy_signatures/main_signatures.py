@@ -63,13 +63,29 @@ class DesignerSignature(dspy.Signature):
 class MemorySignature(dspy.Signature):
     """Memory agent signature for RAG operations.
 
-    Retrieves relevant context from memory stores.
+    Retrieves relevant context from QdrantVectorStore using ColBERTv2 embeddings.
+    Class-based signature for gemma3:4b compatibility (explicit fields).
+
+    Fraud #2 fix: Uses real QdrantVectorStore search instead of dspy.Predict.
     """
 
-    query = dspy.InputField(desc="User's question or request")
-    session_id = dspy.InputField(desc="Current session identifier")
-    context = dspy.OutputField(desc="Relevant context from memory")
-    sources = dspy.OutputField(desc="Source references for retrieved context")
+    query = dspy.InputField(desc="User's question or request that needs memory context")
+    session_id = dspy.InputField(
+        desc="Current session identifier for session-scoped memories"
+    )
+    user_id = dspy.InputField(
+        desc="User ID for user-scoped memory lookup (default: 'default')",
+        default="default",
+    )
+    context = dspy.OutputField(
+        desc="Retrieved context from QdrantVectorStore (ColBERTv2 embeddings)"
+    )
+    sources = dspy.OutputField(
+        desc="List of memory IDs or source references for retrieved context"
+    )
+    retrieval_count = dspy.OutputField(
+        desc="Number of memories retrieved from vector store"
+    )
 
 
 class ToolExecutorSignature(dspy.Signature):

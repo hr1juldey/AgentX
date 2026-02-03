@@ -1,28 +1,31 @@
 """Memory agent for RAG operations.
 
-Retrieves relevant context from memory stores via Mem0 (ColBERTv2-powered).
+Retrieves relevant context from QdrantVectorStore using ColBERTv2 embeddings.
 """
 
 import dspy
 
-from agentx.infrastructure.memory.mem0_adapter import Mem0MemoryAdapter
+from agentx.infrastructure.database.qdrant.qdrant_vector_store import QdrantVectorStore
 
 
 class MemoryAgent(dspy.Module):
-    """Memory agent using Mem0 for real retrieval (ColBERTv2-powered).
+    """Memory agent using QdrantVectorStore for real retrieval (ColBERTv2-powered).
 
-    Fraud #2 fix: Uses real Mem0 search instead of dspy.Predict fake retrieval.
+    Fraud #2 fix: Uses real QdrantVectorStore search instead of dspy.Predict fake retrieval.
+
+    Architecture Note: QdrantVectorStore handles retrieval with ColBERTv2.
+    Mem0 is used for memory management only (consolidation, categorization, TTL).
     """
 
     def __init__(self) -> None:
-        """Initialize the memory agent with Mem0 adapter."""
+        """Initialize the memory agent with QdrantVectorStore."""
         super().__init__()
-        self.mem0_adapter = Mem0MemoryAdapter()
+        self.vector_store = QdrantVectorStore()
 
     async def forward(
         self, query: str, session_id: str, user_id: str = "default"
     ) -> dspy.Prediction:
-        """Retrieve relevant context from Mem0 (real retrieval).
+        """Retrieve relevant context from QdrantVectorStore (real retrieval).
 
         Args:
             query: User's question or request.
@@ -32,18 +35,19 @@ class MemoryAgent(dspy.Module):
         Returns:
             dspy.Prediction: Retrieved context with source references.
         """
-        # REAL Mem0 search (uses ColBERTv2 via QdrantVectorStore)
-        memories = await self.mem0_adapter.search_memories(
+        # REAL QdrantVectorStore search (uses ColBERTv2 via ColBERTEmbedder)
+        memories = await self.vector_store.search_memories(
             query=query,
             user_id=user_id,
             limit=10,
         )
 
         # Format context from memories
-        context = "\n".join([m.get("memory", "") for m in memories])
+        context = "\n".join([m.get("content", "") for m in memories])
         sources = [str(m.get("metadata", {}).get("memory_id", "")) for m in memories]
 
         return dspy.Prediction(
             context=context,
             sources=sources,
+            retrieval_count=len(memories),
         )

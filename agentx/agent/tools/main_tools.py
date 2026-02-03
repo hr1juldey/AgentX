@@ -7,15 +7,20 @@ descriptors and interact with various services.
 Locked from LLD: agent_runtime.md:260-346
 """
 
+from agentx.agent.tools.memory_tools import (
+    categorize_memory,
+    consolidate_memories,
+    set_memory_ttl,
+)
 from agentx.agent.tools.ui_tools import (
-    render_markdown_block,
     render_card,
+    render_markdown_block,
     request_confirmation,
-    update_progress,
-    show_form,
-    show_image,
-    show_gallery,
     show_chart,
+    show_form,
+    show_gallery,
+    show_image,
+    update_progress,
 )
 
 import dspy
@@ -30,4 +35,8 @@ AVAILABLE_TOOLS = [
     dspy.Tool(show_image, name="show_image"),
     dspy.Tool(show_gallery, name="show_gallery"),
     dspy.Tool(show_chart, name="show_chart"),
+    # Memory management tools (Mem0 for management, NOT retrieval)
+    dspy.Tool(consolidate_memories, name="consolidate_memories"),
+    dspy.Tool(categorize_memory, name="categorize_memory"),
+    dspy.Tool(set_memory_ttl, name="set_memory_ttl"),
 ]

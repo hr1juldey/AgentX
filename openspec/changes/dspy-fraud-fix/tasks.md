@@ -55,10 +55,11 @@ assert record.access_count == 1
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create SearchGuidanceSignature | `agentx/agent/dspy_signatures/decision_signatures.py` | ⬜ | Class-based signature |
-| Create SearchGuidanceModule | `agentx/agent/dspy_signatures/decision_signatures.py` | ⬜ | Returns: search_depth, terms, sources, format |
-| ENHANCE QueryPlannerModule | `agentx/agent/nodes/query_planner.py` | ⬜ | Add memory guidance, PRESERVE existing |
-| Verify ExecutionPlan preserved | Manual test | ⬜ | 0 tasks → direct, N tasks → research |
+| Create SearchGuidanceSignature | `agentx/agent/dspy_signatures/decision_signatures.py` | ✅ | Class-based signature |
+| Create SearchGuidanceModule | `agentx/agent/dspy_signatures/decision_signatures.py` | ✅ | Returns: search_depth, terms, sources, format |
+| ENHANCE QueryPlannerModule | `agentx/agent/tools/planner/query_planner.py` | ✅ | Add memory guidance, PRESERVE existing |
+| ENHANCE query_planner_node | `agentx/agent/nodes/query_planner.py` | ✅ | Made async, added SearchGuidanceModule call |
+| Verify ExecutionPlan preserved | Manual test | ✅ | 0 tasks → direct, N tasks → research |
 
 **CRITICAL**: PRESERVE existing QueryPlanner functionality:
 - ExecutionPlan with 0 to N research tasks
@@ -111,9 +112,9 @@ print(f'Retrieved {len(result.retrieved_memories)} memories via Qdrant/ColBERTv2
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Update MemorySignature | `agentx/agent/dspy_signatures/main_signatures.py` | ⬜ | Explicit for gemma3:4b |
-| Replace dspy.Predict with QdrantVectorStore | `agentx/agent/dspy_agents/agents/memory.py` | ⬜ | Use QdrantVectorStore directly |
-| Verify real memory access | Manual test | ⬜ | Actual memories from Qdrant (ColBERTv2) |
+| Update MemorySignature | `agentx/agent/dspy_signatures/main_signatures.py` | ✅ | Explicit for gemma3:4b |
+| Replace dspy.Predict with QdrantVectorStore | `agentx/agent/dspy_agents/agents/memory.py` | ✅ | Use QdrantVectorStore directly |
+| Verify real memory access | Manual test | ✅ | Actual memories from Qdrant (ColBERTv2) |
 
 **Fraud Fixed**: #2 - Fake Memory
 
@@ -131,12 +132,12 @@ print(f'Via QdrantVectorStore with ColBERTv2 embeddings')
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Add QdrantVectorStore pre-retrieval | `agentx/agent/dspy_agents/agents/main.py` | ⬜ | Pre-retrieve user history via ColBERTv2 |
-| Add QdrantVectorStore pre-retrieval | `agentx/agent/dspy_agents/agents/analyst.py` | ⬜ | Pre-retrieve user context via ColBERTv2 |
-| Add QdrantVectorStore pre-retrieval | `agentx/agent/dspy_agents/agents/designer.py` | ⬜ | Pre-retrieve UI preferences via ColBERTv2 |
-| Create memory management tools | `agentx/agent/tools/memory_tools.py` | ⬜ | Mem0 management tools (consolidate, categorize) |
-| Update AVAILABLE_TOOLS | `agentx/agent/tools/main_tools.py` | ⬜ | Add memory management tools |
-| Run verification | Manual test | ⬜ | Tools available in ReAct |
+| Add QdrantVectorStore pre-retrieval | `agentx/agent/dspy_agents/agents/main.py` | ✅ | Pre-retrieve user history via ColBERTv2 |
+| Add QdrantVectorStore pre-retrieval | `agentx/agent/dspy_agents/agents/analyst.py` | ✅ | Pre-retrieve user context via ColBERTv2 |
+| Add QdrantVectorStore pre-retrieval | `agentx/agent/dspy_agents/agents/designer.py` | ✅ | Pre-retrieve UI preferences via ColBERTv2 |
+| Create memory management tools | `agentx/agent/tools/memory_tools.py` | ✅ | Mem0 management tools (consolidate, categorize) |
+| Update AVAILABLE_TOOLS | `agentx/agent/tools/main_tools.py` | ✅ | Add memory management tools |
+| Run verification | Manual test | ✅ | Tools available in ReAct |
 
 **Note**: Memory tools use Mem0 for MANAGEMENT (consolidation, categorization), NOT retrieval
 
