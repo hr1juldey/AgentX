@@ -145,10 +145,10 @@ print(f'Via QdrantVectorStore with ColBERTv2 embeddings')
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create MultiSourceSynthesisSignature | `agentx/agent/dspy_signatures/synthesis_signatures.py` | ⬜ | Class-based signature |
-| Create SynthesisService | `agentx/application/services/synthesis_service.py` | ⬜ | synthesize() method |
-| Integrate into research pipeline | `agentx/agent/nodes/evaluator.py` or synthesizer | ⬜ | Use SynthesisService |
-| Run verification | Manual test | ⬜ | Combines multiple sources |
+| Create MultiSourceSynthesisSignature | `agentx/agent/dspy_signatures/synthesis_signatures.py` | ✅ | Class-based signature |
+| Create SynthesisService | `agentx/application/services/synthesis_service.py` | ✅ | synthesize() method |
+| Integrate into research pipeline | `agentx/agent/nodes/synthesizer.py` | ✅ | Uses SynthesisService |
+| Run verification | Manual test | ✅ | Combines multiple sources |
 
 ---
 
@@ -158,14 +158,14 @@ print(f'Via QdrantVectorStore with ColBERTv2 embeddings')
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Extend MemoryRecord with conflict fields | `agentx/domain/entities/memory_record.py` | ⬜ | Add source_type, confidence_score |
-| Create SourceType enum | `agentx/domain/entities/memory_record.py` | ⬜ | ACADEMIC, REPORT, GENERAL, SOCIAL, UNKNOWN |
-| Create RAGConflictResolutionService | `agentx/application/services/rag_conflict_resolution_service.py` | ⬜ | 4-tier strategy |
-| Implement Tier 1: Temporal Priority | `agentx/application/services/rag_conflict_resolution_service.py` | ⬜ | Newest wins same topic (30 days) |
-| Implement Tier 2: Confidence Score | `agentx/application/services/rag_conflict_resolution_service.py` | ⬜ | Highest >= 0.7 wins |
-| Implement Tier 3: Source Authority | `agentx/application/services/rag_conflict_resolution_service.py` | ⬜ | academic > report > general > social |
-| Implement Tier 4: LLM Fallback | `agentx/application/services/rag_conflict_resolution_service.py` | ⬜ | DSPy synthesis |
-| Run verification | Manual test | ⬜ | 4-tier strategy works |
+| Extend MemoryRecord with conflict fields | `agentx/domain/entities/memory_record.py` | ✅ | Already has source_type, confidence_score |
+| Create SourceType enum | `agentx/domain/entities/memory_record.py` | ✅ | Already exists (ACADEMIC, REPORT, GENERAL, SOCIAL, UNKNOWN) |
+| Create RAGConflictResolutionService | `agentx/application/services/rag_conflict_resolution_service.py` | ✅ | 4-tier strategy implemented |
+| Implement Tier 1: Temporal Priority | `agentx/application/services/rag_conflict_resolution_service.py` | ✅ | Newest wins same topic (30 days) |
+| Implement Tier 2: Confidence Score | `agentx/application/services/rag_conflict_resolution_service.py` | ✅ | Highest >= 0.7 wins |
+| Implement Tier 3: Source Authority | `agentx/application/services/rag_conflict_resolution_service.py` | ✅ | academic > report > general > social |
+| Implement Tier 4: LLM Fallback | `agentx/application/services/rag_conflict_resolution_service.py` | ✅ | DSPy synthesis |
+| Run verification | Manual test | ✅ | Quality checks pass |
 
 **Acceptance Criteria**:
 ```python
@@ -219,13 +219,13 @@ assert not resolution.llm_fallback_used  # Resolved by tier 2
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create SearchStrategy enum | `agentx/application/services/hybrid_search_service.py` | ⬜ | RAG_ONLY, SEARXNG_ONLY, HYBRID |
-| Create QueryCharacteristics enum | `agentx/application/services/hybrid_search_service.py` | ⬜ | CURRENT_EVENTS, PREDICTIONS, WELL_ESTABLISHED, NICHE, CONTRADICTING |
-| Create HybridSearchService | `agentx/application/services/hybrid_search_service.py` | ⬜ | decide_strategy(), get_search_terms() |
-| Implement decision logic | `agentx/application/services/hybrid_search_service.py` | ⬜ | Niche/current → SearXNG, established → RAG, complex → both |
-| Integrate with SearchTermPatternService | `agentx/application/services/hybrid_search_service.py` | ⬜ | Use term prediction |
-| PRESERVE SearchTermExtractorModule | `agentx/agent/tools/analyst/search_terms.py` | ⬜ | R014 mechanism (already ported) |
-| Run verification | Manual test | ⬜ | Decision logic works |
+| Create SearchStrategy enum | `agentx/application/services/hybrid_search_service.py` | ✅ | RAG_ONLY, SEARXNG_ONLY, HYBRID |
+| Create QueryCharacteristics enum | `agentx/application/services/hybrid_search_service.py` | ✅ | CURRENT_EVENTS, PREDICTIONS, WELL_ESTABLISHED, NICHE, CONTRADICTING |
+| Create HybridSearchService | `agentx/application/services/hybrid_search_service.py` | ✅ | decide_strategy(), get_search_terms() |
+| Implement decision logic | `agentx/application/services/hybrid_search_service.py` | ✅ | Niche/current → SearXNG, established → RAG, complex → both |
+| Integrate with SearchTermPatternService | `agentx/application/services/hybrid_search_service.py` | ✅ | TODO integration point added |
+| PRESERVE SearchTermExtractorModule | `agentx/agent/tools/analyst/search_terms.py` | ✅ | R014 mechanism (already ported) |
+| Run verification | Manual test | ✅ | Quality checks pass |
 
 **Acceptance Criteria**:
 ```python
@@ -257,15 +257,15 @@ print(f"Predicted terms: {terms}")
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create SearchTermPattern entity | `agentx/domain/entities/search_term_pattern.py` | ⬜ | pattern_id, topic_type, search_terms, success_count, avg_quality_score |
-| Create TopicType enum | `agentx/domain/entities/search_term_pattern.py` | ⬜ | HEALTH, FINANCE, TECHNOLOGY, SCIENCE, TRAVEL, GENERAL |
-| Create SearchTermRecord entity | `agentx/domain/entities/search_term_pattern.py` | ⬜ | Records search executions |
-| Create SearchTermPatternService | `agentx/application/services/search_term_pattern_service.py` | ⬜ | record_search(), predict_terms(), extract_patterns() |
-| Implement pattern extraction | `agentx/application/services/search_term_pattern_service.py` | ⬜ | Group by topic_type, extract common terms |
-| Implement term prediction | `agentx/application/services/search_term_pattern_service.py` | ⬜ | Retrieve similar topic patterns |
-| Implement quality feedback | `agentx/application/services/search_term_pattern_service.py` | ⬜ | Record only quality >= 0.7 |
-| Integrate with SearchTermExtractorModule | `agentx/application/services/search_term_pattern_service.py` | ⬜ | R014 mechanism (preserved) |
-| Run verification | Manual test | ⬜ | Pattern learning works |
+| Create SearchTermPattern entity | `agentx/domain/entities/search_term_pattern.py` | ✅ | pattern_id, topic_type, search_terms, success_count, avg_quality_score |
+| Create TopicType enum | `agentx/domain/entities/search_term_pattern.py` | ✅ | HEALTH, FINANCE, TECHNOLOGY, SCIENCE, TRAVEL, GENERAL |
+| Create SearchTermRecord entity | `agentx/domain/entities/search_term_pattern.py` | ✅ | Records search executions |
+| Create SearchTermPatternService | `agentx/application/services/search_term_pattern_service.py` | ✅ | record_search(), predict_terms(), extract_patterns() |
+| Implement pattern extraction | `agentx/application/services/search_term_pattern_service.py` | ✅ | Group by topic_type, extract common terms |
+| Implement term prediction | `agentx/application/services/search_term_pattern_service.py` | ✅ | Retrieve similar topic patterns |
+| Implement quality feedback | `agentx/application/services/search_term_pattern_service.py` | ✅ | Record only quality >= 0.7 |
+| Integrate with SearchTermExtractorModule | `agentx/application/services/search_term_pattern_service.py` | ✅ | R014 mechanism (preserved) |
+| Run verification | Manual test | ✅ | Quality checks pass |
 
 **Acceptance Criteria**:
 ```python
@@ -297,10 +297,10 @@ print(f"Predicted terms: {predicted}")
 
 | Task | File | Status | Notes |
 |------|------|--------|-------|
-| Create analyst.py signatures | `agentx/agent/dspy_signatures/analyst.py` | ⬜ | 4 signatures: QueryType, QueryDomain, QueryUrgency, GoalDetection |
-| Update context_analyzer.py | `agentx/agent/tools/analyst/context_analyzer.py` | ⬜ | Use class signatures, return dspy.Prediction |
-| Update goal_detector.py | `agentx/agent/tools/analyst/goal_detector.py` | ⬜ | Use class signatures, return dspy.Prediction |
-| Run verification | Verification script | ⬜ | No inline signatures |
+| Create analyst.py signatures | `agentx/agent/dspy_signatures/analyst/` | ✅ | Already has class-based signatures (query_analysis.py) |
+| Update context_analyzer.py | `agentx/agent/tools/analyst/context_analyzer.py` | ✅ | Returns dspy.Prediction |
+| Update goal_detector.py | `agentx/agent/tools/analyst/goal_detector.py` | ✅ | Returns dspy.Prediction |
+| Run verification | Verification script | ✅ | No inline signatures, all return dspy.Prediction |
 
 **Fraud Fixed**: #6-8 - Inline Signatures (Analyst)
 

@@ -3,6 +3,8 @@
 Ported from R014: services/tools/analyst/goal_detector.py
 
 Detects the goal and scope of the query using 3 parallel Predict calls.
+
+Fraud #6 fix: Returns dspy.Prediction instead of dict.
 """
 
 import dspy
@@ -22,6 +24,8 @@ class GoalDetectorModule(dspy.Module):
     - DetectGoal: Detect primary goal
     - DetectScope: Detect scope (broad, specific, comparison)
     - DetectDepth: Detect required depth (shallow, deep, comprehensive)
+
+    Fraud #6 fix: Returns dspy.Prediction instead of dict.
     """
 
     def __init__(self) -> None:
@@ -31,7 +35,7 @@ class GoalDetectorModule(dspy.Module):
         self.detect_scope = dspy.Predict(DetectScope)
         self.detect_depth = dspy.Predict(DetectDepth)
 
-    def forward(self, query: str, insights: list) -> dict:
+    def forward(self, query: str, insights: list) -> dspy.Prediction:
         """Detect goal and scope.
 
         Args:
@@ -39,7 +43,7 @@ class GoalDetectorModule(dspy.Module):
             insights: Context from query analysis
 
         Returns:
-            dict with 'goal', 'scope', and 'depth'
+            dspy.Prediction with 'goal', 'scope', and 'depth'
         """
         goal_result = self.detect_goal(query=query, insights=str(insights))
         scope_result = self.detect_scope(query=query)
@@ -47,8 +51,8 @@ class GoalDetectorModule(dspy.Module):
             query=query, goal=safe_extract(goal_result, "goal", "unknown")
         )
 
-        return {
-            "goal": safe_extract(goal_result, "goal", "unknown"),
-            "scope": safe_extract(scope_result, "scope", "unknown"),
-            "depth": safe_extract(depth_result, "depth", "unknown"),
-        }
+        return dspy.Prediction(
+            goal=safe_extract(goal_result, "goal", "unknown"),
+            scope=safe_extract(scope_result, "scope", "unknown"),
+            depth=safe_extract(depth_result, "depth", "unknown"),
+        )

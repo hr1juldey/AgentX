@@ -6,6 +6,7 @@ and streams tokens to the frontend for progressive disclosure.
 
 from typing import AsyncGenerator
 
+from agentx.application.services.synthesis_service import SynthesisService
 from agentx.domain.models.graph_state import AgentState
 from agentx.domain.models.streaming_events import (
     CompleteEvent,
@@ -19,6 +20,8 @@ async def synthesizer_node(state: AgentState) -> AsyncGenerator[dict, None]:
     """Synthesize response with progressive disclosure.
 
     Streams text first, then reveals widgets progressively.
+    Uses SynthesisService for multi-source synthesis with consensus
+    and conflict detection.
 
     Args:
         state: Current agent state
@@ -28,16 +31,48 @@ async def synthesizer_node(state: AgentState) -> AsyncGenerator[dict, None]:
     """
     findings = state.get("research_findings", [])
     widgets = state.get("selected_widgets", [])
+    query = state.get("query", "")
 
-    # Phase 1: Stream text response
+    # Phase 1: Stream text response with DSPy-powered synthesis
     response_parts: list[str] = []
-    findings_text = "\n".join(f"- {f}" for f in findings)
 
-    # Simple synthesis: combine findings into coherent response
-    # TODO: Replace with DSPy SynthesizerModule when implemented
-    # Stream tokens (mock streaming for now)
-    # TODO: Integrate with DSPy streaming when LLM backend is configured
-    response_text = f"Based on my research, here's what I found:\n\n{findings_text}"
+    # Multi-source synthesis using SynthesisService
+    synthesis_service = SynthesisService()
+
+    # Prepare assessed sources from research findings
+    assessed_sources = [
+        {
+            "content": finding,
+            "relevance_score": 0.8,
+            "quality_score": 0.8,
+        }
+        for finding in findings
+    ]
+
+    # Run multi-source synthesis
+    synthesized = await synthesis_service.synthesize(
+        query=query,
+        assessed_sources=assessed_sources,
+    )
+
+    # Use synthesized unified answer with consensus/conflict info
+    response_text = synthesized["unified_answer"]
+
+    # Append consensus and conflict info if available
+    if synthesized.get("consensus_points"):
+        response_text += (
+            f"\n\n**Key Consensus Points:**\n{synthesized['consensus_points']}"
+        )
+    if synthesized.get("conflicts"):
+        response_text += f"\n\n**Noted Conflicts:**\n{synthesized['conflicts']}"
+
+    # Store synthesis metadata in state
+    synthesis_metadata = {
+        "consensus_points": synthesized.get("consensus_points", ""),
+        "conflicts": synthesized.get("conflicts", ""),
+        "confidence_level": synthesized.get("confidence_level", "unknown"),
+        "reasoning": synthesized.get("reasoning", ""),
+    }
 
     for i, char in enumerate(response_text):
         response_parts.append(char)
@@ -70,6 +105,7 @@ async def synthesizer_node(state: AgentState) -> AsyncGenerator[dict, None]:
         "final_response": final_response,
         "widgets": widgets_sorted,
         "widget_count": len(widgets_sorted),
+        "synthesis_metadata": synthesis_metadata,
         "streaming_event": CompleteEvent(
             event_type=StreamingEventType.COMPLETE,
             final_response=final_response,
