@@ -80,15 +80,13 @@ dependencies = [
     "types-redis>=4.6.0",
     "uvicorn[standard]>=0.30.0",
     "uvloop>=0.21.0",
-    "voice-client-sdk",
     "watchfiles>=1.0.0",
     "webrtcvad>=2.0.10",
     "websockets>=13.0",
     "xlrd>=2.0.0",
 ]
 
-[tool.uv.sources]
-voice-client-sdk = { path = "libs/voice_client" }
+
 
 [tool.pyrefly]
 project-includes = [

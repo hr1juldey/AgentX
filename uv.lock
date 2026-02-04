@@ -105,7 +105,6 @@ dependencies = [
     { name = "types-redis" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "uvloop" },
-    { name = "voice-client-sdk" },
     { name = "watchfiles" },
     { name = "webrtcvad" },
     { name = "websockets" },
@@ -189,7 +188,6 @@ requires-dist = [
     { name = "types-redis", specifier = ">=4.6.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
     { name = "uvloop", specifier = ">=0.21.0" },
-    { name = "voice-client-sdk", directory = "libs/voice_client" },
     { name = "watchfiles", specifier = ">=1.0.0" },
     { name = "webrtcvad", specifier = ">=2.0.10" },
     { name = "websockets", specifier = ">=13.0" },
@@ -5761,27 +5759,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/bd/e4/d07b5f29d283596b9
 wheels = [
     { url = "https://files.pythonhosted.org/packages/03/ff/7c0c86c43b3cbb927e0ccc0255cb4057ceba4799cd44ae95174ce8e8b5b2/vine-5.1.0-py3-none-any.whl", hash = "sha256:40fdf3c48b2cfe1c38a49e9ae2da6fda88e4794c810050a728bd7413811fb1dc", size = 9636, upload-time = "2023-11-05T08:46:51.205Z" },
 ]
-
-[[package]]
-name = "voice-client-sdk"
-version = "0.1.0"
-source = { directory = "libs/voice_client" }
-dependencies = [
-    { name = "msgpack" },
-    { name = "websockets" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "msgpack", specifier = ">=1.0.0" },
-    { name = "numpy", marker = "extra == 'audio'", specifier = ">=1.20.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.21" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
-    { name = "sounddevice", marker = "extra == 'audio'", specifier = ">=0.4.6" },
-    { name = "websockets", specifier = ">=14.0" },
-]
-provides-extras = ["audio", "dev"]
 
 [[package]]
 name = "voyager"
