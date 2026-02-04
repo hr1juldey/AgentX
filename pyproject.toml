@@ -30,7 +30,7 @@ dependencies = [
     "langgraph-checkpoint>=0.2.0",
     "langgraph-checkpoint-redis>=0.2.0",
     "makefun>=1.16.0",
-    "mem0ai>=1.0.2",
+    "mem0ai==1.0.3",
     "msgpack>=1.0.0",
     "msoffcrypto-tool>=5.4.0",
     "numpy>=1.26.0",
