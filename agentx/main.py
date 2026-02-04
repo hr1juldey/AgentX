@@ -1,66 +1,64 @@
-"""Real AgentX v0.1 - Main entry point.
+"""AGENTX Main Application Entry Point.
 
-FastAPI application factory following the pattern from mimicus.
-Creates and configures the ASGI application with all routes and middleware.
+FastAPI factory with lifespan management for DSPy, Mem0AI, Qdrant, etc.
 """
 
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from agentx.core.config import get_settings
-from agentx.presentation.api.v1.agent_routes import router as agent_router
-from agentx.presentation.api.v1.health import router as health_router
-from agentx.presentation.api.v1.memory_routes import router as memory_router
-from agentx.presentation.api.v1.thread_routes import router as thread_router
-from agentx.presentation.api.v1.voice_routes import router as voice_router
-from agentx.presentation.api.v1.websocket_routes import router as websocket_router
+from agentx.core.config import settings
+from agentx.core.dependencies import ensure_dspy_configured
+from agentx.presentation.api.v1.agents.routes import router as agents_router
+from agentx.presentation.api.v1.graphs.routes import router as graphs_router
+from agentx.presentation.api.v1.memory.routes import router as memory_router
+from agentx.presentation.api.v1.threads.routes import router as threads_router
+from agentx.presentation.api.v1.voice.routes import router as voice_router
+from agentx.presentation.api.v1.websocket.routes import router as websocket_router
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan manager.
+async def lifespan(app: FastAPI):
+    """Application lifespan context manager.
 
-    Handles startup and shutdown events.
+    Args:
+        app: FastAPI application instance
+
+    Yields:
+        None
     """
     # Startup
-    settings = get_settings()
-    print(f"Starting {settings.app_name} v{settings.app_version}")
-    print(f"Debug mode: {settings.debug}")
-    print(f"LLM: {settings.llm.provider}/{settings.llm.model}")
+    print("Starting AGENTX...")
 
-    # Configure DSPy with Ollama
-    from agentx.core.dependencies import ensure_dspy_configured
+    # Configure DSPy globally
+    try:
+        ensure_dspy_configured()
+        print("DSPy configured successfully")
+    except NotImplementedError as e:
+        print(f"Warning: {e}")
 
-    ensure_dspy_configured()
-    print("DSPy configured successfully")
+    # TODO: Initialize Mem0AI client
+    # TODO: Initialize Qdrant client
+    # TODO: Initialize voice clients
 
-    # Initialize LangGraph Redis connections
-    from agentx.infrastructure.memory.redis_lifespan import redis_lifespan
-
-    DB_URI = "redis://localhost:6380"
-    async with redis_lifespan(DB_URI):
-        print("LangGraph Redis connections initialized")
-        yield
+    yield
 
     # Shutdown
-    print("Shutting down...")
+    print("Shutting down AGENTX...")
+    # TODO: Cleanup connections
 
 
 def create_app() -> FastAPI:
-    """Create and configure the FastAPI application.
+    """Create FastAPI application.
 
     Returns:
-        FastAPI: The configured application instance.
+        Configured FastAPI application
     """
-    settings = get_settings()
-
     app = FastAPI(
-        title=settings.app_name,
-        version=settings.app_version,
-        debug=settings.debug,
+        title="AGENTX",
+        description="Personal AI Assistant Framework",
+        version="0.1.0",
         lifespan=lifespan,
     )
 
@@ -80,29 +78,45 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Include routers
-    app.include_router(health_router, prefix="/api/v1", tags=["health"])
-    app.include_router(agent_router, prefix="/api/v1/agent", tags=["agent"])
-    app.include_router(thread_router, prefix="/api/v1/threads", tags=["threads"])
-    app.include_router(websocket_router, prefix="/api/v1", tags=["websocket"])
-    app.include_router(memory_router, prefix="/api/v1/memory", tags=["memory"])
-    app.include_router(voice_router)  # Already has prefix="/api/v1/voice" in definition
+    # Include API routers (new structure)
+    app.include_router(agents_router, prefix="/api/v1")
+    app.include_router(graphs_router, prefix="/api/v1")
+    app.include_router(memory_router, prefix="/api/v1")
+    app.include_router(voice_router, prefix="/api/v1")
+    app.include_router(threads_router, prefix="/api/v1")
+    app.include_router(websocket_router, prefix="/api/v1")
+
+    @app.get("/")
+    async def root() -> dict:
+        """Root endpoint.
+
+        Returns:
+            Welcome message
+        """
+        return {"message": "AGENTX - Personal AI Assistant Framework"}
+
+    @app.get("/health")
+    async def health() -> dict:
+        """Health check endpoint.
+
+        Returns:
+            Health status
+        """
+        return {"status": "healthy"}
 
     return app
 
 
-# Create the application instance
+# Create app instance
 app = create_app()
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    settings = get_settings()
     uvicorn.run(
         "agentx.main:app",
-        host=settings.server.host,
-        port=settings.server.port,
-        reload=settings.debug,
-        log_level=settings.server.log_level,
+        host=settings.host,
+        port=settings.port,
+        reload=True,
     )
