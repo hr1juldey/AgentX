@@ -34,6 +34,7 @@ dependencies = [
     "msgpack>=1.0.0",
     "msoffcrypto-tool>=5.4.0",
     "numpy>=1.26.0",
+    "ollama>=0.6.1",
     "openpyxl>=3.1.0",
     "orjson>=3.10.0",
     "pandas>=2.2.0",

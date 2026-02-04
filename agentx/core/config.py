@@ -26,12 +26,15 @@ class Settings(BaseSettings):
     voice_kyutai_tts_url: str = "ws://localhost:16000/tts"
     use_voice_sdk: bool = True
 
-    # Memory (Mem0AI)
-    mem0_api_key: str = ""
-    mem0_api_url: str = "http://localhost:8000"
+    # Memory (Mem0AI with local Ollama + Qdrant)
+    mem0_qdrant_host: str = "localhost"
+    mem0_qdrant_port: int = 6335  # AgentX uses port 6335 to avoid conflicts
+    mem0_llm_model: str = "gemma3:4b"
+    mem0_embedder_model: str = "mxbai-embed-large:latest"
+    mem0_embedding_dims: int = 1024  # mxbai-embed-large uses 1024 dims
 
     # Retrieval (Qdrant)
-    qdrant_url: str = "http://localhost:6333"
+    qdrant_url: str = "http://localhost:6335"
     qdrant_collection: str = "agentx_memory"
 
     # LangGraph Checkpoint (Redis)

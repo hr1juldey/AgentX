@@ -4,9 +4,14 @@ The StemCellAgent is the foundation from which all specialized agents differenti
 It uses signature-based differentiation as the primary mechanism.
 """
 
+import logging
 from typing import Optional
 
 import dspy
+
+from agentx.application.agents.memory import MemoryManager
+
+logger = logging.getLogger(__name__)
 
 
 class StemCellAgent(dspy.Module):
@@ -54,8 +59,8 @@ class StemCellAgent(dspy.Module):
         # DSPy History for conversation context (shared across all signatures)
         self._history: dspy.History = dspy.History(messages=[])
 
-        # Memory client (singleton)
-        self._mem0_client: Optional[object] = None
+        # Memory manager for persistent Mem0AI integration
+        self._memory = MemoryManager(user_id)
         self._tools: list[dspy.Tool] = []
 
     def set_signature(self, signature: dspy.Signature) -> None:
@@ -81,7 +86,7 @@ class StemCellAgent(dspy.Module):
     def forward(
         self, context: str = "", question: str = "", **kwargs: object
     ) -> dspy.Prediction:
-        """Execute the agent with history management.
+        """Execute the agent with history and memory management.
 
         Args:
             context: Background context (for pluripotent signature)
@@ -91,24 +96,28 @@ class StemCellAgent(dspy.Module):
         Returns:
             DSPy Prediction with results
         """
-        # Step 1: Prepare inputs for reasoning module
+        # Step 1: Search Mem0AI for relevant context
+        enhanced_context = self._memory.search_memory(context, question)
+
+        # Step 2: Prepare inputs for reasoning module
         reasoning_inputs: dict[str, object] = {"question": question}
 
-        # Add context if provided (for pluripotent ReasoningSignature)
-        if context:
-            reasoning_inputs["context"] = context
+        # Add enhanced context if provided (for pluripotent ReasoningSignature)
+        if enhanced_context:
+            reasoning_inputs["context"] = enhanced_context
 
         # Add history if signature supports it (for ConversationSignature)
-        # Check if signature expects a "history" input field
         sig_inputs = self.signature.input_fields
         if "history" in sig_inputs:
             reasoning_inputs["history"] = self._history
 
-        # Step 2: Execute reasoning
-        result = self.reasoning(**reasoning_inputs)
+        # Step 3: Execute reasoning
+        result: dspy.Prediction = self.reasoning(**reasoning_inputs)  # type: ignore[assignment]
 
-        # Step 3: Append to DSPy history for context in next turn
-        # DSPy Prediction is dict-like; extract fields for storage
+        # Step 4: Append to DSPy history for context in next turn
         self._history.messages.append({"question": question, **dict(result)})  # type: ignore[no-matching-overload]
+
+        # Step 5: Store interaction in Mem0AI (async, non-blocking)
+        self._memory.store_interaction(question, result)
 
         return result  # type: ignore[bad-return]

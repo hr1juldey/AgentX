@@ -16,7 +16,7 @@
 # =============================================================================
 # DSPy - Programmatic LLM framework with ReAct agents
 dspy>=3.1.2
-
+ollama>= 
 # Mem0AI - Long-term memory for AI agents
 mem0ai>=1.0.2
 

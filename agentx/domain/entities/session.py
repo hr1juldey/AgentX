@@ -1,5 +1,7 @@
 """Session entity for voice conversation state."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
