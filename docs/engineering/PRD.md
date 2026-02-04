@@ -131,7 +131,7 @@ Mutation triggers:
 
 ### 5.1 Core Principle
 
-**All agents have memory from Mem0AI.** Only agents handling large-scale mixed-quality data (web search, internal dumps) use ColBERTv2.
+**All agents have memory from Mem0AI.** Only agents handling large-scale mixed-quality data (web search, internal dumps) use ColBERTv2 with the **prefetch pattern**.
 
 ### 5.2 Memory Tiers
 
@@ -140,9 +140,36 @@ Mutation triggers:
 | **1. LangGraph State** | Conversation state, checkpointing | SqliteSaver | All agents |
 | **2. Mem0AI** | Conversational memory, facts, preferences | Mem0API | **ALL agents** |
 | **3. DSPy ReAct** | Step-by-step reasoning traces | DSPy | ReAct agents |
-| **4. ColBERTv2** | Large-scale retrieval (mixed quality) | Qdrant + Late Interaction | Researcher, MemoryDump only |
+| **4. ColBERTv2** | Large-scale retrieval (prefetch pattern) | Qdrant + Late Interaction | Researcher, MemoryDump only |
 
-### 5.3 Memory Flow
+### 5.3 Qdrant Collection Architecture
+
+**Two collections** (not three):
+
+```
+Qdrant (localhost:6335)
+│
+├── agentx_memories
+│   │ Type: Dense vectors only (384 dims)
+│   │ Model: Ollama (nomic-embed-text)
+│   │ Purpose: Mem0AI conversational memory (ALL agents)
+│   │
+│
+└── agentx_knowledge
+    │ Type: TWO named vectors in ONE collection
+    │   ├── dense: BGE-small (384 dims, indexed) → Fast retrieval
+    │   └── colbert: ColBERTv2 (N×128 dims, NOT indexed) → Accurate reranking
+    │ Purpose: RAG + Research with prefetch pattern
+```
+
+**Prefetch Pattern (Qdrant medical bot pattern):**
+```
+Query → [Dense] → Top 100 candidates (fast, indexed)
+         ↓ Prefetch pass
+Query → [ColBERTv2] → Rerank → Top 5 results (accurate)
+```
+
+### 5.4 Memory Flow
 
 ```
 User Query
@@ -161,17 +188,17 @@ LangGraph checkpoint updated
 **For Researcher (web search) and MemoryDump (large-scale) ONLY:**
 ```
 Query → Mem0AI (conversational context)
-      → ColBERTv2.retrieve() (large-scale retrieval)
+      → Prefetch pattern: dense (top 100) → ColBERTv2 (rerank top 5)
       → Agent execution
-      → Results stored in Qdrant for future retrieval
+      → Results stored in Qdrant agentx_knowledge for future retrieval
 ```
 
-### 5.4 Agent Memory Configuration
+### 5.5 Agent Memory Configuration
 
 | Agent | Mem0AI | ColBERTv2 | Notes |
 |-------|--------|-----------|-------|
 | Conversation | ✅ Yes | ❌ No | Conversational memory only |
-| RAG Agent | ✅ Yes | ❌ No | Document QA, uses DSPy retrieve |
+| RAG Agent | ✅ Yes | ✅ Yes | Document QA, uses prefetch pattern |
 | Researcher | ✅ Yes | ✅ Yes | Web search = mixed quality, needs ColBERTv2 |
 | Analyst | ✅ Yes | ❌ No | Data analysis, no large retrieval |
 | Designer | ✅ Yes | ❌ No | UI generation |
@@ -182,12 +209,14 @@ Query → Mem0AI (conversational context)
 | Replanner | ✅ Yes | ❌ No | Uses Qdrant for graph patterns |
 | MemoryDump | ✅ Yes | ✅ Yes | Large-scale internal memory retrieval |
 
-### 5.5 Memory Storage
+### 5.6 Memory Storage
 
 - **LangGraph**: SQLite with SqliteSaver (conversation checkpoints)
 - **Mem0AI**: Persistent storage via Mem0API (conversational memory for all agents)
 - **DSPy ReAct**: In-memory during execution (ephemeral reasoning traces)
 - **ColBERTv2 + Qdrant**: Large-scale retrieval storage (web search results, internal dumps)
+  - Port: 6335 (from docker-compose.yaml)
+  - Collection: agentx_knowledge (dense + ColBERTv2 with prefetch)
 
 ---
 
@@ -514,9 +543,30 @@ DSPy.streamify(agent) → Agent-level token stream
 | System | Purpose | Used By | Data Characteristics |
 |--------|---------|---------|-------------------|
 | **DSPy dspy.Retrieve** | Document QA, clean data | RAG Agent | Small, curated, high-quality |
-| **ColBERTv2** | Web search, large-scale retrieval | Researcher, MemoryDump | Large volume, mixed quality |
+| **Prefetch Pattern (Dense + ColBERTv2)** | Web search, large-scale retrieval | RAG Agent, Researcher, MemoryDump | Large volume, mixed quality |
 
-### 11.2 DSPy Retrieve (RAG Agent)
+### 11.2 Qdrant Collection Architecture
+
+**Two collections** (based on Qdrant medical bot pattern):
+
+| Collection | Vectors | Purpose |
+|------------|---------|---------|
+| `agentx_memories` | dense (384 dims) | Mem0AI conversational memory |
+| `agentx_knowledge` | dense (384) + colbert (N×128) | RAG + Research with prefetch reranking |
+
+**Prefetch Pattern (Qdrant medical bot pattern):**
+```
+Query → [Dense] → Top 100 candidates (fast, indexed)
+         ↓ Prefetch pass
+Query → [ColBERTv2] → Rerank → Top 5 results (accurate)
+```
+
+**Benefits:**
+- Dense (indexed, fast) → Initial retrieval
+- ColBERTv2 (NOT indexed, accurate) → Final reranking
+- One collection → Simpler management
+
+### 11.3 DSPy Retrieve (RAG Agent)
 
 **Purpose:** Document question-answering with clean, curated content.
 
@@ -525,24 +575,25 @@ DSPy.streamify(agent) → Agent-level token stream
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | **Retriever** | DSPy dspy.Retrieve | Query interface |
-| **Vector Store** | Qdrant | Semantic search for documents |
+| **Vector Store** | Qdrant (agentx_knowledge) | Semantic search |
 | **Embedding** | Ollama nomic-embed-text | Standard embeddings |
 | **Reranker** | DSPy ChainOfThought | Passage refinement |
 
 **Process:**
 
 1. User query about documents
-2. DSPy retrieve searches document collection in Qdrant
-3. Returns top-k relevant passages
-4. Agent synthesizes answer with citations
+2. DSPy retrieve searches agentx_knowledge collection
+3. Uses prefetch pattern: dense (top 100) → ColBERTv2 (rerank top 5)
+4. Returns top-k relevant passages
+5. Agent synthesizes answer with citations
 
 **Data Characteristics:**
 - Clean, structured document content
 - Moderate volume (thousands of documents)
 - High-quality, curated sources
-- Standard embedding vectors sufficient
+- Prefetch pattern for optimal speed + accuracy
 
-### 11.3 ColBERTv2 (Researcher & MemoryDump)
+### 11.4 ColBERTv2 Prefetch (Researcher & MemoryDump)
 
 **Purpose:** Large-scale retrieval for web search results and internal memory dumps.
 
@@ -550,37 +601,37 @@ DSPy.streamify(agent) → Agent-level token stream
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Retriever** | ColBERTv2 (late interaction) | Max- similarity matching |
-| **Vector Store** | Qdrant | Large-scale storage |
-| **Embedding** | ColBERTv2 contextual embeddings | Late interaction scoring |
+| **Retriever** | Prefetch pattern | Dense → ColBERTv2 reranking |
+| **Vector Store** | Qdrant (agentx_knowledge) | Large-scale storage |
+| **Embeddings** | BGE-small (dense) + ColBERTv2 (multivector) | Two-stage retrieval |
 | **Reranker** | DSPy ChainOfThought | Result refinement |
 
 **Process (Researcher - Web Search):**
 
 1. User query triggers web search via SearXNG
 2. SearXNG returns many results (mixed quality)
-3. Results stored in Qdrant with ColBERTv2 embeddings
-4. ColBERTv2 late interaction finds most relevant passages
+3. Results stored in agentx_knowledge with BOTH vectors (dense + ColBERTv2)
+4. Prefetch pattern: dense retrieves top 100 → ColBERTv2 reranks to top 5
 5. Agent synthesizes answer with citations
 
 **Process (MemoryDump - Internal):**
 
 1. Query for internal knowledge
-2. ColBERTv2 searches large internal memory dump
-3. Returns relevant passages from high-volume data
+2. Prefetch pattern searches agentx_knowledge
+3. Dense (fast) retrieves top 100 → ColBERTv2 (accurate) reranks to top 5
 4. Agent uses retrieved context for response
 
 **Data Characteristics:**
 - Very large volume (millions of passages)
 - Mixed quality (junk, duplicates, noise)
-- Requires late interaction for accurate scoring
+- Prefetch pattern: speed + accuracy
 - Needs iterative refinement to handle overflow
 
-### 11.4 Multi-Hop Retrieval (ColBERTv2)
+### 11.5 Multi-Hop Retrieval (Prefetch Pattern)
 
 **Process:**
 
-1. Initial query → ColBERTv2 retrieves passages
+1. Initial query → Prefetch pattern retrieves passages
 2. Agent identifies gaps or insufficient results
 3. Generate follow-up queries with refinement
 4. Retrieve additional passages with new queries
@@ -592,6 +643,14 @@ DSPy.streamify(agent) → Agent-level token stream
 - If >M tokens: Summarize and re-query
 - Max iterations: 3
 - Detects "junk" patterns and filters out
+
+### 11.6 Qdrant Configuration
+
+**Port:** 6335 (from docker-compose.yaml)
+
+**Collections:**
+- `agentx_memories`: Mem0AI conversational memory (dense only)
+- `agentx_knowledge`: RAG + Research (dense + ColBERTv2 with prefetch)
 
 ---
 

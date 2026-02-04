@@ -34,7 +34,7 @@ pip install dspy-ai dspy-qdrant fastembed qdrant-client
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                      Qdrant Instance                            │
-│                     (localhost:6333)                           │
+│                     (localhost:6335)                           │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │  ┌──────────────────────┐  ┌──────────────────────┐            │
@@ -77,7 +77,7 @@ mem0_config = {
         "provider": "qdrant",
         "config": {
             "host": "localhost",
-            "port": 6333,
+            "port": 6335,  # From docker-compose.yaml
             "collection_name": "agentx_memories"  # Main conversational memory
         },
     },
@@ -110,7 +110,13 @@ results = memory.search("programming preference", user_id="user123")
 
 ---
 
-## 4. DSPy QdrantRM Configuration
+## 4. DSPy 3.1+ API
+
+**Note:** This document uses the new unified DSPy 3.1+ API (`dspy.LM()`). For complete documentation on the new API, see **file 13: `13_dspy_qdrant_ollama_integration.md`**.
+
+---
+
+## 5. DSPy QdrantRM Configuration
 
 DSPy Retrieve uses QdrantRM for document retrieval (RAG):
 
@@ -129,7 +135,7 @@ lm = dspy.LM(
 )
 
 # Create Qdrant client
-qdrant_client = QdrantClient(url="http://localhost:6333")
+qdrant_client = QdrantClient(url="http://localhost:6335")
 
 # Collection name for DSPy Retrieve (SEPARATE from Mem0AI)
 DSPY_COLLECTION = "agentx_documents"
@@ -158,7 +164,7 @@ dspy.settings.configure(lm=lm, rm=rm)
 
 ---
 
-## 5. DSPy Retrieve Module
+## 6. DSPy Retrieve Module
 
 Create a DSPy module that uses `dspy.Retrieve`:
 
@@ -194,7 +200,43 @@ print(result.answer)
 
 ---
 
-## 6. Combined Usage Pattern
+## 7. FastEmbed: Universal Vectorizer
+
+**Key Insight:** All systems (Mem0AI, dspy-qdrant, Qdrant) can use **FastEmbed** as the vectorizer:
+
+```python
+from fastembed import TextEmbedding, LateInteractionTextEmbedding
+
+# Dense embeddings (for Mem0AI, RAG)
+dense_model = TextEmbedding("BAAI/bge-small-en-v1.5")
+embedding = list(dense_model.embed(["text"]))[0]  # Shape: (384,)
+
+# Late interaction embeddings (ColBERTv2 for Researcher/MemoryDump)
+late_model = LateInteractionTextEmbedding("colbert-ir/colbertv2.0")
+doc_embedding = list(late_model.embed(["text"]))[0]  # Shape: (N, 128)
+query_embedding = list(late_model.query_embed(["query"]))[0]  # Shape: (M, 128)
+```
+
+### QdrantRM with FastEmbed
+
+```python
+from dspy_qdrant import QdrantRM
+from fastembed import LateInteractionTextEmbedding
+
+# Use ColBERTv2 for better accuracy
+rm = QdrantRM(
+    qdrant_collection_name="agentx_web_search",
+    qdrant_client=qdrant_client,
+    vectorizer=LateInteractionTextEmbedding("colbert-ir/colbertv2.0"),
+    k=10
+)
+```
+
+**See file 12** for detailed ColBERTv2 integration with Qdrant multivectors.
+
+---
+
+## 8. Combined Usage Pattern
 
 Here's how to use both Mem0AI and DSPy Retrieve together:
 
@@ -205,13 +247,13 @@ from dspy_qdrant import QdrantRM
 from qdrant_client import QdrantClient
 
 # Initialize Qdrant client
-qdrant_client = QdrantClient(url="http://localhost:6333")
+qdrant_client = QdrantClient(url="http://localhost:6335")
 
 # Initialize Mem0AI for conversational memory
 memory = Memory.from_config({
     "vector_store": {
         "provider": "qdrant",
-        "config": {"host": "localhost", "port": 6333, "collection_name": "agentx_memories"}
+        "config": {"host": "localhost", "port": 6335, "collection_name": "agentx_memories"}
     },
     "llm": {"provider": "ollama", "config": {"model": "gemma3:4b", "host": "http://localhost:11434"}},
     "embedder": {"provider": "ollama", "config": {"model": "nomic-embed-text", "host": "http://localhost:11434"}}
@@ -267,7 +309,7 @@ response = agent.forward("What did we discuss about Python?", user_id="user123")
 
 ---
 
-## 7. Collection Naming Strategy
+## 9. Collection Naming Strategy
 
 ### Recommended Collection Names
 
@@ -293,7 +335,7 @@ WEB_COLLECTION = f"{ENV}_agentx_web_search"    # dev_agentx_web_search
 
 ---
 
-## 8. Data Ingestion for DSPy Retrieve
+## 10. Data Ingestion for DSPy Retrieve
 
 To populate the `agentx_documents` collection:
 
@@ -301,7 +343,7 @@ To populate the `agentx_documents` collection:
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct
 
-client = QdrantClient(url="http://localhost:6333")
+client = QdrantClient(url="http://localhost:6335")
 
 # Sample documents
 documents = [
@@ -347,7 +389,7 @@ for doc in documents:
 
 ---
 
-## 9. DSPy Mem0 Tools Integration
+## 11. DSPy Mem0 Tools Integration
 
 DSPy's Mem0 ReAct agent uses memory tools that store in Qdrant:
 
@@ -379,9 +421,11 @@ react = dspy.ReAct(
 
 ---
 
-## 10. ColBERTv2 Integration (Researcher Agent)
+## 12. ColBERTv2 Integration (Researcher Agent)
 
-For large-scale web search retrieval:
+**Note:** For detailed ColBERTv2 integration, see **file 12: `12_colbertv2_qdrant_dspy_integration.md`**
+
+ColBERTv2 is a **late interaction embedding model** (not a server) that produces multivectors. All systems use FastEmbed which supports both dense and late interaction embeddings.
 
 ```python
 import dspy
@@ -411,7 +455,7 @@ researcher = ResearcherAgent()
 
 ---
 
-## 11. Summary: Integration Architecture
+## 13. Summary: Integration Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -461,7 +505,7 @@ researcher = ResearcherAgent()
 
 ---
 
-## 12. Configuration File Template
+## 14. Configuration File Template
 
 ```yaml
 # config/agentx_memory.yaml
@@ -472,7 +516,7 @@ mem0:
     provider: qdrant
     config:
       host: localhost
-      port: 6333
+      port: 6335
       collection_name: agentx_memories
   llm:
     provider: ollama
@@ -500,18 +544,19 @@ colbert:
 
 ---
 
-## 13. Key Takeaways
+## 15. Key Takeaways
 
 1. **Separate Collections**: Mem0AI and DSPy Retrieve use different Qdrant collections
 2. **QdrantRM Package**: Install `dspy-qdrant` for DSPy integration with Qdrant
 3. **Collection Naming**: Use `{prefix}_agentx_*` pattern for clarity
-4. **Embedder Choice**: Use Ollama embeddings for both systems to maintain compatibility
+4. **FastEmbed Universal**: All systems (Mem0AI, dspy-qdrant, Qdrant) can use FastEmbed as the vectorizer
 5. **Per-Agent Memory**: DSPy Mem0 tools create `{agent_name}_collection` per agent
-6. **ColBERTv2 Separate**: Use ColBERTv2 for large-scale web search, not QdrantRM
+6. **ColBERTv2**: Late interaction embedding model for better accuracy (see file 12)
+7. **Port**: Qdrant runs on port **6335** (from docker-compose.yaml)
 
 ---
 
-## 14. Quick Reference
+## 16. Quick Reference
 
 ```python
 # Mem0AI (Conversational Memory)
@@ -531,8 +576,15 @@ from dspy.mem0 import MemoryTools
 tools = MemoryTools(memory=memory, user_id="user123")
 react = dspy.ReAct("question->answer", tools=[tools.add_memory, tools.search_memory])
 
-# ColBERTv2 (Large-Scale Web Search)
-colbert_rm = dspy.ColBERTv2(url="http://localhost:2017/index")
+# ColBERTv2 (Late Interaction - Qdrant Multivectors)
+from fastembed import LateInteractionTextEmbedding
+colbert_vectorizer = LateInteractionTextEmbedding("colbert-ir/colbertv2.0")
+colbert_rm = QdrantRM(
+    "agentx_web_search",
+    qdrant_client,
+    vectorizer=colbert_vectorizer,
+    k=10
+)
 dspy.settings.configure(lm=lm, rm=colbert_rm)
 ```
 
@@ -541,6 +593,7 @@ dspy.settings.configure(lm=lm, rm=colbert_rm)
 ## Sources
 
 - [Qdrant DSPy Integration](https://qdrant.tech/documentation/frameworks/dspy/)
+- [dspy-qdrant PyPI](https://pypi.org/project/dspy-qdrant/)
 - [DSPy Retrieve Documentation](https://github.com/stanfordnlp/dspy/blob/main/dspy/retrieve/qdrant_rm.py)
 - [Mem0AI Configuration](https://docs.mem0.ai/open-source/configuration)
 - [Mem0AI LangGraph Integration](https://docs.mem0.ai/integrations/langgraph)
