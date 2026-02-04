@@ -3,11 +3,14 @@
 Provides singleton instances and getter functions for all external dependencies.
 """
 
+import logging
 from typing import Optional
 
 import dspy
 
 from agentx.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Global singletons (lazy initialized)
 _lm: Optional[dspy.LM] = None
@@ -20,15 +23,21 @@ def ensure_dspy_configured() -> None:
     """Configure DSPy globally with Ollama LM.
 
     Raises:
-        NotImplementedError: If not yet implemented with actual RM configuration.
+        ConnectionError: If Ollama is not available at the configured URL.
     """
+    from agentx.infrastructure.external.ollama import check_ollama_health
+
     global _lm
 
     if _lm is None:
+        # Check Ollama health before creating LM
+        check_ollama_health()
+
         _lm = dspy.LM(
             model=f"ollama_chat/{settings.llm_model}",
             api_base=settings.llm_api_base,
         )
+        logger.info(f"DSPy configured with Ollama model: {settings.llm_model}")
 
     # TODO: Configure RM with Qdrant + ColBERTv2
     # For now, configure without RM
