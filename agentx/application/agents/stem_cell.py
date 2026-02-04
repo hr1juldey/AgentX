@@ -51,6 +51,9 @@ class StemCellAgent(dspy.Module):
         # Initialize reasoning module with current signature
         self.reasoning = dspy.ChainOfThought(self.signature)
 
+        # DSPy History for conversation context (shared across all signatures)
+        self._history: dspy.History = dspy.History(messages=[])
+
         # Memory client (singleton)
         self._mem0_client: Optional[object] = None
         self._tools: list[dspy.Tool] = []
@@ -78,26 +81,34 @@ class StemCellAgent(dspy.Module):
     def forward(
         self, context: str = "", question: str = "", **kwargs: object
     ) -> dspy.Prediction:
-        """Execute the agent with memory search before and storage after.
+        """Execute the agent with history management.
 
         Args:
-            context: Background context
+            context: Background context (for pluripotent signature)
             question: The input question
-            **kwargs: Additional arguments
+            **kwargs: Additional arguments (e.g., history for conversation signature)
 
         Returns:
             DSPy Prediction with results
-
-        Raises:
-            NotImplementedError: If forward pass is not yet implemented
         """
-        # Step 1: Search Mem0AI for relevant context
-        # TODO: Implement memory search
+        # Step 1: Prepare inputs for reasoning module
+        reasoning_inputs: dict[str, object] = {"question": question}
+
+        # Add context if provided (for pluripotent ReasoningSignature)
+        if context:
+            reasoning_inputs["context"] = context
+
+        # Add history if signature supports it (for ConversationSignature)
+        # Check if signature expects a "history" input field
+        sig_inputs = self.signature.input_fields
+        if "history" in sig_inputs:
+            reasoning_inputs["history"] = self._history
 
         # Step 2: Execute reasoning
-        # TODO: Implement forward pass with reasoning module
+        result = self.reasoning(**reasoning_inputs)
 
-        # Step 3: Store interaction in Mem0AI
-        # TODO: Implement memory storage
+        # Step 3: Append to DSPy history for context in next turn
+        # DSPy Prediction is dict-like; extract fields for storage
+        self._history.messages.append({"question": question, **dict(result)})  # type: ignore[no-matching-overload]
 
-        raise NotImplementedError("StemCellAgent.forward() not yet implemented")
+        return result  # type: ignore[bad-return]
