@@ -40,6 +40,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "diffusers" },
     { name = "dspy" },
+    { name = "dspy-qdrant" },
     { name = "email-validator" },
     { name = "fastapi" },
     { name = "fastapi-users" },
@@ -50,6 +51,9 @@ dependencies = [
     { name = "ipdb" },
     { name = "ipython" },
     { name = "kombu" },
+    { name = "langgraph" },
+    { name = "langgraph-checkpoint" },
+    { name = "langgraph-checkpoint-redis" },
     { name = "makefun" },
     { name = "mem0ai" },
     { name = "msgpack" },
@@ -120,6 +124,7 @@ requires-dist = [
     { name = "cryptography", specifier = ">=43.0.0" },
     { name = "diffusers", specifier = ">=0.30.0" },
     { name = "dspy", specifier = ">=3.1.2" },
+    { name = "dspy-qdrant", specifier = ">=0.1.4" },
     { name = "email-validator", specifier = ">=2.1.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "fastapi-users", specifier = ">=15.0.3" },
@@ -130,6 +135,9 @@ requires-dist = [
     { name = "ipdb", specifier = ">=0.13.0" },
     { name = "ipython", specifier = ">=8.20.0" },
     { name = "kombu", specifier = ">=5.4.0" },
+    { name = "langgraph", specifier = ">=0.2.0" },
+    { name = "langgraph-checkpoint", specifier = ">=0.2.0" },
+    { name = "langgraph-checkpoint-redis", specifier = ">=0.2.0" },
     { name = "makefun", specifier = ">=1.16.0" },
     { name = "mem0ai", specifier = ">=1.0.2" },
     { name = "msgpack", specifier = ">=1.0.0" },
@@ -160,7 +168,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "pytz", specifier = ">=2024.1" },
     { name = "pyyaml", specifier = ">=6.0.0" },
-    { name = "qdrant-client", specifier = ">=1.16.2" },
+    { name = "qdrant-client", specifier = ">=1.13.2" },
     { name = "ragatouille", specifier = ">=0.0.9.post2" },
     { name = "redis", specifier = ">=5.2.0" },
     { name = "requests", specifier = ">=2.31.0" },
@@ -184,7 +192,7 @@ requires-dist = [
     { name = "voice-client-sdk", directory = "libs/voice_client" },
     { name = "watchfiles", specifier = ">=1.0.0" },
     { name = "webrtcvad", specifier = ">=2.0.10" },
-    { name = "websockets", specifier = ">=14.0" },
+    { name = "websockets", specifier = ">=13.0" },
     { name = "xlrd", specifier = ">=2.0.0" },
 ]
 
@@ -1239,6 +1247,19 @@ wheels = [
 ]
 
 [[package]]
+name = "dspy-qdrant"
+version = "0.1.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dspy" },
+    { name = "qdrant-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bd/15/404edb2da7922c811e7e2d5ad88840390222faad2e732681c98bbcd57eda/dspy_qdrant-0.1.4.tar.gz", hash = "sha256:677b12a62fe2bfe1a52e712d71d596134fbd2d93d39c7fa3ae9b5fd96067ded8", size = 120649, upload-time = "2025-12-19T04:44:13.691Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c6/45/d1fa3fda2a048ecd15661b3662c17ee0d431186a4504bbb0a8ce10ef484a/dspy_qdrant-0.1.4-py3-none-any.whl", hash = "sha256:929d43ee041ded1263d86d003e55c8ec24f4be15e60090319246422561b02bad", size = 12890, upload-time = "2025-12-19T04:44:11.912Z" },
+]
+
+[[package]]
 name = "ecdsa"
 version = "0.19.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2092,6 +2113,18 @@ wheels = [
 ]
 
 [[package]]
+name = "jsonpath-ng"
+version = "1.7.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ply" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6d/86/08646239a313f895186ff0a4573452038eed8c86f54380b3ebac34d32fb2/jsonpath-ng-1.7.0.tar.gz", hash = "sha256:f6f5f7fd4e5ff79c785f1573b394043b39849fb2bb47bcead935d12b00beab3c", size = 37838, upload-time = "2024-10-11T15:41:42.404Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/35/5a/73ecb3d82f8615f32ccdadeb9356726d6cae3a4bbc840b437ceb95708063/jsonpath_ng-1.7.0-py3-none-any.whl", hash = "sha256:f3d7f9e848cba1b6da28c55b1c26ff915dc9e0b1ba7e752a53d6da8d5cbd00b6", size = 30105, upload-time = "2024-11-20T17:58:30.418Z" },
+]
+
+[[package]]
 name = "jsonpointer"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2204,15 +2237,30 @@ wheels = [
 
 [[package]]
 name = "langgraph-checkpoint"
-version = "4.0.0"
+version = "3.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "ormsgpack" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/98/76/55a18c59dedf39688d72c4b06af73a5e3ea0d1a01bc867b88fbf0659f203/langgraph_checkpoint-4.0.0.tar.gz", hash = "sha256:814d1bd050fac029476558d8e68d87bce9009a0262d04a2c14b918255954a624", size = 137320, upload-time = "2026-01-12T20:30:26.38Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/07/2b1c042fa87d40cf2db5ca27dc4e8dd86f9a0436a10aa4361a8982718ae7/langgraph_checkpoint-3.0.1.tar.gz", hash = "sha256:59222f875f85186a22c494aedc65c4e985a3df27e696e5016ba0b98a5ed2cee0", size = 137785, upload-time = "2025-11-04T21:55:47.774Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4a/de/ddd53b7032e623f3c7bcdab2b44e8bf635e468f62e10e5ff1946f62c9356/langgraph_checkpoint-4.0.0-py3-none-any.whl", hash = "sha256:3fa9b2635a7c5ac28b338f631abf6a030c3b508b7b9ce17c22611513b589c784", size = 46329, upload-time = "2026-01-12T20:30:25.2Z" },
+    { url = "https://files.pythonhosted.org/packages/48/e3/616e3a7ff737d98c1bbb5700dd62278914e2a9ded09a79a1fa93cf24ce12/langgraph_checkpoint-3.0.1-py3-none-any.whl", hash = "sha256:9b04a8d0edc0474ce4eaf30c5d731cee38f11ddff50a6177eead95b5c4e4220b", size = 46249, upload-time = "2025-11-04T21:55:46.472Z" },
+]
+
+[[package]]
+name = "langgraph-checkpoint-redis"
+version = "0.3.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langgraph-checkpoint" },
+    { name = "orjson" },
+    { name = "redis" },
+    { name = "redisvl" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b0/a9/54a10fdba7e04cbbf2885c718f7638f07d20bb3dee9f26355290e3f8f690/langgraph_checkpoint_redis-0.3.4.tar.gz", hash = "sha256:cf28b39d51554a1423ee3696530089e851e0aaad52b9539afac895a9a3516b10", size = 107475, upload-time = "2026-02-03T03:15:30.263Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f2/9a/c01b800b6f9980657758f0173f78950dac4a77803f9ff808cae7db0c1d7f/langgraph_checkpoint_redis-0.3.4-py3-none-any.whl", hash = "sha256:60481bd3dcb0dd66b1267811cbfc9a23c70e252a0d0ee9a0d702a5759f6c6378", size = 121028, upload-time = "2026-02-03T03:15:29.17Z" },
 ]
 
 [[package]]
@@ -3646,6 +3694,15 @@ wheels = [
 ]
 
 [[package]]
+name = "ply"
+version = "3.11"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e5/69/882ee5c9d017149285cab114ebeab373308ef0f874fcdac9beb90e0ac4da/ply-3.11.tar.gz", hash = "sha256:00c7c1aaa88358b9c765b6d3000c6eec0ba42abca5351b095321aef446081da3", size = 159130, upload-time = "2018-02-15T19:01:31.097Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a3/58/35da89ee790598a0700ea49b2a66594140f44dec458c07e8e3d4979137fc/ply-3.11-py2.py3-none-any.whl", hash = "sha256:096f9b8350b65ebd2fd1346b12452efe5b9607f7482813ffca50c22722a807ce", size = 49567, upload-time = "2018-02-15T19:01:27.172Z" },
+]
+
+[[package]]
 name = "pocket-tts"
 version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4302,6 +4359,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-ulid"
+version = "3.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/40/7e/0d6c82b5ccc71e7c833aed43d9e8468e1f2ff0be1b3f657a6fcafbb8433d/python_ulid-3.1.0.tar.gz", hash = "sha256:ff0410a598bc5f6b01b602851a3296ede6f91389f913a5d5f8c496003836f636", size = 93175, upload-time = "2025-08-18T16:09:26.305Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/a0/4ed6632b70a52de845df056654162acdebaf97c20e3212c559ac43e7216e/python_ulid-3.1.0-py3-none-any.whl", hash = "sha256:e2cdc979c8c877029b4b7a38a6fba3bc4578e4f109a308419ff4d3ccf0a46619", size = 11577, upload-time = "2025-08-18T16:09:25.047Z" },
+]
+
+[[package]]
 name = "pytz"
 version = "2025.2"
 source = { registry = "https://pypi.org/simple" }
@@ -4419,6 +4485,25 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/0d/d6/e8b92798a5bd67d659d51a18170e91c16ac3b59738d91894651ee255ed49/redis-6.4.0.tar.gz", hash = "sha256:b01bc7282b8444e28ec36b261df5375183bb47a07eb9c603f284e89cbc5ef010", size = 4647399, upload-time = "2025-08-07T08:10:11.441Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e8/02/89e2ed7e85db6c93dfa9e8f691c5087df4e3551ab39081a4d7c6d1f90e05/redis-6.4.0-py3-none-any.whl", hash = "sha256:f0544fa9604264e9464cdf4814e7d4830f74b165d52f2a330a760a88dd248b7f", size = 279847, upload-time = "2025-08-07T08:10:09.84Z" },
+]
+
+[[package]]
+name = "redisvl"
+version = "0.13.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jsonpath-ng" },
+    { name = "ml-dtypes" },
+    { name = "numpy" },
+    { name = "pydantic" },
+    { name = "python-ulid" },
+    { name = "pyyaml" },
+    { name = "redis" },
+    { name = "tenacity" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/81/d6/8f3235b272e3a2370698d7524aad2dec15f53c5be5d6726ba41056844f69/redisvl-0.13.2.tar.gz", hash = "sha256:f34c4350922ac469c45d90b5db65c49950e6aa8706331931b000f631ff9a0f4a", size = 737736, upload-time = "2025-12-19T09:22:07.787Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b2/93/81ea5c45637ce7fe2fdaf214d5e1b91afe96a472edeb9b659e24d3710dfb/redisvl-0.13.2-py3-none-any.whl", hash = "sha256:dd998c6acc54f13526d464ad6b6e6f0c4cf6985fb2c7a1655bdf8ed8e57a4c01", size = 192760, upload-time = "2025-12-19T09:22:06.301Z" },
 ]
 
 [[package]]
