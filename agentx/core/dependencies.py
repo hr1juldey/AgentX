@@ -9,6 +9,8 @@ from agentx.core.config import settings
 
 if TYPE_CHECKING:
     from agentx.infrastructure.memory.session_state_manager import SessionStateManager
+    from agentx.infrastructure.voice.voice_adapter import VoiceSDKAdapter
+    from agentx.infrastructure.voice.voice_gateway import VoiceGatewayService
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +19,8 @@ _mem0_client: Optional[object] = None
 _qdrant_client: Optional[object] = None
 _agent_registry: dict = {}
 _session_manager: Optional[SessionStateManager] = None
+_voice_sdk_adapter: Optional[VoiceSDKAdapter] = None
+_voice_gateway: Optional[VoiceGatewayService] = None
 
 
 def ensure_dspy_configured() -> None:
@@ -66,3 +70,31 @@ def get_session_manager() -> SessionStateManager:
     from agentx.core.sessions import get_session_manager as _get_session_manager
 
     return _get_session_manager()
+
+
+def get_voice_sdk_adapter() -> VoiceSDKAdapter:
+    """Get the singleton VoiceSDKAdapter."""
+    from agentx.infrastructure.voice.voice_adapter import VoiceSDKAdapter
+
+    global _voice_sdk_adapter
+    if _voice_sdk_adapter is None:
+        _voice_sdk_adapter = VoiceSDKAdapter(
+            stt_url=settings.voice_kyutai_stt_url,
+            tts_url=settings.voice_kyutai_tts_url,
+        )
+        logger.info("VoiceSDKAdapter initialized")
+    return _voice_sdk_adapter
+
+
+def get_voice_gateway() -> VoiceGatewayService:
+    """Get the singleton VoiceGatewayService."""
+    from agentx.infrastructure.voice.voice_gateway import VoiceGatewayService
+
+    global _voice_gateway
+    if _voice_gateway is None:
+        _voice_gateway = VoiceGatewayService(
+            session_manager=get_session_manager(),
+            voice_adapter=get_voice_sdk_adapter(),
+        )
+        logger.info("VoiceGatewayService initialized")
+    return _voice_gateway

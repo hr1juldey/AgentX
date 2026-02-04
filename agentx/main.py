@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from agentx.core.config import settings
-from agentx.core.dependencies import ensure_dspy_configured
+from agentx.core.dependencies import ensure_dspy_configured, get_session_manager
 from agentx.presentation.api.v1.agents.routes import router as agents_router
 from agentx.presentation.api.v1.graphs.routes import router as graphs_router
 from agentx.presentation.api.v1.memory.routes import router as memory_router
@@ -38,9 +38,17 @@ async def lifespan(app: FastAPI):
     except NotImplementedError as e:
         print(f"Warning: {e}")
 
+    # Initialize SessionStateManager for voice conversations
+    try:
+        session_manager = get_session_manager()
+        print(
+            f"SessionStateManager initialized (timeout={session_manager._session_timeout})"
+        )
+    except Exception as e:
+        print(f"Warning: SessionStateManager initialization failed: {e}")
+
     # TODO: Initialize Mem0AI client
     # TODO: Initialize Qdrant client
-    # TODO: Initialize voice clients
 
     yield
 
