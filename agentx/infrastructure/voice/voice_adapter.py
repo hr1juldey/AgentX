@@ -24,7 +24,10 @@ logger = logging.getLogger(__name__)
 
 
 class VoiceSDKAdapter:
-    """Thin wrapper around voice_client SDK for AGENTX integration."""
+    """Thin wrapper around voice_client SDK for AGENTX integration.
+
+    Uses VoiceClient for STT → Agent → TTS pipeline.
+    """
 
     def __init__(self, stt_url: str, tts_url: str) -> None:
         """Initialize the voice SDK adapter.
@@ -43,7 +46,7 @@ class VoiceSDKAdapter:
         session_id: str,
         agent_callback: Callable[[str], Any],
     ) -> None:
-        """Handle voice session using SDK's VoiceClient.converse_stream().
+        """Handle voice session using VoiceClient.
 
         Args:
             websocket: WebSocket connection
@@ -57,33 +60,47 @@ class VoiceSDKAdapter:
 
         from agentx.libs.voice_client import VoiceClient
 
+        from agentx.infrastructure.voice.stt.transcriber import (
+            decode_base64_audio,
+            transcribe_audio,
+        )
+        from agentx.infrastructure.voice.tts.synthesizer import stream_tts_audio
+
         self._client = VoiceClient(stt_url=self.stt_url, tts_url=self.tts_url)
         audio_buffer: list[bytes] = []
 
         try:
-            async for msg in self._message_stream(websocket):
-                match msg["type"]:
-                    case "Audio":
-                        audio_buffer.extend(self._decode_audio(msg["data"]))
+            async with self._client:
+                await self._client.stt.configure()
+                await self._client.tts.configure()
 
-                    case "Eos":
-                        if not audio_buffer:
+                async for msg in self._message_stream(websocket):
+                    match msg["type"]:
+                        case "Audio":
+                            audio_buffer.extend(decode_base64_audio(msg["data"]))
+
+                        case "Eos":
+                            if not audio_buffer:
+                                return
+
+                            transcription = await transcribe_audio(
+                                self._client, audio_buffer
+                            )
+                            response = await agent_callback(transcription)
+                            await stream_tts_audio(self._client, websocket, response)
                             return
 
-                        transcription = await self._transcribe_audio(audio_buffer)
-                        response = await agent_callback(transcription)
-                        await self._send_to_tts(websocket, response)
-                        return
+                        case "Text":
+                            text_input = (
+                                msg["data"] if isinstance(msg["data"], str) else ""
+                            )
+                            response = await agent_callback(text_input)
+                            await stream_tts_audio(self._client, websocket, response)
+                            return
 
-                    case "Text":
-                        text_input = msg["data"] if isinstance(msg["data"], str) else ""
-                        response = await agent_callback(text_input)
-                        await self._send_to_tts(websocket, response)
-                        return
-
-                    case "Error":
-                        logger.error(f"Voice error: {msg['data']}")
-                        return
+                        case "Error":
+                            logger.error(f"Voice error: {msg['data']}")
+                            return
 
         except Exception as e:
             logger.error(f"Voice session error: {e}")
@@ -101,51 +118,3 @@ class VoiceSDKAdapter:
         while True:
             msg = await websocket.receive_json()
             yield msg
-
-    def _decode_audio(self, data: dict) -> list[bytes]:
-        """Decode base64 audio data.
-
-        Args:
-            data: Message data dict with 'audio' key
-
-        Returns:
-            List of decoded audio bytes
-        """
-        import base64
-
-        audio_data = data.get("audio")
-        if not audio_data:
-            return []
-
-        audio_bytes = base64.b64decode(audio_data)
-        return [audio_bytes]
-
-    async def _transcribe_audio(self, audio_chunks: list[bytes]) -> str:
-        """Transcribe buffered audio chunks.
-
-        Args:
-            audio_chunks: List of audio bytes
-
-        Returns:
-            Transcribed text
-        """
-        if not self._client:
-            return ""
-
-        # TODO: Implement STT using voice_client SDK
-        logger.warning(
-            f"STT not implemented, returning placeholder for {len(audio_chunks)} chunks"
-        )
-        return "[STT transcription pending]"
-
-    async def _send_to_tts(self, websocket: Any, text: str) -> None:
-        """Send text to TTS and stream audio back to WebSocket.
-
-        Args:
-            websocket: WebSocket connection
-            text: Text to synthesize
-        """
-        await websocket.send_json({"type": "Text", "data": text})
-
-        # TODO: Implement TTS streaming using voice_client SDK
-        logger.info(f"TTS synthesis requested for: {text[:50]}...")
