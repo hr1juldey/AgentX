@@ -86,7 +86,7 @@ export class VoiceClient {
   sendAudio(audioBase64: string): void {
     const message: VoiceMessage = {
       type: VoiceMessageType.AUDIO,
-      data: audioBase64,
+      data: { audio: audioBase64 },
       sessionId: this.config.sessionId,
       timestamp: Date.now() / 1000,
     };
