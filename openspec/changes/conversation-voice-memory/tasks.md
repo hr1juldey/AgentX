@@ -178,10 +178,13 @@ Implementation tasks organized by phase as defined in design.md.
   - Configures `MultiVectorConfig` with `MAX_SIM` comparator
   - Sets `HnswConfigDiff(m=0)` for ColBERT (no indexing for reranker)
   - Implements `search_with_prefetch()` using Qdrant's `query_points` API
+  - **Per-Agent Collections**: Collection name configurable via `__init__(collection_name)`
+    - Private collections: `"research_agent_memory"`, `"chatbot_agent_memory"`
+    - Shared collection: `"agentx_knowledge"`
 
 ### 14. Integration
 
-- [x] 14.1 Configure Mem0AI to use Qdrant as backend
+- [x] 14.1.1 Configure Mem0AI to use Qdrant as backend
   - Mem0AI uses Qdrant directly (configured in `mem0_client.py`)
   - **Implementation**:
     - `qdrant-client>=1.13.2` added to `pyproject.toml` dependencies
@@ -190,7 +193,15 @@ Implementation tasks organized by phase as defined in design.md.
     - Uses Ollama embedder for local embeddings
   - **Note**: PrefetchRM is a separate knowledge base system (different collection)
 
-- [ ] 14.2 Test multivector retrieval accuracy
+- [x] 14.2 Update dependencies.py for per-agent collections
+  - Changed `get_qdrant_collection_manager()` to accept `collection_name` parameter
+  - Implements caching: `_qdrant_collection_managers: dict[str, QdrantCollectionManager]`
+  - Default collection: `"agentx_knowledge"` (shared)
+  - Usage: `get_qdrant_collection_manager("research_agent_memory")`
+  - Updated `prefetch_rm.py` to use `collection_manager.collection_name`
+  - Fixed test fixtures to use new API
+
+- [ ] 14.3 Test multivector retrieval accuracy
   - Compare dense-only vs multivector results
   - Verify prefetch pattern improves accuracy
 
