@@ -6,19 +6,19 @@ Implementation tasks organized by phase as defined in design.md.
 
 ### 1. Core Layer - Dependencies and Configuration
 
-- [ ] 1.1 Add Ollama health check in `ensure_dspy_configured()`
+- [x] 1.1 Add Ollama health check in `ensure_dspy_configured()`
   - Verify Ollama is running on `http://localhost:11434`
   - Fail fast with clear error message if unavailable
   - Add connection timeout (600 seconds)
 
-- [ ] 1.2 Add `get_session_manager()` singleton function
+- [x] 1.2 Add `get_session_manager()` singleton function
   - Create in-memory session state storage: `dict[str, SessionState]`
   - Implement `get_or_create_session(session_id: str)` function
   - Add session cleanup task for expired sessions
 
 ### 2. Domain Layer - Signatures
 
-- [ ] 2.1 Create `ConversationSignature` class
+- [x] 2.1 Create `ConversationSignature` class
   - File: `agentx/domain/signatures/conversation_signature.py`
   - Inherit from `dspy.Signature`
   - Define fields: `question: str = dspy.InputField(desc="User's question")`
@@ -28,14 +28,14 @@ Implementation tasks organized by phase as defined in design.md.
 
 ### 3. Application Layer - Agents
 
-- [ ] 3.1 Implement `StemCellAgent.forward()` (sync version)
+- [x] 3.1 Implement `StemCellAgent.forward()` (sync version)
   - File: `agentx/application/agents/stem_cell.py`
   - Implement DSPy History management: initialize, append, pass to reasoning
   - Create `self._history: dspy.History` instance attribute
   - Execute `self.reasoning(question=question, context=context)`
   - Return `dspy.Prediction`
 
-- [ ] 3.2 Update `ConversationAgent` to use `ConversationSignature`
+- [x] 3.2 Update `ConversationAgent` to use `ConversationSignature`
   - File: `agentx/application/agents/conversation.py`
   - Pass `ConversationSignature` to parent `__init__`
   - Initialize `self._history = dspy.History(messages=[])`
@@ -43,27 +43,27 @@ Implementation tasks organized by phase as defined in design.md.
 
 ### 4. Infrastructure Layer - Voice
 
-- [ ] 4.1 Implement `VoiceSDKAdapter.handle_session()`
+- [x] 4.1 Implement `VoiceSDKAdapter.handle_session()`
   - File: `agentx/infrastructure/voice/voice_adapter.py`
   - Import `VoiceClient` from `libs/voice_client/`
   - Implement STT buffering: collect audio chunks until Eos
   - Implement TTS streaming: send text to TTS, stream audio back
   - Add error handling for STT/TTS failures
 
-- [ ] 4.2 Implement `VoiceGatewayService`
+- [x] 4.2 Implement `VoiceGatewayService`
   - File: `agentx/infrastructure/voice/voice_gateway.py`
   - Create `handle_session(websocket, session_id)` method
   - Get or create agent from session manager
   - Route messages: Audio (buffer), Eos (transcribe), Text (send to agent)
   - Send agent response to TTS
 
-- [ ] 4.3 Create `TextPreprocessor` service
-  - File: `agentx/infrastructure/voice/text_preprocessor.py`
+- [x] 4.3 Create `TextPreprocessor` service
+  - File: `agentx/application/services/text_preprocessor.py`
   - Implement `preprocess_stt(text: str) -> str`: remove filler words
   - Implement `preprocess_tts(text: str) -> str`: add punctuation, break sentences
   - Keep it simple for Phase 1 (rule-based, not LLM-based)
 
-- [ ] 4.4 Create `SessionStateManager` service
+- [x] 4.4 Create `SessionStateManager` service
   - File: `agentx/infrastructure/memory/session_state_manager.py`
   - Create `SessionState` dataclass: session_id, history, agent, metadata
   - Implement `get_or_create_session(session_id: str) -> SessionState`
@@ -72,7 +72,7 @@ Implementation tasks organized by phase as defined in design.md.
 
 ### 5. Presentation Layer - API Routes
 
-- [ ] 5.1 Create WebSocket voice endpoint
+- [x] 5.1 Create WebSocket voice endpoint
   - File: `agentx/presentation/api/v1/voice/routes.py`
   - Create `@router.websocket("/ws/voice")` endpoint
   - Accept WebSocket, extract session_id from query params
@@ -81,7 +81,7 @@ Implementation tasks organized by phase as defined in design.md.
 
 ### 6. Main Application
 
-- [ ] 6.1 Update `main.py` lifespan to initialize session manager
+- [x] 6.1 Update `main.py` lifespan to initialize session manager
   - Import `get_session_manager` and call during startup
   - Add background task for session cleanup
 
@@ -91,20 +91,20 @@ Implementation tasks organized by phase as defined in design.md.
 
 ### 7. Core Layer - Mem0AI Dependencies
 
-- [ ] 7.1 Add Mem0AI client initialization
+- [x] 7.1 Add Mem0AI client initialization
   - File: `agentx/core/dependencies.py`
   - Implement `get_mem0_client()` singleton function
-  - Create `Mem0` client with `api_key` and `host` from settings
+  - Create `Mem0` client with local Ollama + Qdrant (no API key)
   - Add health check with try-except, return None if unavailable
   - Add graceful degradation (continue without memory if unavailable)
 
-- [ ] 7.2 Add Mem0AI to requirements-core.txt
-  - Add `mem0ai` package
+- [x] 7.2 Add Mem0AI to requirements-core.txt
+  - Add `mem0ai==1.0.3` package (in pyproject.toml)
   - Run `uv pip install -r requirements-core.txt`
 
 ### 8. Infrastructure Layer - Memory Client
 
-- [ ] 8.1 Create `Mem0AIClient` wrapper
+- [x] 8.1 Create `Mem0Client` wrapper
   - File: `agentx/infrastructure/memory/mem0_client.py`
   - Wrap Mem0AI client with AGENTX-specific methods
   - Implement `search_memory(query: str, user_id: str, limit: int) -> list[str]`
@@ -113,22 +113,24 @@ Implementation tasks organized by phase as defined in design.md.
 
 ### 9. Application Layer - Integrate Memory into StemCellAgent
 
-- [ ] 9.1 Add memory search to `StemCellAgent.forward()`
-  - Before executing reasoning, call `mem0_client.search_memory(question, user_id, limit=5)`
+- [x] 9.1 Add memory search to `StemCellAgent.forward()`
+  - Before executing reasoning, call `memory_manager.search_memory(context, question)`
   - Concatenate memory results to context
   - Handle case where Mem0AI is unavailable (continue with empty context)
 
-- [ ] 9.2 Add memory storage to `StemCellAgent.forward()`
+- [x] 9.2 Add memory storage to `StemCellAgent.forward()`
   - After executing reasoning, format interaction as string
-  - Call `mem0_client.store_memory(interaction_text, user_id, metadata={})`
+  - Call `memory_manager.store_interaction(question, result)`
   - Store asynchronously (don't block response)
 
 ### 10. Testing
 
-- [ ] 10.1 Test memory persistence across sessions
+- [x] 10.1 Test memory persistence across sessions
+  - Test file: `agentx/tests/integration/test_memory_persistence.py`
   - Start conversation, add facts
   - Disconnect and reconnect with same session_id
   - Verify agent remembers previous context
+  - **Test passes**: Agent 2 correctly retrieved "Alice" and "hiking" memories
 
 ---
 
@@ -142,9 +144,10 @@ Implementation tasks organized by phase as defined in design.md.
   - Create `QdrantClient` pointing to `http://localhost:6335`
   - Verify connection with health check
   - Create collection if not exists
+  - **Status**: Returns `NotImplementedError`
 
-- [ ] 11.2 Add Qdrant to requirements-core.txt
-  - Add `qdrant-client` package
+- [x] 11.2 Add Qdrant to requirements-core.txt
+  - Add `qdrant-client` package (in pyproject.toml)
   - Run `uv pip install -r requirements-core.txt`
 
 ### 12. Infrastructure Layer - Vector Embedding
@@ -178,7 +181,8 @@ Implementation tasks organized by phase as defined in design.md.
 - [ ] 14.1 Configure Mem0AI to use Qdrant as backend
   - Option A: Use Mem0AI's Qdrant integration (if available)
   - Option B: Implement direct Qdrant storage with Mem0AI-like features
-  - Update `Mem0AIClient` to use PrefetchRM for search
+  - Update `Mem0Client` to use PrefetchRM for search
+  - **Current**: Mem0AI uses Qdrant directly (configured in mem0_client.py)
 
 - [ ] 14.2 Test multivector retrieval accuracy
   - Compare dense-only vs multivector results
