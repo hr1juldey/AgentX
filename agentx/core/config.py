@@ -3,7 +3,12 @@
 Provides Pydantic Settings for all environment variables and configuration.
 """
 
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
+
+# Project root (3 levels up from this file: agentx/core/config.py → project root)
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 
 
 class Settings(BaseSettings):
@@ -45,8 +50,11 @@ class Settings(BaseSettings):
     class Config:
         """Pydantic configuration."""
 
-        env_file = ".env"
+        # Try CWD-relative first, fallback to project root absolute path
+        env_file = [".env", str(PROJECT_ROOT / ".env")]
         case_sensitive = False
+        env_file_encoding = "utf-8"
+        extra = "ignore"  # Ignore undefined env vars (for .env compatibility)
 
 
 # Singleton instance

@@ -12,7 +12,6 @@ import pytest
 from agentx.core.dependencies import (
     ensure_dspy_configured,
     get_qdrant_collection_manager,
-    get_qdrant_client,
 )
 from agentx.infrastructure.retrieval.colbert_vectorizer import ColBERTVectorizer
 from agentx.infrastructure.retrieval.dense_vectorizer import DenseVectorizer
@@ -24,7 +23,7 @@ logger = logging.getLogger(__name__)
 @pytest.fixture
 def qdrant_collection_manager():
     """Get Qdrant collection manager and ensure collection exists."""
-    manager = get_qdrant_collection_manager()
+    manager = get_qdrant_collection_manager("test_memory")
     if manager is None:
         pytest.skip("Qdrant not available")
     return manager
@@ -45,17 +44,10 @@ def colbert_vectorizer():
 @pytest.fixture
 def prefetch_rm(qdrant_collection_manager, dense_vectorizer, colbert_vectorizer):
     """Get PrefetchRM instance."""
-    qdrant_client = get_qdrant_client()
-    if qdrant_client is None:
-        pytest.skip("Qdrant not available")
-
     return PrefetchRM(
-        qdrant_client=qdrant_client,
+        collection_manager=qdrant_collection_manager,
         dense_vectorizer=dense_vectorizer,
         colbert_vectorizer=colbert_vectorizer,
-        collection_name="agentx_memory",
-        dense_vector_name="dense",
-        colbert_vector_name="colbert",
     )
 
 
@@ -197,7 +189,7 @@ def test_retrieval_integration():
     ensure_dspy_configured()
 
     # Step 2: Get collection manager and ensure collection exists
-    collection_manager = get_qdrant_collection_manager()
+    collection_manager = get_qdrant_collection_manager("test_integration")
     if collection_manager is None:
         pytest.skip("Qdrant not available")
 
@@ -208,9 +200,8 @@ def test_retrieval_integration():
     colbert_vectorizer = ColBERTVectorizer(model_name="colbert-ir/colbertv2.0")
 
     # Step 4: Create PrefetchRM
-    qdrant_client = get_qdrant_client()
     prefetch_rm = PrefetchRM(
-        qdrant_client=qdrant_client,
+        collection_manager=collection_manager,
         dense_vectorizer=dense_vectorizer,
         colbert_vectorizer=colbert_vectorizer,
     )

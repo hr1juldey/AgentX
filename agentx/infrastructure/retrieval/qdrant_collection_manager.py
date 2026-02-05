@@ -44,7 +44,8 @@ class QdrantCollectionManager:
     COLBERT_DIM = 128  # colbertv2.0 dimension
 
     # Distance metric (Cosine for semantic search)
-    DISTANCE = Distance.COSINE
+    # Note: For dense vector only. ColBERT uses MAX_SIM comparator instead.
+    DENSE_DISTANCE = Distance.COSINE
 
     def __init__(self, qdrant_client: QdrantClient, collection_name: str) -> None:
         """Initialize the collection manager.
@@ -61,11 +62,14 @@ class QdrantCollectionManager:
             f"QdrantCollectionManager initialized for collection: {collection_name}"
         )
 
-    def ensure_collection_exists(self) -> bool:
+    def ensure_collection_exists(self, force_recreate: bool = False) -> bool:
         """Ensure the collection exists with proper configuration.
 
         Creates the collection if it doesn't exist, or validates
         configuration if it does.
+
+        Args:
+            force_recreate: If True, delete and recreate existing collection
 
         Returns:
             True if collection is ready, False otherwise
@@ -76,8 +80,13 @@ class QdrantCollectionManager:
             collection_names = {col.name for col in collections.collections}
 
             if self.collection_name in collection_names:
-                logger.info(f"Collection '{self.collection_name}' already exists")
-                return self._validate_collection()
+                if force_recreate:
+                    logger.info(f"Force recreating collection '{self.collection_name}'")
+                    self.delete_collection()
+                    return self._create_collection()
+                else:
+                    logger.info(f"Collection '{self.collection_name}' already exists")
+                    return self._validate_collection()
             else:
                 return self._create_collection()
 
@@ -94,18 +103,18 @@ class QdrantCollectionManager:
         try:
             # Configure named vectors as dict (medical bot pattern)
             vectors_config = {
-                # Dense vector for fast retrieval (indexed)
+                # Dense vector for fast retrieval (indexed with COSINE distance)
                 self.DENSE_VECTOR_NAME: VectorParams(
                     size=self.DENSE_DIM,
-                    distance=self.DISTANCE,
+                    distance=self.DENSE_DISTANCE,
                     # HNSW indexing by default for fast search
                 ),
-                # ColBERT multivector for reranking (NOT indexed)
+                # ColBERT multivector for reranking (NOT indexed, uses MAX_SIM)
                 self.COLBERT_VECTOR_NAME: VectorParams(
                     size=self.COLBERT_DIM,
-                    distance=self.DISTANCE,
+                    distance=self.DENSE_DISTANCE,  # Required for token-level comparison
                     multivector_config=MultiVectorConfig(
-                        comparator=MultiVectorComparator.MAX_SIM
+                        comparator=MultiVectorComparator.MAX_SIM  # Max aggregation
                     ),
                     hnsw_config=HnswConfigDiff(m=0),  # NO indexing for reranker!
                 ),

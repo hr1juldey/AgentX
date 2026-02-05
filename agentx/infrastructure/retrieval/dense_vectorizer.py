@@ -19,7 +19,13 @@ class DenseVectorizer:
     all-MiniLM-L6-v2 or Ollama embeddings.
 
     Defaults to using Ollama's embedding API for fully local operation.
+
+    Note: All embeddings are resized to 1024 dimensions to match
+    QdrantCollectionManager's DENSE_DIM configuration.
     """
+
+    # Target dimension for Qdrant compatibility
+    TARGET_DIM = 1024
 
     def __init__(self, model_name: str = "mxbai-embed-large:latest") -> None:
         """Initialize the dense vectorizer.
@@ -84,15 +90,27 @@ class DenseVectorizer:
 
         Returns:
             List of float values representing the embedding vector
+            (resized to TARGET_DIM for Qdrant compatibility)
         """
         try:
             response = self._ollama_client.embeddings(
                 model=self.model_name, prompt=text
             )
             embedding = response.get("embedding", [])
-            logger.debug(
-                f"Ollama embedding: dim={len(embedding)}, text='{text[:30]}...'"
-            )
+
+            # Resize to TARGET_DIM for Qdrant compatibility
+            # (e.g., qwen3-embedding:8b produces 4096D, we need 1024D)
+            original_dim = len(embedding)
+            if original_dim > self.TARGET_DIM:
+                embedding = embedding[: self.TARGET_DIM]
+                logger.debug(
+                    f"Ollama embedding resized: {original_dim}D -> {len(embedding)}D, "
+                    f"model={self.model_name}, text='{text[:30]}...'"
+                )
+            else:
+                logger.debug(
+                    f"Ollama embedding: dim={len(embedding)}, text='{text[:30]}...'"
+                )
             return embedding
         except Exception as e:
             logger.error(f"Ollama embedding failed: {e}")
@@ -126,11 +144,9 @@ class DenseVectorizer:
         """Get the embedding dimension.
 
         Returns:
-            Size of the embedding vector
+            Size of the embedding vector (always TARGET_DIM after resizing)
         """
-        # Return a test embedding to get dimension
-        test_embedding = self.embed("test")
-        return len(test_embedding)
+        return self.TARGET_DIM
 
     def embed_batch(self, texts: list[str]) -> "list[list[float]]":
         """Embed multiple texts efficiently.
