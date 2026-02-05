@@ -169,6 +169,7 @@ class STTClient(BaseClient):
         Returns:
             Transcribed text
         """
+
         # Register handler
         async def handler(msg: Message) -> None:
             if isinstance(msg, TextMessage) and msg.is_final:

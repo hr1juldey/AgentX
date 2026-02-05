@@ -29,8 +29,8 @@ async def test_memory_persistence() -> bool:
     2. Creates second agent (simulating reconnection)
     3. Verifies second agent retrieves information from first session
     """
-    from agentx.application.agents import StemCellAgent
-    from agentx.core.dependencies import ensure_dspy_configured
+    from agentx.application.agents import StemCellAgent  # type: ignore[import]
+    from agentx.core.dependencies import ensure_dspy_configured  # type: ignore[import]
 
     # Configure DSPy globally
     ensure_dspy_configured()
@@ -49,8 +49,8 @@ async def test_memory_persistence() -> bool:
     response1 = agent1.forward(question=question1)
     logger.info(f"Agent 1 response: {response1.get('answer', 'No answer')}")
 
-    # Give Mem0AI time to store
-    await asyncio.sleep(1)
+    # Give Mem0AI time to store and index
+    await asyncio.sleep(6)
 
     # Phase 2: Second agent session - retrieve information
     logger.info("\n=== Phase 2: Second Agent Session (New Instance) ===")
@@ -59,6 +59,16 @@ async def test_memory_persistence() -> bool:
     # Ask a question that should trigger memory retrieval
     question2 = "What do you know about me?"
     logger.info(f"Retrieving: {question2}")
+
+    # Debug: check what memories are stored
+    from agentx.core.dependencies import get_mem0_client  # type: ignore[import]
+
+    mem0 = get_mem0_client()
+    if mem0:
+        raw_results = mem0._memory.search(
+            "What do you know?", user_id=test_user_id, limit=5
+        )
+        logger.info(f"DEBUG: Raw search results: {raw_results}")
 
     response2 = agent2.forward(question=question2)
     answer2: str = response2.get("answer", "No answer") or "No answer"  # type: ignore[assignment]
@@ -91,7 +101,7 @@ async def test_memory_search_and_storage() -> bool:
     1. Memory can be stored
     2. Memory can be searched
     """
-    from agentx.core.dependencies import get_mem0_client
+    from agentx.core.dependencies import get_mem0_client  # type: ignore[import]
 
     logger.info("=== Test: Memory Search and Storage ===")
 

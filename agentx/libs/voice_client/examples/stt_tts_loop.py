@@ -96,11 +96,11 @@ async def main():
                 audio=audio_bytes,
                 agent_callback=simple_agent,
             )
-            print(f"  Transcription: \"{transcription}\"")
+            print(f'  Transcription: "{transcription}"')
 
             # Get agent response (for display)
             response_text = simple_agent(transcription)
-            print(f"  Response: \"{response_text}\"")
+            print(f'  Response: "{response_text}"')
 
             # Step 3: Save synthesized audio
             print(f"\nStep 3: Saving audio to {output_path}...")

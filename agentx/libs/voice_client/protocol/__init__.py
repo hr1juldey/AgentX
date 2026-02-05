@@ -58,7 +58,5 @@ def get_encoder(encoding: str) -> JSONEncoder | MessagePackEncoder:
         ValueError: If encoding is not supported
     """
     if encoding not in _encoders:
-        raise ValueError(
-            f"Unsupported encoding: {encoding}. Use 'json' or 'msgpack'."
-        )
+        raise ValueError(f"Unsupported encoding: {encoding}. Use 'json' or 'msgpack'.")
     return _encoders[encoding]()

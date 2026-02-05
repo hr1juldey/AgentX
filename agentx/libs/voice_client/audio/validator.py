@@ -1,11 +1,11 @@
 """Audio format validation."""
 
-from voice_client.constants import (
+from agentx.libs.voice_client.constants import (
     SUPPORTED_BYTES_PER_SAMPLE,
     SUPPORTED_CHANNELS,
     SUPPORTED_SAMPLE_RATES,
 )
-from voice_client.exceptions import AudioFormatError
+from agentx.libs.voice_client.exceptions import AudioFormatError
 
 
 class AudioValidator:
@@ -35,8 +35,7 @@ class AudioValidator:
 
         if sample_rate not in SUPPORTED_SAMPLE_RATES:
             raise AudioFormatError(
-                f"Unsupported sample rate: {sample_rate} Hz. "
-                f"Expected {SUPPORTED_SAMPLE_RATES} Hz."
+                f"Unsupported sample rate: {sample_rate} Hz. Expected {SUPPORTED_SAMPLE_RATES} Hz."
             )
 
         if channels != SUPPORTED_CHANNELS:

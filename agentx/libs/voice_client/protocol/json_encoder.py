@@ -4,10 +4,10 @@ import base64
 import binascii
 import json
 
-from voice_client.exceptions import ProtocolError
-from voice_client.protocol.common import create_message, message_to_dict
-from voice_client.protocol.messages import Message
-from voice_client.protocol.types import MessageType
+from agentx.libs.voice_client.exceptions import ProtocolError
+from agentx.libs.voice_client.protocol.common import create_message, message_to_dict
+from agentx.libs.voice_client.protocol.messages import Message
+from agentx.libs.voice_client.protocol.types import MessageType
 
 
 class JSONEncoder:
@@ -59,15 +59,10 @@ class JSONEncoder:
                 try:
                     decoded["type"] = MessageType(decoded["type"])
                 except ValueError as err:
-                    raise ProtocolError(
-                        f"Unknown message type: {decoded['type']}"
-                    ) from err
+                    raise ProtocolError(f"Unknown message type: {decoded['type']}") from err
 
             # Base64 decode audio data
-            if (
-                decoded.get("type") == MessageType.AUDIO
-                and isinstance(decoded.get("data"), str)
-            ):
+            if decoded.get("type") == MessageType.AUDIO and isinstance(decoded.get("data"), str):
                 decoded["data"] = base64.b64decode(decoded["data"])
 
             return create_message(decoded)

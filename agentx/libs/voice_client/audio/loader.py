@@ -3,7 +3,7 @@
 import wave
 from pathlib import Path
 
-from voice_client.constants import (
+from agentx.libs.voice_client.constants import (
     DEFAULT_CHANNELS,
     DEFAULT_SAMPLE_RATE,
     MP3_FRAME_MAGICS,
@@ -12,7 +12,7 @@ from voice_client.constants import (
     WAV_RIFF_MAGIC,
     WAV_WAVE_MAGIC,
 )
-from voice_client.exceptions import AudioFormatError
+from agentx.libs.voice_client.exceptions import AudioFormatError
 
 
 class AudioLoader:
@@ -53,9 +53,7 @@ class AudioLoader:
         ):
             return cls._load_wav(path)
 
-        if len(header) >= 3 and (
-            header[:3] == MP3_ID3_MAGIC or header[:2] in MP3_FRAME_MAGICS
-        ):
+        if len(header) >= 3 and (header[:3] == MP3_ID3_MAGIC or header[:2] in MP3_FRAME_MAGICS):
             raise AudioFormatError(
                 "MP3 files are not supported directly. "
                 "Convert to WAV first: "
