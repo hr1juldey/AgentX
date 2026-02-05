@@ -12,6 +12,9 @@ from agentx.core.config import settings
 if TYPE_CHECKING:
     from agentx.infrastructure.memory.mem0_client import Mem0Client
     from agentx.infrastructure.memory.session_state_manager import SessionStateManager
+    from agentx.infrastructure.retrieval.qdrant_collection_manager import (
+        QdrantCollectionManager,
+    )
     from agentx.infrastructure.voice.voice_adapter import VoiceSDKAdapter
     from agentx.infrastructure.voice.voice_gateway import VoiceGatewayService
 
@@ -20,6 +23,7 @@ logger = logging.getLogger(__name__)
 _lm: Optional[dspy.LM] = None
 _mem0_client: Optional[Mem0Client] = None
 _qdrant_client: Optional[object] = None
+_qdrant_collection_manager: Optional[QdrantCollectionManager] = None
 _agent_registry: dict = {}
 _session_manager: Optional[SessionStateManager] = None
 _voice_sdk_adapter: Optional[VoiceSDKAdapter] = None
@@ -73,11 +77,75 @@ def get_mem0_client() -> Optional[Mem0Client]:
 
 
 def get_qdrant_client() -> object:
-    """Get the singleton Qdrant client."""
+    """Get the singleton Qdrant client.
+
+    Returns:
+        QdrantClient instance for vector operations
+    """
+    from qdrant_client import QdrantClient
+    from qdrant_client.http.exceptions import UnexpectedResponse
+
     global _qdrant_client
     if _qdrant_client is None:
-        raise NotImplementedError("Qdrant client not yet implemented")
+        try:
+            _qdrant_client = QdrantClient(
+                host=settings.qdrant_host,
+                port=settings.qdrant_port,
+            )
+            # Verify connection
+            collections = _qdrant_client.get_collections()
+            logger.info(
+                f"Qdrant client initialized: {settings.qdrant_host}:{settings.qdrant_port}, "
+                f"{len(collections.collections)} collections"
+            )
+        except UnexpectedResponse as e:
+            logger.warning(f"Qdrant client initialization failed: {e}")
+            logger.info("Continuing without Qdrant client")
+            _qdrant_client = None
+        except Exception as e:
+            logger.warning(f"Qdrant client connection failed: {e}")
+            logger.info("Continuing without Qdrant client")
+            _qdrant_client = None
     return _qdrant_client
+
+
+def get_qdrant_collection_manager() -> Optional[QdrantCollectionManager]:
+    """Get the singleton Qdrant collection manager.
+
+    Ensures the collection exists with proper named vector configuration.
+
+    Returns:
+        QdrantCollectionManager instance or None if Qdrant unavailable
+    """
+    from agentx.infrastructure.retrieval.qdrant_collection_manager import (
+        QdrantCollectionManager,
+    )
+
+    global _qdrant_collection_manager
+    if _qdrant_collection_manager is None:
+        qdrant_client = get_qdrant_client()
+        if qdrant_client is None:
+            logger.warning(
+                "Qdrant client unavailable, cannot create collection manager"
+            )
+            return None
+
+        try:
+            _qdrant_collection_manager = QdrantCollectionManager(
+                qdrant_client  # type: ignore[arg-type]
+            )
+            # Ensure collection exists with proper configuration
+            if _qdrant_collection_manager.ensure_collection_exists():
+                logger.info("QdrantCollectionManager initialized and collection ready")
+            else:
+                logger.warning(
+                    "QdrantCollectionManager initialized but collection validation failed"
+                )
+        except Exception as e:
+            logger.warning(f"QdrantCollectionManager initialization failed: {e}")
+            _qdrant_collection_manager = None
+
+    return _qdrant_collection_manager
 
 
 def get_agent_registry() -> dict:

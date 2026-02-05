@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     mem0_embedding_dims: int = 1024  # mxbai-embed-large uses 1024 dims
 
     # Retrieval (Qdrant)
+    qdrant_host: str = "localhost"
+    qdrant_port: int = 6335
     qdrant_url: str = "http://localhost:6335"
     qdrant_collection: str = "agentx_memory"
 
