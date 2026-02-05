@@ -24,9 +24,7 @@ Test levels:
 from __future__ import annotations
 
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from threading import Lock
 
 import pytest
 
@@ -57,9 +55,12 @@ def dspy_collection_manager():
 @pytest.fixture(scope="module")
 def vectorizers():
     """Get vectorizers for embedding DSPy documentation."""
-    # Use qwen3-embedding:8b (4096D, auto-resized to 1024D by DenseVectorizer)
+    # Read from .env via settings
+    from agentx.core.config import settings
+
+    # Use mxbai-embed-large:latest (1024D native) from .env
     # Use ColBERTv2 for multivector reranking
-    dense = DenseVectorizer(model_name="qwen3-embedding:8b")
+    dense = DenseVectorizer(model_name=settings.mem0_embedder_model)
     colbert = ColBERTVectorizer(model_name="colbert-ir/colbertv2.0")
     return dense, colbert
 
@@ -70,7 +71,7 @@ class TestDSPyHiddenDiscovery:
     def test_index_dspy_docs(self, dspy_collection_manager, vectorizers):
         """Index full DSPy source code into Qdrant for RAG discovery test.
 
-        Multithreaded implementation for faster indexing.
+        Batch insert implementation with timeout handling to avoid timeout errors.
         """
         dense_vectorizer, colbert_vectorizer = vectorizers
         dspy_path = Path("/home/riju279/Downloads/dspy-main/dspy-main/")
@@ -90,24 +91,18 @@ class TestDSPyHiddenDiscovery:
                 if "test" not in f.parts and "__pycache__" not in f.parts
             ]
             logger.info(
-                f"Found {len(py_files)} Python files and {len(md_files)} Markdown files "
-                f"({len(all_files)} after filtering)"
+                f"Found {len(py_files)} Python files and {len(md_files)} Markdown files ({len(all_files)} after filtering)"
             )
 
             # Chunking settings
-            max_chars = 1000  # Increased for speed
-            overlap = 100  # Reduced for speed
+            max_chars = 500
+            overlap = 100
 
-            # Thread-safe counters
-            indexed_count = 0
+            # Step 1: Collect all chunks with text
+            chunks_to_index = []
             doc_id_counter = 0
-            lock = Lock()
 
-            def process_file(file_path: Path) -> int:
-                """Process a single file and return number of chunks indexed."""
-                nonlocal doc_id_counter
-                chunks_indexed = 0
-
+            for file_path in all_files:
                 try:
                     with open(file_path) as f:
                         content = f.read()
@@ -117,73 +112,59 @@ class TestDSPyHiddenDiscovery:
                     while start < len(content):
                         end = start + max_chars
                         chunk_text = content[start:end]
-
-                        # Add file path as context
                         chunk_with_context = (
                             f"# File: {file_path.relative_to(dspy_path)}\n{chunk_text}"
                         )
 
-                        dense_vec = dense_vectorizer.embed(chunk_with_context)
-
-                        colbert_vec = None
-                        if colbert_vectorizer.is_available:
-                            colbert_vec = colbert_vectorizer.embed(chunk_with_context)
-
-                        # Thread-safe doc_id assignment
-                        with lock:
-                            doc_id = doc_id_counter
-                            doc_id_counter += 1
-
-                        success = dspy_collection_manager.insert_document(
-                            document_id=doc_id,
-                            text=chunk_with_context,
-                            dense_vector=dense_vec,
-                            colbert_vector=colbert_vec,
-                            metadata={
-                                "source": str(file_path),
-                                "type": "dspy_source",
-                                "chunk_index": start,
-                                "file_path": str(file_path.relative_to(dspy_path)),
-                            },
+                        chunks_to_index.append(
+                            {
+                                "id": doc_id_counter,
+                                "text": chunk_with_context,
+                                "metadata": {
+                                    "source": str(file_path),
+                                    "type": "dspy_source",
+                                    "chunk_index": start,
+                                    "file_path": str(file_path.relative_to(dspy_path)),
+                                },
+                            }
                         )
-
-                        if success:
-                            chunks_indexed += 1
+                        doc_id_counter += 1
                         start = end - overlap
 
                 except Exception as e:
-                    logger.warning(f"Failed to index {file_path}: {e}")
+                    logger.warning(f"Failed to read {file_path}: {e}")
 
-                return chunks_indexed
+            logger.info(f"Collected {len(chunks_to_index)} chunks for indexing")
 
-            # Process files in parallel (8 workers)
-            max_workers = 8
-            logger.info(
-                f"Starting multithreaded indexing with {max_workers} workers..."
+            # Step 2: Embed all chunks (batch embeddings)
+            logger.info("Embedding chunks with dense vectorizer...")
+            for i, chunk in enumerate(chunks_to_index):
+                chunk["dense_vector"] = dense_vectorizer.embed(chunk["text"])
+                if i > 0 and i % 100 == 0:
+                    logger.info(f"Embedded {i}/{len(chunks_to_index)} chunks...")
+
+            # Step 3: ColBERT embeddings (if available)
+            if colbert_vectorizer.is_available:
+                logger.info("Embedding chunks with ColBERT vectorizer...")
+                for i, chunk in enumerate(chunks_to_index):
+                    chunk["colbert_vector"] = colbert_vectorizer.embed(chunk["text"])
+                    if i > 0 and i % 50 == 0:
+                        logger.info(
+                            f"ColBERT embedded {i}/{len(chunks_to_index)} chunks..."
+                        )
+
+            # Step 4: Batch insert with timeout
+            logger.info(f"Inserting {len(chunks_to_index)} chunks into Qdrant...")
+            inserted = dspy_collection_manager.insert_documents_batch(
+                documents=chunks_to_index,
+                timeout=60.0,
+                batch_size=100,
             )
 
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = {
-                    executor.submit(process_file, file_path): file_path
-                    for file_path in all_files
-                }
-
-                for future in as_completed(futures):
-                    file_path = futures[future]
-                    try:
-                        chunks = future.result()
-                        with lock:
-                            indexed_count += chunks
-                        if chunks > 0 and (indexed_count % 100 == 0):
-                            logger.info(f"Progress: {indexed_count} chunks indexed...")
-                    except Exception as e:
-                        logger.error(f"Exception processing {file_path}: {e}")
-
             logger.info(
-                f"Successfully indexed {indexed_count} chunks from DSPy codebase "
-                f"(Python + Markdown) with multithreading"
+                f"Successfully indexed {inserted} chunks from DSPy codebase (Python + Markdown)"
             )
-            assert indexed_count > 0, "No chunks were indexed"
+            assert inserted > 0, "No chunks were indexed"
 
         except Exception as e:
             logger.error(f"Failed to index DSPy codebase: {e}")

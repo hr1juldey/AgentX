@@ -24,8 +24,11 @@ def rag_components():
     # Configure DSPy with Ollama
     ensure_dspy_configured()
 
-    # Initialize vectorizers
-    dense = DenseVectorizer(model_name="qwen3-embedding:8b")
+    # Read from .env via settings
+    from agentx.core.config import settings
+
+    # Initialize vectorizers using .env settings
+    dense = DenseVectorizer(model_name=settings.mem0_embedder_model)
     colbert = ColBERTVectorizer(model_name="colbert-ir/colbertv2.0")
 
     # Get Qdrant collection manager (should already exist from indexing)
