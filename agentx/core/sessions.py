@@ -1,5 +1,7 @@
 """Session-related dependencies for AGENTX."""
 
+from __future__ import annotations
+
 import logging
 from typing import TYPE_CHECKING
 
@@ -10,7 +12,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_session_manager: "SessionStateManager" | None = None
+_session_manager: SessionStateManager | None = None
 
 
 def get_session_manager() -> SessionStateManager:

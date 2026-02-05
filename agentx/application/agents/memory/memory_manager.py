@@ -57,21 +57,41 @@ class MemoryManager:
             return context
 
         try:
-            # Run async search in event loop (create if needed)
+            # Try to detect if we're in an async context
             try:
-                loop = asyncio.get_event_loop()
+                asyncio.get_running_loop()
+                # In async context - use synchronous approach by running in executor
+                import threading
+
+                result: list[str] = []
+
+                def _run_in_thread():
+                    try:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        try:
+                            memories = loop.run_until_complete(
+                                mem0_client.search_memory(
+                                    question, self.user_id, limit=5
+                                )  # type: ignore[no-untyped-call]
+                            )
+                            result.extend(memories)
+                        finally:
+                            loop.close()
+                    except Exception as e:
+                        logger.error(f"Memory search in thread failed: {e}")
+
+                thread = threading.Thread(target=_run_in_thread)
+                thread.start()
+                thread.join(timeout=5.0)
+
+                memories = result
+
             except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-
-            if loop.is_running():
-                # If loop is running, we can't use await - skip memory for now
-                logger.debug("Skipping Mem0AI search: event loop is running")
-                return context
-
-            memories = asyncio.run(
-                mem0_client.search_memory(question, self.user_id, limit=5)  # type: ignore[no-untyped-call]
-            )
+                # No running loop - use asyncio.run() directly
+                memories = asyncio.run(
+                    mem0_client.search_memory(question, self.user_id, limit=5)  # type: ignore[no-untyped-call]
+                )
 
             if memories:
                 memory_context = "\n".join(memories)
@@ -104,14 +124,10 @@ class MemoryManager:
 
             # Try to store asynchronously (non-blocking)
             try:
-                loop = asyncio.get_event_loop()
+                asyncio.get_running_loop()
             except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-
-            if loop.is_running():
-                # Create background task for storage
-                asyncio.create_task(
+                # No running loop - use asyncio.run()
+                asyncio.run(
                     mem0_client.store_memory(  # type: ignore[no-untyped-call]
                         text=interaction_text,
                         user_id=self.user_id,
@@ -119,8 +135,8 @@ class MemoryManager:
                     )
                 )
             else:
-                # Run synchronously if no loop running
-                asyncio.run(
+                # Running loop exists - schedule as background task
+                asyncio.create_task(
                     mem0_client.store_memory(  # type: ignore[no-untyped-call]
                         text=interaction_text,
                         user_id=self.user_id,

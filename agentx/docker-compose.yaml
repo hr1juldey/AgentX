@@ -12,11 +12,11 @@
 services:
   # Qdrant - Vector Database for RAG
   qdrant:
-    image: qdrant/qdrant:v1.13.6
+    image: qdrant/qdrant
     container_name: agentx-qdrant
     ports:
-      - "6335:6333"  # HTTP API (host:container - using 6335 to avoid conflict)
-      - "6336:6334"  # gRPC API (optional)
+      - "6335:6333" # HTTP API (host:container - using 6335 to avoid conflict)
+      - "6336:6334" # gRPC API (optional)
     volumes:
       - qdrant_data:/qdrant/storage
     environment:
@@ -25,7 +25,11 @@ services:
       QDRANT_TELEMETRY_DISABLED: "true"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "timeout 10s bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "timeout 10s bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1",
+        ]
       interval: 10s
       timeout: 10s
       retries: 3
@@ -40,7 +44,7 @@ services:
     image: redis/redis-stack:latest
     container_name: agentx-redis
     ports:
-      - "6380:6379"  # (host:container - using 6380 to avoid conflict)
+      - "6380:6379" # (host:container - using 6380 to avoid conflict)
     volumes:
       - redis_data:/data
     restart: unless-stopped

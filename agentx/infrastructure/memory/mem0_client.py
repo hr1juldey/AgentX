@@ -39,6 +39,7 @@ class Mem0Client:
             embedding_dims: Embedding vector dimensions
         """
         from mem0 import Memory
+        from qdrant_client import QdrantClient
 
         # Configure Mem0AI for local Ollama + Qdrant
         config = {
@@ -68,6 +69,18 @@ class Mem0Client:
             },
         }
 
+        # Clean up existing collection to ensure clean state
+        collection_name = "agentx_memories"
+        client = QdrantClient(host=qdrant_host, port=qdrant_port)
+        collections = [c.name for c in client.get_collections().collections]
+
+        if collection_name in collections:
+            try:
+                client.delete_collection(collection_name)
+                logger.info(f"Deleted existing Qdrant collection: {collection_name}")
+            except Exception as e:
+                logger.warning(f"Failed to delete collection: {e}")
+
         self._memory = Memory.from_config(config)
         logger.info(
             f"Mem0AI initialized: qdrant={qdrant_host}:{qdrant_port}, "
@@ -94,10 +107,32 @@ class Mem0Client:
                 limit=limit,
             )
 
-            # Extract memory text from results
-            memories = [
-                result.get("memory", "") for result in results if result.get("memory")
-            ]
+            # Handle Mem0AI result format: {"results": [{"memory": "...", ...}]}
+            memories: list[str] = []
+
+            # If results is a dict with "results" key
+            if isinstance(results, dict) and "results" in results:
+                result_list = results["results"]
+            # If results is already a list
+            elif isinstance(results, list):
+                result_list = results
+            else:
+                logger.debug(f"Mem0AI search: unexpected format {type(results)}")
+                return memories
+
+            # Extract memory text from result items
+            for result in result_list:
+                if isinstance(result, str):
+                    memories.append(result)
+                elif isinstance(result, dict):
+                    # Try common keys for memory text
+                    memory_text = (
+                        result.get("memory")
+                        or result.get("text")
+                        or result.get("content")
+                    )
+                    if memory_text:
+                        memories.append(memory_text)
 
             logger.debug(
                 f"Mem0AI search: query='{query[:30]}...', user_id={user_id}, "
@@ -122,7 +157,7 @@ class Mem0Client:
         """
         try:
             self._memory.add(
-                text=text,
+                text,  # positional argument
                 user_id=user_id,
                 metadata=metadata or {},
             )
