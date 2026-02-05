@@ -1,7 +1,6 @@
 """MessagePack encoder/decoder for WebSocket messages."""
 
 import msgpack
-
 from agentx.libs.voice_client.exceptions import ProtocolError
 from agentx.libs.voice_client.protocol.common import create_message, message_to_dict
 from agentx.libs.voice_client.protocol.messages import Message

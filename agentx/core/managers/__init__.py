@@ -1,12 +1,5 @@
-"""Core dependency injection for AGENTX.
+"""Core dependency injection managers."""
 
-This module provides a unified import interface for all singleton services.
-Individual managers are organized in the managers/ subdirectory.
-"""
-
-from __future__ import annotations
-
-# Import all manager functions for backward compatibility
 from agentx.core.managers.agent_registry import (
     get_agent_registry,
     register_agent,
@@ -21,7 +14,6 @@ from agentx.core.managers.voice_manager import (
     get_voice_gateway,
     get_voice_sdk_adapter,
 )
-from agentx.core.sessions import get_session_manager
 
 __all__ = [
     # DSPy
@@ -38,6 +30,4 @@ __all__ = [
     # Agent registry
     "get_agent_registry",
     "register_agent",
-    # Sessions
-    "get_session_manager",
 ]

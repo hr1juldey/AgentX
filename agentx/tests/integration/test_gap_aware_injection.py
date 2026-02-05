@@ -108,7 +108,9 @@ class TestGapAwareInjection:
 
         # Check what information we got
         combined_text1 = " ".join(passages1)
-        has_ollama_url = "localhost:11434" in combined_text1 or "11434" in combined_text1
+        has_ollama_url = (
+            "localhost:11434" in combined_text1 or "11434" in combined_text1
+        )
         has_dspy_lm = "dspy.LM" in combined_text1 or "ollama_chat" in combined_text1
 
         print("\n📊 Query 1 covered:")
@@ -137,7 +139,9 @@ class TestGapAwareInjection:
 
         # This demonstrates the problem
         assert has_ollama_url, "Query 1 should have Ollama URL info"
-        assert "localhost:11434" in combined_text2 or "11434" in combined_text2, "Query 2 retrieved same info"
+        assert "localhost:11434" in combined_text2 or "11434" in combined_text2, (
+            "Query 2 retrieved same info"
+        )
 
         print("\n💡 CONCLUSION: Naive RAG doesn't remember - re-queries known facts")
 
@@ -190,15 +194,19 @@ class TestGapAwareInjection:
             fact_text: str = str(memory_entry["fact"])
             # Simple keyword matching (in real implementation, use MAX_SIM)
             if any(word in question.lower() for word in fact_text.lower().split()):
-                covered_topics.append({
-                    "topic": key,
-                    "fact": fact_text,
-                    "max_sim": memory_entry["max_sim"],
-                })
+                covered_topics.append(
+                    {
+                        "topic": key,
+                        "fact": fact_text,
+                        "max_sim": memory_entry["max_sim"],
+                    }
+                )
 
         print("Covered in Mem0AI:")
         for topic in covered_topics:
-            print(f"  ✓ {topic['topic']}: {topic['fact']} (MAX_SIM: {topic['max_sim']})")
+            print(
+                f"  ✓ {topic['topic']}: {topic['fact']} (MAX_SIM: {topic['max_sim']})"
+            )
 
         # Identify gaps
         if "dspy_lm_config" not in simulated_memory:
@@ -263,13 +271,17 @@ class TestGapAwareInjection:
             if "dspy.lm" in passage_lower and "ollama_chat" in passage_lower:
                 # Check if already exists in memory
                 if "dspy_lm_config" in simulated_memory:
-                    existing_max_sim: float = float(simulated_memory["dspy_lm_config"]["max_sim"])  # type: ignore[arg-type]
+                    existing_max_sim: float = float(
+                        simulated_memory["dspy_lm_config"]["max_sim"]
+                    )  # type: ignore[arg-type]
                     # Simulated MAX_SIM for this passage
                     passage_max_sim = 0.85
 
                     if passage_max_sim > existing_max_sim + redundancy_margin:
                         print("  ✓ INJECT: Better version of dspy.LM config")
-                        print(f"    (New: {passage_max_sim} > Existing: {existing_max_sim})")
+                        print(
+                            f"    (New: {passage_max_sim} > Existing: {existing_max_sim})"
+                        )
                         simulated_memory["dspy_lm_config"] = {
                             "fact": passage[:200],
                             "max_sim": passage_max_sim,
@@ -309,7 +321,9 @@ class TestGapAwareInjection:
 
         # Assertions
         assert len(simulated_memory) > 1, "Memory should have grown"
-        assert "dspy_lm_config" in simulated_memory, "Should have injected dspy.LM config"
+        assert "dspy_lm_config" in simulated_memory, (
+            "Should have injected dspy.LM config"
+        )
 
         print("\n✅ SUCCESS: Gap-aware injection avoided redundant RAG query")
         print("   - Ollama URL was NOT re-queried (already in memory)")
@@ -353,7 +367,9 @@ class TestGapAwareInjection:
         agent1 = StemCellAgent(user_id="test_user_rag_only")
         result1 = agent1(context=rag_context, question=question)
 
-        answer1 = result1.answer if hasattr(result1, "answer") else result1.get("answer", "")  # type: ignore[union-attr]
+        answer1 = (
+            result1.answer if hasattr(result1, "answer") else result1.get("answer", "")
+        )  # type: ignore[union-attr]
 
         print(f"Generated ({len(answer1)} chars):")
         print(answer1[:5000] + "..." if len(answer1) > 500 else answer1)
@@ -403,7 +419,9 @@ class TestGapAwareInjection:
                 unique_passages.append(passage)
 
         injection_context = "\n\n---\n\n".join(unique_passages[:25])  # Top 25 docs
-        print(f"\nRetrieved {len(unique_passages)} unique passages (merged from {len(expanded_queries)} queries)")
+        print(
+            f"\nRetrieved {len(unique_passages)} unique passages (merged from {len(expanded_queries)} queries)"
+        )
 
         # Add simulated memory context
         memory_context = "\n\n[From Memory: Ollama runs on http://localhost:11434]\n\n"
@@ -412,7 +430,9 @@ class TestGapAwareInjection:
         agent2 = StemCellAgent(user_id="test_user_expansion")
         result2 = agent2(context=enhanced_context, question=question)
 
-        answer2 = result2.answer if hasattr(result2, "answer") else result2.get("answer", "")  # type: ignore[union-attr]
+        answer2 = (
+            result2.answer if hasattr(result2, "answer") else result2.get("answer", "")
+        )  # type: ignore[union-attr]
 
         print(f"Generated ({len(answer2)} chars):")
         print(answer2[:500] + "..." if len(answer2) > 500 else answer2)
@@ -423,7 +443,8 @@ class TestGapAwareInjection:
             "mentions_ollama_chat": "ollama_chat" in answer2,
             "has_code_example": "```" in answer2 or "import dspy" in answer2,
             "mentions_api_base": "localhost:11434" in answer2 or "api_base" in answer2,
-            "mentions_tutorial_classes": "DocumentationFetcher" in answer2 or "CodeGenerator" in answer2,
+            "mentions_tutorial_classes": "DocumentationFetcher" in answer2
+            or "CodeGenerator" in answer2,
         }
 
         print("\nQuality Metrics:")
@@ -448,7 +469,9 @@ class TestGapAwareInjection:
             print("\n⚠️  Need to refine expansion strategy")
 
         # Assertion: Expansion should not be worse
-        assert expansion_score >= rag_only_score - 1, "Query expansion should not significantly degrade quality"
+        assert expansion_score >= rag_only_score - 1, (
+            "Query expansion should not significantly degrade quality"
+        )
 
         print("\n💡 KEY INSIGHT:")
         print("   - Query expansion keeps ALL original query terms (anchors)")
