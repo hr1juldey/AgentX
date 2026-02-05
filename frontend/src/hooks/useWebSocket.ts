@@ -99,6 +99,8 @@ export function useWebSocket(
       };
 
       ws.onerror = (event) => {
+        // Prevent reconnection spam for non-existent endpoints
+        reconnectAttemptsRef.current = maxReconnectAttempts;
         onError?.(event);
       };
 

@@ -191,7 +191,7 @@ export function VoiceButton() {
 
     try {
       const client = new VoiceClient({
-        url: `${BACKEND_WS_URL}/api/v1/voice/ws/voice`,
+        url: `${BACKEND_WS_URL}/api/v1/voice/ws`,
         maxReconnectAttempts: 0,
       });
 
