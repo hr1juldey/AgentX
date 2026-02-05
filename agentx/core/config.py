@@ -26,9 +26,9 @@ class Settings(BaseSettings):
     llm_model: str = "gemma3:4b"
     llm_api_base: str = "http://localhost:11434"
 
-    # Voice (Kyutai)
-    voice_kyutai_stt_url: str = "ws://localhost:16000/stt"
-    voice_kyutai_tts_url: str = "ws://localhost:16000/tts"
+    # Voice (Kyutai) - base URL (SDK appends /stt and /tts automatically)
+    voice_kyutai_stt_url: str = "ws://localhost:16000"
+    voice_kyutai_tts_url: str = "ws://localhost:16000"
     use_voice_sdk: bool = True
 
     # Memory (Mem0AI with local Ollama + Qdrant)
