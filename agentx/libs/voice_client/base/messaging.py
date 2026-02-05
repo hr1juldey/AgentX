@@ -5,7 +5,6 @@ from collections.abc import Callable
 from typing import Any
 
 import websockets
-
 from agentx.libs.voice_client.protocol import Message, MessageType
 
 

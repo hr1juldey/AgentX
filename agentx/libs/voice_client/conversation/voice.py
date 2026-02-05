@@ -7,12 +7,11 @@ agent processing, and text-to-speech synthesis.
 import types
 from typing import Any
 
-from typing_extensions import Self
-
 from agentx.libs.voice_client.conversation.basic import BasicConversationMixin
 from agentx.libs.voice_client.conversation.streaming import StreamingConversationMixin
 from agentx.libs.voice_client.stt import STTClient
 from agentx.libs.voice_client.tts import TTSClient
+from typing_extensions import Self
 
 
 class VoiceClient(BasicConversationMixin, StreamingConversationMixin):

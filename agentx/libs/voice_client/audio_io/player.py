@@ -6,7 +6,6 @@ from typing import Any
 
 import numpy as np
 import sounddevice as sd
-
 from agentx.libs.voice_client.audio_io.devices import list_output_devices
 from agentx.libs.voice_client.constants import DEFAULT_CHANNELS, DEFAULT_SAMPLE_RATE
 from agentx.libs.voice_client.exceptions import PlaybackError

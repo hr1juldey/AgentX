@@ -17,8 +17,9 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from voice_client import AudioPlayer, AudioRecorder, VoiceClient
 from agentx.libs.voice_client.exceptions import VoiceClientError
+
+from voice_client import AudioPlayer, AudioRecorder, VoiceClient
 
 
 def simple_agent(transcription: str) -> str:

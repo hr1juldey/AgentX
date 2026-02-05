@@ -16,6 +16,9 @@ from agentx.libs.voice_client.audio_io import AudioPlayer, AudioRecorder
 # Base client
 from agentx.libs.voice_client.client import BaseClient
 
+# Voice
+from agentx.libs.voice_client.conversation.events import ConversationEvent
+
 # Exceptions
 from agentx.libs.voice_client.exceptions import (
     AudioFormatError,
@@ -56,9 +59,7 @@ from agentx.libs.voice_client.stt import STTClient, TranscriptionResult
 
 # TTS
 from agentx.libs.voice_client.tts import AudioChunk, TTSClient
-
-# Voice
-from agentx.libs.voice_client.voice import ConversationEvent, VoiceClient
+from agentx.libs.voice_client.voice import VoiceClient
 
 
 def _default_agent_callback(text: str) -> str:

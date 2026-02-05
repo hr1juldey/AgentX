@@ -4,7 +4,6 @@ import asyncio
 import uuid
 
 import websockets
-
 from agentx.libs.voice_client.exceptions import ConnectionError as VoiceConnectionError
 
 

@@ -7,7 +7,11 @@ from typing import Any
 
 from agentx.libs.voice_client.audio import AudioHandler
 from agentx.libs.voice_client.client import BaseClient
-from agentx.libs.voice_client.constants import DEFAULT_CHUNK_MS, DEFAULT_SAMPLE_RATE, DEFAULT_TIMEOUT
+from agentx.libs.voice_client.constants import (
+    DEFAULT_CHUNK_MS,
+    DEFAULT_SAMPLE_RATE,
+    DEFAULT_TIMEOUT,
+)
 from agentx.libs.voice_client.exceptions import TimeoutError as VoiceTimeoutError
 from agentx.libs.voice_client.protocol import (
     Message,

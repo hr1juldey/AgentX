@@ -6,10 +6,9 @@ message encoding/decoding, and automatic reconnection.
 
 import types
 
-from typing_extensions import Self
-
 from agentx.libs.voice_client.base.connection import ConnectionMixin
 from agentx.libs.voice_client.base.messaging import MessagingMixin
+from typing_extensions import Self
 
 
 class BaseClient(ConnectionMixin, MessagingMixin):

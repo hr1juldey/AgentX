@@ -3,7 +3,11 @@
 import wave
 from pathlib import Path
 
-from agentx.libs.voice_client.constants import DEFAULT_CHANNELS, DEFAULT_SAMPLE_RATE, WAV_BYTES_PER_SAMPLE
+from agentx.libs.voice_client.constants import (
+    DEFAULT_CHANNELS,
+    DEFAULT_SAMPLE_RATE,
+    WAV_BYTES_PER_SAMPLE,
+)
 
 
 class AudioWriter:

@@ -5,7 +5,6 @@ from typing import Any
 
 import numpy as np
 import sounddevice as sd
-
 from agentx.libs.voice_client.audio_io.devices import list_input_devices
 from agentx.libs.voice_client.audio_io.recording.streaming import StreamRecorder
 from agentx.libs.voice_client.constants import (

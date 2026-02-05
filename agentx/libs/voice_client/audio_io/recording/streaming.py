@@ -6,7 +6,6 @@ from typing import Any
 
 import numpy as np
 import sounddevice as sd
-
 from agentx.libs.voice_client.constants import (
     DEFAULT_CHUNK_MS,
     DEFAULT_SAMPLE_RATE,
