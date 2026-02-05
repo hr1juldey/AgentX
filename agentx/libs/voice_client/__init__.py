@@ -8,16 +8,16 @@ and combined voice conversations via WebSocket.
 __version__ = "0.1.0"
 
 # Audio
-from voice_client.audio import AudioHandler
+from agentx.libs.voice_client.audio import AudioHandler
 
 # Audio I/O
-from voice_client.audio_io import AudioPlayer, AudioRecorder
+from agentx.libs.voice_client.audio_io import AudioPlayer, AudioRecorder
 
 # Base client
-from voice_client.client import BaseClient
+from agentx.libs.voice_client.client import BaseClient
 
 # Exceptions
-from voice_client.exceptions import (
+from agentx.libs.voice_client.exceptions import (
     AudioFormatError,
     ConfigurationError,
     PlaybackError,
@@ -26,15 +26,15 @@ from voice_client.exceptions import (
     ServerError,
     VoiceClientError,
 )
-from voice_client.exceptions import (
+from agentx.libs.voice_client.exceptions import (
     ConnectionError as VoiceClientConnectionError,
 )
-from voice_client.exceptions import (
+from agentx.libs.voice_client.exceptions import (
     TimeoutError as VoiceClientTimeoutError,
 )
 
 # Protocol
-from voice_client.protocol import (
+from agentx.libs.voice_client.protocol import (
     AudioMessage,
     ConfigMessage,
     EOSMessage,
@@ -52,13 +52,13 @@ from voice_client.protocol import (
 )
 
 # STT
-from voice_client.stt import STTClient, TranscriptionResult
+from agentx.libs.voice_client.stt import STTClient, TranscriptionResult
 
 # TTS
-from voice_client.tts import AudioChunk, TTSClient
+from agentx.libs.voice_client.tts import AudioChunk, TTSClient
 
 # Voice
-from voice_client.voice import ConversationEvent, VoiceClient
+from agentx.libs.voice_client.voice import ConversationEvent, VoiceClient
 
 
 def _default_agent_callback(text: str) -> str:

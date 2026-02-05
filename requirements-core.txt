@@ -162,6 +162,7 @@ pocket-tts>=1.0.1
 # Audio processing utilities (non-PyTorch)
 scipy>=1.14.0
 soundfile>=0.12.0
+sounddevice>=0.4.6
 
 # Silero Models - STT, TTS, and VAD (all-in-one package)
 # Includes speech-to-text, text-to-speech, and voice activity detection

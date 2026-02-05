@@ -1,13 +1,13 @@
 """Convenience functions for creating messages."""
 
-from voice_client.constants import DEFAULT_CHANNELS, DEFAULT_SAMPLE_RATE
-from voice_client.protocol.messages import (
+from agentx.libs.voice_client.constants import DEFAULT_CHANNELS, DEFAULT_SAMPLE_RATE
+from agentx.libs.voice_client.protocol.messages import (
     AudioMessage,
     ConfigMessage,
     EOSMessage,
     TextMessage,
 )
-from voice_client.protocol.types import MessageType
+from agentx.libs.voice_client.protocol.types import MessageType
 
 
 def create_audio_message(

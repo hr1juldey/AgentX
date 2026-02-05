@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 import sounddevice as sd
 
-from voice_client.constants import (
+from agentx.libs.voice_client.constants import (
     DEFAULT_CHUNK_MS,
     DEFAULT_SAMPLE_RATE,
     SILENCE_DURATION_MS,
@@ -71,7 +71,7 @@ class StreamRecorder:
                 time: Stream time
                 status: Stream status
             """
-            from voice_client.audio_io.recording.silence import is_silent
+            from agentx.libs.voice_client.audio_io.recording.silence import is_silent
 
             if status:
                 print(f"Audio callback status: {status}")

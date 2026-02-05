@@ -5,7 +5,7 @@ import uuid
 
 import websockets
 
-from voice_client.exceptions import ConnectionError as VoiceConnectionError
+from agentx.libs.voice_client.exceptions import ConnectionError as VoiceConnectionError
 
 
 class ConnectionMixin:

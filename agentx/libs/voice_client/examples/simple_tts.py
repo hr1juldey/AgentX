@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from voice_client import TTSClient
-from voice_client.exceptions import VoiceClientError
+from agentx.libs.voice_client.exceptions import VoiceClientError
 
 
 async def main():

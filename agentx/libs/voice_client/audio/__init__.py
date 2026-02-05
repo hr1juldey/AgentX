@@ -1,9 +1,9 @@
 """Audio file handling for the voice client SDK."""
 
-from voice_client.audio.loader import AudioLoader
-from voice_client.audio.processor import AudioProcessor
-from voice_client.audio.validator import AudioValidator
-from voice_client.audio.writer import AudioWriter
+from agentx.libs.voice_client.audio.loader import AudioLoader
+from agentx.libs.voice_client.audio.processor import AudioProcessor
+from agentx.libs.voice_client.audio.validator import AudioValidator
+from agentx.libs.voice_client.audio.writer import AudioWriter
 
 
 class AudioHandler:

@@ -2,8 +2,8 @@
 
 from dataclasses import dataclass
 
-from voice_client.stt import TranscriptionResult
-from voice_client.tts import AudioChunk
+from agentx.libs.voice_client.stt import TranscriptionResult
+from agentx.libs.voice_client.tts import AudioChunk
 
 
 @dataclass

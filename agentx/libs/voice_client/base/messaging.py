@@ -6,7 +6,7 @@ from typing import Any
 
 import websockets
 
-from voice_client.protocol import Message, MessageType
+from agentx.libs.voice_client.protocol import Message, MessageType
 
 
 class MessagingMixin:
@@ -21,7 +21,7 @@ class MessagingMixin:
         Args:
             encoding: Message encoding ("json" or "msgpack")
         """
-        from voice_client.protocol import get_encoder
+        from agentx.libs.voice_client.protocol import get_encoder
 
         self.encoding = encoding
         self.encoder = get_encoder(encoding)
@@ -36,7 +36,7 @@ class MessagingMixin:
         Raises:
             VoiceConnectionError: If not connected
         """
-        from voice_client.exceptions import ConnectionError as VoiceConnectionError
+        from agentx.libs.voice_client.exceptions import ConnectionError as VoiceConnectionError
 
         if not self._ws:
             raise VoiceConnectionError("Not connected")

@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from voice_client.protocol.types import MessageType
+from agentx.libs.voice_client.protocol.types import MessageType
 
 
 @dataclass

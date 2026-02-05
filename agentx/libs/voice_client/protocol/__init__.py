@@ -1,14 +1,14 @@
 """WebSocket protocol for voice client communication."""
 
-from voice_client.protocol.common import create_message, message_to_dict
-from voice_client.protocol.creators import (
+from agentx.libs.voice_client.protocol.common import create_message, message_to_dict
+from agentx.libs.voice_client.protocol.creators import (
     create_audio_message,
     create_config_message,
     create_eos_message,
     create_text_message,
 )
-from voice_client.protocol.json_encoder import JSONEncoder
-from voice_client.protocol.messages import (
+from agentx.libs.voice_client.protocol.json_encoder import JSONEncoder
+from agentx.libs.voice_client.protocol.messages import (
     AudioMessage,
     ConfigMessage,
     EOSMessage,
@@ -16,8 +16,8 @@ from voice_client.protocol.messages import (
     Message,
     TextMessage,
 )
-from voice_client.protocol.msgpack_encoder import MessagePackEncoder
-from voice_client.protocol.types import MessageType
+from agentx.libs.voice_client.protocol.msgpack_encoder import MessagePackEncoder
+from agentx.libs.voice_client.protocol.types import MessageType
 
 __all__ = [
     "AudioMessage",

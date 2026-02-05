@@ -7,6 +7,6 @@ The actual implementation has been split into focused modules:
 - silence.py: Silence detection and trimming utilities
 """
 
-from voice_client.audio_io.recording.recorder import AudioRecorder
+from agentx.libs.voice_client.audio_io.recording.recorder import AudioRecorder
 
 __all__ = ["AudioRecorder"]

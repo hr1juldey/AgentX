@@ -5,11 +5,11 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
-from voice_client.audio import AudioHandler
-from voice_client.client import BaseClient
-from voice_client.constants import DEFAULT_CHUNK_MS, DEFAULT_SAMPLE_RATE, DEFAULT_TIMEOUT
-from voice_client.exceptions import TimeoutError as VoiceTimeoutError
-from voice_client.protocol import (
+from agentx.libs.voice_client.audio import AudioHandler
+from agentx.libs.voice_client.client import BaseClient
+from agentx.libs.voice_client.constants import DEFAULT_CHUNK_MS, DEFAULT_SAMPLE_RATE, DEFAULT_TIMEOUT
+from agentx.libs.voice_client.exceptions import TimeoutError as VoiceTimeoutError
+from agentx.libs.voice_client.protocol import (
     Message,
     MessageType,
     TextMessage,
@@ -17,7 +17,7 @@ from voice_client.protocol import (
     create_config_message,
     create_eos_message,
 )
-from voice_client.stt.result import TranscriptionResult
+from agentx.libs.voice_client.stt.result import TranscriptionResult
 
 
 class STTClient(BaseClient):

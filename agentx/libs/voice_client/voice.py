@@ -9,6 +9,6 @@ The actual implementation has been split into focused modules:
 - events.py: Conversation event types
 """
 
-from voice_client.conversation.voice import VoiceClient
+from agentx.libs.voice_client.conversation.voice import VoiceClient
 
 __all__ = ["VoiceClient"]

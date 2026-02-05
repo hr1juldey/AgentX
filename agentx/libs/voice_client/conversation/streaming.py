@@ -5,12 +5,12 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Any
 
-from voice_client.conversation.events import ConversationEvent
+from agentx.libs.voice_client.conversation.events import ConversationEvent
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from voice_client.stt import TranscriptionResult
+    from agentx.libs.voice_client.stt import TranscriptionResult
 
 
 class StreamingConversationMixin:

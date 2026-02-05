@@ -9,10 +9,10 @@ from typing import Any
 
 from typing_extensions import Self
 
-from voice_client.conversation.basic import BasicConversationMixin
-from voice_client.conversation.streaming import StreamingConversationMixin
-from voice_client.stt import STTClient
-from voice_client.tts import TTSClient
+from agentx.libs.voice_client.conversation.basic import BasicConversationMixin
+from agentx.libs.voice_client.conversation.streaming import StreamingConversationMixin
+from agentx.libs.voice_client.stt import STTClient
+from agentx.libs.voice_client.tts import TTSClient
 
 
 class VoiceClient(BasicConversationMixin, StreamingConversationMixin):

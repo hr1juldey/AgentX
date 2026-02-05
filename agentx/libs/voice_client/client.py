@@ -7,6 +7,6 @@ The actual implementation has been split into focused modules:
 - client.py: Main BaseClient class composing the mixins
 """
 
-from voice_client.base.client import BaseClient
+from agentx.libs.voice_client.base.client import BaseClient
 
 __all__ = ["BaseClient"]

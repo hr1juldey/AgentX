@@ -6,9 +6,9 @@ from typing import Any
 import numpy as np
 import sounddevice as sd
 
-from voice_client.audio_io.devices import list_input_devices
-from voice_client.audio_io.recording.streaming import StreamRecorder
-from voice_client.constants import (
+from agentx.libs.voice_client.audio_io.devices import list_input_devices
+from agentx.libs.voice_client.audio_io.recording.streaming import StreamRecorder
+from agentx.libs.voice_client.constants import (
     DEFAULT_CHANNELS,
     DEFAULT_SAMPLE_RATE,
     SILENCE_THRESHOLD,
@@ -68,7 +68,7 @@ class AudioRecorder(StreamRecorder):
         Returns:
             Tuple of (audio_array, sample_rate)
         """
-        from voice_client.audio_io.recording.silence import trim_silence
+        from agentx.libs.voice_client.audio_io.recording.silence import trim_silence
 
         frames = int(duration_seconds * self.sample_rate)
         recording = sd.rec(

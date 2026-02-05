@@ -1,6 +1,6 @@
 """Audio processing utilities for chunking."""
 
-from voice_client.constants import DEFAULT_BYTES_PER_SAMPLE, OPTIMAL_CHUNK_SIZE
+from agentx.libs.voice_client.constants import DEFAULT_BYTES_PER_SAMPLE, OPTIMAL_CHUNK_SIZE
 
 
 class AudioProcessor:

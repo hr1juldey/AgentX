@@ -18,7 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from voice_client import AudioPlayer, AudioRecorder, VoiceClient
-from voice_client.exceptions import VoiceClientError
+from agentx.libs.voice_client.exceptions import VoiceClientError
 
 
 def simple_agent(transcription: str) -> str:

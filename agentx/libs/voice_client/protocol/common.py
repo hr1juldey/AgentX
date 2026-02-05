@@ -1,6 +1,6 @@
 """Common message conversion utilities for encoders."""
 
-from voice_client.protocol.messages import (
+from agentx.libs.voice_client.protocol.messages import (
     AudioMessage,
     ConfigMessage,
     EOSMessage,
@@ -8,7 +8,7 @@ from voice_client.protocol.messages import (
     Message,
     TextMessage,
 )
-from voice_client.protocol.types import MessageType
+from agentx.libs.voice_client.protocol.types import MessageType
 
 
 def message_to_dict(msg: Message) -> dict:

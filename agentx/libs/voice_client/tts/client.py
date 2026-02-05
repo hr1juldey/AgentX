@@ -5,12 +5,12 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
-from voice_client.audio import AudioHandler
-from voice_client.client import BaseClient
-from voice_client.constants import DEFAULT_SAMPLE_RATE
-from voice_client.exceptions import ConfigurationError
-from voice_client.exceptions import ServerError as VoiceServerError
-from voice_client.protocol import (
+from agentx.libs.voice_client.audio import AudioHandler
+from agentx.libs.voice_client.client import BaseClient
+from agentx.libs.voice_client.constants import DEFAULT_SAMPLE_RATE
+from agentx.libs.voice_client.exceptions import ConfigurationError
+from agentx.libs.voice_client.exceptions import ServerError as VoiceServerError
+from agentx.libs.voice_client.protocol import (
     AudioMessage,
     EOSMessage,
     Message,
@@ -19,7 +19,7 @@ from voice_client.protocol import (
     create_config_message,
     create_text_message,
 )
-from voice_client.tts.chunk import AudioChunk
+from agentx.libs.voice_client.tts.chunk import AudioChunk
 
 
 class TTSClient(BaseClient):

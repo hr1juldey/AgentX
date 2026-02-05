@@ -8,8 +8,8 @@ import types
 
 from typing_extensions import Self
 
-from voice_client.base.connection import ConnectionMixin
-from voice_client.base.messaging import MessagingMixin
+from agentx.libs.voice_client.base.connection import ConnectionMixin
+from agentx.libs.voice_client.base.messaging import MessagingMixin
 
 
 class BaseClient(ConnectionMixin, MessagingMixin):
