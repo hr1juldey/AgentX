@@ -53,7 +53,7 @@ class PrefetchRM(Retrieve):
         self.k = k
 
         logger.info(
-            f"PrefetchRM initialized: collection={collection_manager.COLLECTION_NAME}, "
+            f"PrefetchRM initialized: collection={collection_manager.collection_name}, "
             f"dense_vector={collection_manager.DENSE_VECTOR_NAME}, "
             f"colbert_vector={collection_manager.COLBERT_VECTOR_NAME}, k={k}"
         )

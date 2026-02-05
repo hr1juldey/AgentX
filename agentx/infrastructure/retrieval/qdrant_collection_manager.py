@@ -2,6 +2,8 @@
 
 Manages Qdrant collections with support for multiple named vectors
 (dense embeddings and ColBERT multi-vectors).
+
+Supports both per-agent private collections and shared knowledge collections.
 """
 
 from __future__ import annotations
@@ -29,10 +31,11 @@ class QdrantCollectionManager:
 
     Handles collection creation, validation, and configuration for
     storing both dense and ColBERT embeddings in the same collection.
+
+    Supports per-agent collections and shared knowledge collections.
     """
 
-    # Collection configuration
-    COLLECTION_NAME = "agentx_memory"
+    # Vector name constants (same across all collections)
     DENSE_VECTOR_NAME = "dense"
     COLBERT_VECTOR_NAME = "colbert"
 
@@ -43,13 +46,20 @@ class QdrantCollectionManager:
     # Distance metric (Cosine for semantic search)
     DISTANCE = Distance.COSINE
 
-    def __init__(self, qdrant_client: QdrantClient) -> None:
+    def __init__(self, qdrant_client: QdrantClient, collection_name: str) -> None:
         """Initialize the collection manager.
 
         Args:
             qdrant_client: Qdrant client instance
+            collection_name: Name of the collection (e.g., "research_agent_memory",
+                           "chatbot_agent_memory", or "agentx_knowledge" for shared)
         """
         self._client = qdrant_client
+        self.collection_name = collection_name
+
+        logger.info(
+            f"QdrantCollectionManager initialized for collection: {collection_name}"
+        )
 
     def ensure_collection_exists(self) -> bool:
         """Ensure the collection exists with proper configuration.
@@ -65,8 +75,8 @@ class QdrantCollectionManager:
             collections = self._client.get_collections()
             collection_names = {col.name for col in collections.collections}
 
-            if self.COLLECTION_NAME in collection_names:
-                logger.info(f"Collection '{self.COLLECTION_NAME}' already exists")
+            if self.collection_name in collection_names:
+                logger.info(f"Collection '{self.collection_name}' already exists")
                 return self._validate_collection()
             else:
                 return self._create_collection()
@@ -103,12 +113,12 @@ class QdrantCollectionManager:
 
             # Create collection
             self._client.create_collection(
-                collection_name=self.COLLECTION_NAME,
+                collection_name=self.collection_name,
                 vectors_config=vectors_config,
             )
 
             logger.info(
-                f"Created collection '{self.COLLECTION_NAME}' with "
+                f"Created collection '{self.collection_name}' with "
                 f"named vectors: {self.DENSE_VECTOR_NAME} ({self.DENSE_DIM}D), "
                 f"{self.COLBERT_VECTOR_NAME} ({self.COLBERT_DIM}D multivector)"
             )
@@ -125,13 +135,13 @@ class QdrantCollectionManager:
             True if configuration is valid, False otherwise
         """
         try:
-            collection_info = self._client.get_collection(self.COLLECTION_NAME)
+            collection_info = self._client.get_collection(self.collection_name)
 
             # Check for named vectors (dict type in new API)
             vectors_config = collection_info.config.params.vectors
             if not isinstance(vectors_config, dict):
                 logger.warning(
-                    f"Collection '{self.COLLECTION_NAME}' exists but "
+                    f"Collection '{self.collection_name}' exists but "
                     "doesn't have named vectors configured"
                 )
                 return False
@@ -144,13 +154,13 @@ class QdrantCollectionManager:
 
             if not has_dense or not has_colbert:
                 logger.warning(
-                    f"Collection '{self.COLLECTION_NAME}' missing required vectors. "
+                    f"Collection '{self.collection_name}' missing required vectors. "
                     f"Has: {vector_names}, Required: "
                     f"[{self.DENSE_VECTOR_NAME}, {self.COLBERT_VECTOR_NAME}]"
                 )
                 return False
 
-            logger.info(f"Collection '{self.COLLECTION_NAME}' validated successfully")
+            logger.info(f"Collection '{self.collection_name}' validated successfully")
             return True
 
         except Exception as e:
@@ -202,12 +212,13 @@ class QdrantCollectionManager:
 
             # Insert point
             self._client.upsert(
-                collection_name=self.COLLECTION_NAME,
+                collection_name=self.collection_name,
                 points=[point],
             )
 
             logger.debug(
-                f"Inserted document '{document_id}' with {len(vectors)} vectors"
+                f"Inserted document '{document_id}' in '{self.collection_name}' "
+                f"with {len(vectors)} vectors"
             )
             return True
 
@@ -240,7 +251,7 @@ class QdrantCollectionManager:
 
             # Prefetch pattern: retrieve with dense, rerank with ColBERT
             results = self._client.query_points(
-                collection_name=self.COLLECTION_NAME,
+                collection_name=self.collection_name,
                 prefetch=[
                     Prefetch(
                         query=dense_query,
@@ -290,7 +301,7 @@ class QdrantCollectionManager:
         """
         try:
             results = self._client.query_points(
-                collection_name=self.COLLECTION_NAME,
+                collection_name=self.collection_name,
                 query=query_vector,
                 using=self.DENSE_VECTOR_NAME,
                 limit=limit,
@@ -328,8 +339,8 @@ class QdrantCollectionManager:
             True if successful, False otherwise
         """
         try:
-            self._client.delete_collection(self.COLLECTION_NAME)
-            logger.info(f"Deleted collection '{self.COLLECTION_NAME}'")
+            self._client.delete_collection(self.collection_name)
+            logger.info(f"Deleted collection '{self.collection_name}'")
             return True
         except Exception as e:
             logger.error(f"Failed to delete collection: {e}")
