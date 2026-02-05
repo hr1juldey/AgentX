@@ -121,3 +121,44 @@ class StemCellAgent(dspy.Module):
         self._memory.store_interaction(question, result)
 
         return result  # type: ignore[bad-return]
+
+    async def aforward(
+        self, context: str = "", question: str = "", **kwargs: object
+    ) -> dspy.Prediction:
+        """Async version of forward for streaming scenarios.
+
+        Args:
+            context: Background context (for pluripotent signature)
+            question: The input question
+            **kwargs: Additional arguments (e.g., history for conversation signature)
+
+        Returns:
+            DSPy Prediction with results
+        """
+        # Step 1: Search Mem0AI for relevant context
+        enhanced_context = self._memory.search_memory(context, question)
+
+        # Step 2: Prepare inputs for reasoning module
+        reasoning_inputs: dict[str, object] = {"question": question}
+
+        # Add enhanced context if provided (for pluripotent ReasoningSignature)
+        if enhanced_context:
+            reasoning_inputs["context"] = enhanced_context
+
+        # Add history if signature supports it (for ConversationSignature)
+        sig_inputs = self.signature.input_fields
+        if "history" in sig_inputs:
+            reasoning_inputs["history"] = self._history
+
+        # Step 3: Execute reasoning asynchronously
+        result: dspy.Prediction = await self.reasoning.acall(  # type: ignore[assignment]
+            **reasoning_inputs
+        )
+
+        # Step 4: Append to DSPy history for context in next turn
+        self._history.messages.append({"question": question, **dict(result)})  # type: ignore[no-matching-overload]
+
+        # Step 5: Store interaction in Mem0AI (async, non-blocking)
+        self._memory.store_interaction(question, result)
+
+        return result  # type: ignore[bad-return]

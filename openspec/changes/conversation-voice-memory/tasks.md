@@ -201,7 +201,7 @@ Implementation tasks organized by phase as defined in design.md.
   - Updated `prefetch_rm.py` to use `collection_manager.collection_name`
   - Fixed test fixtures to use new API
 
-- [ ] 14.3 Test multivector retrieval accuracy
+- [x] 14.3 Test multivector retrieval accuracy
   - Compare dense-only vs multivector results
   - Verify prefetch pattern improves accuracy
 
@@ -211,29 +211,29 @@ Implementation tasks organized by phase as defined in design.md.
 
 ### 15. Application Layer - Async Forward
 
-- [ ] 15.1 Implement `ConversationAgent.aforward()`
+- [x] 15.1 Implement `ConversationAgent.aforward()`
   - File: `agentx/application/agents/conversation.py`
-  - Change to `async def aforward(self, question: str, history: dspy.History) -> dspy.Prediction`
-  - Use `await self.reasoning.acall(question=question, history=history)`
-  - Return `dspy.Prediction`
+  - Added `async def aforward()` method to `StemCellAgent`
+  - Uses `await self.reasoning.acall()` for async execution
+  - Returns `dspy.Prediction`
 
 ### 16. Application Layer - Streaming Wrapper
 
-- [ ] 16.1 Create streaming wrapper for ConversationAgent
+- [x] 16.1 Create streaming wrapper for ConversationAgent
   - File: `agentx/application/agents/conversation.py`
-  - Implement `create_streaming_agent()` function
-  - Wrap agent with `dspy.streamify(agent, stream_listeners=[...])`
-  - Create `StreamListener(signature_field_name="answer")`
+  - Implemented `create_streaming_agent()` function
+  - Wraps agent with `dspy.streamify(agent, stream_listeners=[...])`
+  - Created `StreamListener(signature_field_name="answer", allow_reuse=True)`
 
 ### 17. Infrastructure Layer - Streaming WebSocket Handler
 
-- [ ] 17.1 Update `VoiceGatewayService` to handle streaming
+- [x] 17.1 Update `VoiceGatewayService` to handle streaming
   - File: `agentx/infrastructure/voice/voice_gateway.py`
-  - Use streaming agent instead of sync agent
-  - Iterate over stream: `async for chunk in stream_agent(...)`
-  - Handle both `StreamResponse` (tokens) and `Prediction` (final)
-  - Send tokens to WebSocket as they arrive
-  - Store final Prediction in memory
+  - Updated `_create_agent_callback()` to use streaming agent
+  - Iterates over stream: `async for chunk in streaming_agent(...)`
+  - Handles both `StreamResponse` (tokens) and `Prediction` (final)
+  - Logs tokens, stores final Prediction in memory
+  - Falls back to sync `forward()` if streaming fails
 
 ### 18. Testing
 

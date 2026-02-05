@@ -4,6 +4,8 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+import dspy
+
 if TYPE_CHECKING:
     from agentx.infrastructure.memory.session_state_manager import SessionStateManager
     from agentx.infrastructure.voice.voice_adapter import VoiceSDKAdapter
@@ -60,25 +62,46 @@ class VoiceGatewayService:
             session: Session state with agent
 
         Returns:
-            Async callback function
+            Async callback function that uses streaming internally
         """
+        from agentx.application.agents.conversation import (
+            create_streaming_agent,
+        )
+
+        # Create streaming wrapper for the agent
+        streaming_agent = create_streaming_agent(session.agent)
 
         async def agent_callback(text: str) -> str:
-            """Process transcribed text through agent.
+            """Process transcribed text through streaming agent.
 
             Args:
                 text: Transcribed user input
 
             Returns:
-                Agent response text
+                Complete agent response text
             """
-            prediction = session.agent.forward(question=text)
-            response = self._extract_response(prediction)
+            final_prediction: dspy.Prediction | None = None
+
+            # Iterate over streaming response
+            async for chunk in streaming_agent(question=text):
+                if isinstance(chunk, dspy.streaming.StreamResponse):
+                    # Token chunk - could be sent to WebSocket for real-time streaming
+                    logger.debug(f"Streaming token: {chunk.chunk}")
+                elif isinstance(chunk, dspy.Prediction):
+                    # Final prediction
+                    final_prediction = chunk
+
+            # Extract response from final prediction
+            if final_prediction is None:
+                # Fallback to sync forward if streaming failed
+                final_prediction = session.agent.forward(question=text)
+
+            response = self._extract_response(final_prediction)
 
             self._session_manager.add_assistant_message(
                 session_id,
                 text,
-                prediction,  # type: ignore[arg-type]
+                final_prediction,  # type: ignore[arg-type]
             )
 
             return response
