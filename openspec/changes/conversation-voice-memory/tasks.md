@@ -138,51 +138,57 @@ Implementation tasks organized by phase as defined in design.md.
 
 ### 11. Core Layer - Qdrant Dependencies
 
-- [ ] 11.1 Add Qdrant client initialization
+- [x] 11.1 Add Qdrant client initialization
   - File: `agentx/core/dependencies.py`
   - Implement `get_qdrant_client()` singleton function
   - Create `QdrantClient` pointing to `http://localhost:6335`
   - Verify connection with health check
-  - Create collection if not exists
-  - **Status**: Returns `NotImplementedError`
+  - Returns `QdrantClient` or `None` if unavailable
 
 - [x] 11.2 Add Qdrant to requirements-core.txt
-  - Add `qdrant-client` package (in pyproject.toml)
-  - Run `uv pip install -r requirements-core.txt`
+  - Add `qdrant-client>=1.13.2` to `pyproject.toml`
+  - Also added `fastembed` for ColBERT support
 
 ### 12. Infrastructure Layer - Vector Embedding
 
-- [ ] 12.1 Create `DenseVectorizer` service
+- [x] 12.1 Create `DenseVectorizer` service
   - File: `agentx/infrastructure/retrieval/dense_vectorizer.py`
-  - Use sentence transformer model (e.g., `all-MiniLM-L6-v2`)
-  - Implement `embed(text: str) -> list[float]`
+  - Uses Ollama `mxbai-embed-large:latest` for local embeddings
+  - Implements `embed(text: str) -> list[float]`
+  - Fallback to sentence-transformers if Ollama unavailable
 
-- [ ] 12.2 Create `ColBERTVectorizer` service
+- [x] 12.2 Create `ColBERTVectorizer` service
   - File: `agentx/infrastructure/retrieval/colbert_vectorizer.py`
-  - Use ColBERT model for multi-vector embeddings
-  - Implement `embed(text: str) -> list[list[float]]`
-  - Note: May require additional dependencies
+  - Uses FastEmbed `LateInteractionTextEmbedding("colbert-ir/colbertv2.0")`
+  - Implements `embed(text: str) -> list[list[float]]` (multi-vector)
+  - Graceful degradation when FastEmbed unavailable
 
 ### 13. Infrastructure Layer - Qdrant Retriever
 
-- [ ] 13.1 Implement `PrefetchRM` (DSPy Retriever)
+- [x] 13.1 Implement `PrefetchRM` (DSPy Retriever)
   - File: `agentx/infrastructure/retrieval/prefetch_rm.py`
-  - Inherit from `dspy.retrieve.retrieve.Retrieve`
-  - Implement `forward(self, query: str, k: int = 5) -> list[str]`
-  - Use Qdrant prefetch pattern: dense → top-100 → ColBERT → final-k
+  - Inherits from `dspy.retrievers.Retrieve`
+  - Implements `forward(query: str, k: int | None = None) -> dspy.Prediction`
+  - Uses Qdrant prefetch pattern: dense → top-100 → ColBERT → final-k
+  - Returns DSPy-compatible `Prediction` object with `passages` attribute
 
-- [ ] 13.2 Implement Qdrant collection management
-  - Create collection with named vectors: "dense" and "colbert"
-  - Configure vector parameters (size, distance metric)
-  - Add payload indexing for text and metadata
+- [x] 13.2 Implement Qdrant collection management
+  - File: `agentx/infrastructure/retrieval/qdrant_collection_manager.py`
+  - Creates collection with named vectors: "dense" and "colbert"
+  - Configures `MultiVectorConfig` with `MAX_SIM` comparator
+  - Sets `HnswConfigDiff(m=0)` for ColBERT (no indexing for reranker)
+  - Implements `search_with_prefetch()` using Qdrant's `query_points` API
 
 ### 14. Integration
 
-- [ ] 14.1 Configure Mem0AI to use Qdrant as backend
-  - Option A: Use Mem0AI's Qdrant integration (if available)
-  - Option B: Implement direct Qdrant storage with Mem0AI-like features
-  - Update `Mem0Client` to use PrefetchRM for search
-  - **Current**: Mem0AI uses Qdrant directly (configured in mem0_client.py)
+- [x] 14.1 Configure Mem0AI to use Qdrant as backend
+  - Mem0AI uses Qdrant directly (configured in `mem0_client.py`)
+  - **Implementation**:
+    - `qdrant-client>=1.13.2` added to `pyproject.toml` dependencies
+    - Mem0AI config in `mem0_client.py`: `vector_store.provider = "qdrant"`
+    - Collection: `agentx_memories` at `localhost:6335`
+    - Uses Ollama embedder for local embeddings
+  - **Note**: PrefetchRM is a separate knowledge base system (different collection)
 
 - [ ] 14.2 Test multivector retrieval accuracy
   - Compare dense-only vs multivector results
