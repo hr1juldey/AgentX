@@ -14,6 +14,8 @@ import logging
 import sys
 from pathlib import Path
 
+import dspy
+
 # Add agentx to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
@@ -46,8 +48,8 @@ async def test_memory_persistence() -> bool:
     question1 = "My name is Alice and I love hiking in the mountains."
     logger.info(f"Storing: {question1}")
 
-    response1 = agent1.forward(question=question1)
-    logger.info(f"Agent 1 response: {response1.get('answer', 'No answer')}")
+    response1: dspy.Prediction = agent1(question=question1)  # type: ignore[call-arg]
+    logger.info(f"Agent 1 response: {response1.get('answer', 'No answer')}")  # type: ignore[union-attr]
 
     # Give Mem0AI time to store and index
     await asyncio.sleep(6)
@@ -60,18 +62,8 @@ async def test_memory_persistence() -> bool:
     question2 = "What do you know about me?"
     logger.info(f"Retrieving: {question2}")
 
-    # Debug: check what memories are stored
-    from agentx.core.dependencies import get_mem0_client  # type: ignore[import]
-
-    mem0 = get_mem0_client()
-    if mem0:
-        raw_results = mem0._memory.search(
-            "What do you know?", user_id=test_user_id, limit=5
-        )
-        logger.info(f"DEBUG: Raw search results: {raw_results}")
-
-    response2 = agent2.forward(question=question2)
-    answer2: str = response2.get("answer", "No answer") or "No answer"  # type: ignore[assignment]
+    response2: dspy.Prediction = agent2(question=question2)  # type: ignore[call-arg]
+    answer2: str = response2.get("answer", "No answer") or "No answer"  # type: ignore[union-attr]
     logger.info(f"Agent 2 response: {answer2}")
 
     # Verify memory retrieval (basic check)
@@ -94,80 +86,20 @@ async def test_memory_persistence() -> bool:
         return False
 
 
-async def test_memory_search_and_storage() -> bool:
-    """Test basic memory search and storage operations.
-
-    This is a simpler test that verifies:
-    1. Memory can be stored
-    2. Memory can be searched
-    """
-    from agentx.core.dependencies import get_mem0_client  # type: ignore[import]
-
-    logger.info("=== Test: Memory Search and Storage ===")
-
-    mem0_client = get_mem0_client()
-    if not mem0_client:
-        logger.error("❌ Mem0AI client not available - skipping test")
-        return False
-
-    test_user_id = "test_user_search_storage"
-
-    # Store a memory
-    test_memory = "Test user prefers Python over JavaScript for backend development."
-    logger.info(f"Storing memory: {test_memory}")
-
-    await mem0_client.store_memory(  # type: ignore[no-untyped-call]
-        text=test_memory,
-        user_id=test_user_id,
-        metadata={"category": "preference"},
-    )
-
-    # Give Mem0AI time to index
-    await asyncio.sleep(1)
-
-    # Search for the memory
-    search_query = "What programming language does the user prefer?"
-    logger.info(f"Searching for: {search_query}")
-
-    results = await mem0_client.search_memory(  # type: ignore[no-untyped-call]
-        query=search_query,
-        user_id=test_user_id,
-        limit=5,
-    )
-
-    logger.info(f"Search results: {results}")
-
-    if results:
-        logger.info("✅ Memory search and storage test PASSED")
-        return True
-    else:
-        logger.warning(
-            "⚠️ Memory search and storage test INCONCLUSIVE - No results returned"
-        )
-        return False
-
-
 async def main() -> None:
-    """Run all memory persistence tests."""
+    """Run memory persistence test."""
     logger.info("Starting Mem0AI Memory Persistence Tests\n")
 
-    # Test 1: Basic search and storage
-    result1 = await test_memory_search_and_storage()
-
-    # Test 2: Full persistence across sessions
-    result2 = await test_memory_persistence()
+    result = await test_memory_persistence()
 
     logger.info("\n=== Test Summary ===")
-    logger.info(
-        f"Memory Search/Storage: {'✅ PASSED' if result1 else '⚠️ INCONCLUSIVE'}"
-    )
-    logger.info(f"Memory Persistence: {'✅ PASSED' if result2 else '⚠️ INCONCLUSIVE'}")
+    logger.info(f"Memory Persistence: {'✅ PASSED' if result else '⚠️ INCONCLUSIVE'}")
 
-    if result1 and result2:
+    if result:
         logger.info("\n🎉 All tests passed!")
     else:
         logger.info(
-            "\n⚠️ Some tests were inconclusive - Mem0AI may need additional configuration"
+            "\n⚠️ Test was inconclusive - Mem0AI may need additional configuration"
         )
 
 

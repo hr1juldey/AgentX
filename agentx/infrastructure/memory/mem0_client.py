@@ -39,7 +39,6 @@ class Mem0Client:
             embedding_dims: Embedding vector dimensions
         """
         from mem0 import Memory
-        from qdrant_client import QdrantClient
 
         # Configure Mem0AI for local Ollama + Qdrant
         config = {
@@ -68,18 +67,6 @@ class Mem0Client:
                 },
             },
         }
-
-        # Clean up existing collection to ensure clean state
-        collection_name = "agentx_memories"
-        client = QdrantClient(host=qdrant_host, port=qdrant_port)
-        collections = [c.name for c in client.get_collections().collections]
-
-        if collection_name in collections:
-            try:
-                client.delete_collection(collection_name)
-                logger.info(f"Deleted existing Qdrant collection: {collection_name}")
-            except Exception as e:
-                logger.warning(f"Failed to delete collection: {e}")
 
         self._memory = Memory.from_config(config)
         logger.info(
