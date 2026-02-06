@@ -31,6 +31,7 @@ async def handle_chat_query(
                 "collection_name": "conversation_agent_memory",
             }
         }
+        logger.info(f"Invoking LangGraph with query: {query_text}")
         result = get_chat_graph().invoke(  # type: ignore[misc]
             {
                 "query": query_text,
@@ -40,8 +41,10 @@ async def handle_chat_query(
             },
             config=config,
         )
+        logger.info(f"LangGraph result: {result}")
 
         response_text = result.get("formatted_response", "")
+        logger.info(f"Sending response: {response_text}")
         await websocket.send_json(
             {
                 "message_type": "response",

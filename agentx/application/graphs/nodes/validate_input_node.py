@@ -23,8 +23,10 @@ def validate_input_node(state: ChatState) -> dict:  # type: ignore[return-value]
     Returns:
         dict: Updated state with cleaned query or error message
     """
+    logger.info(f"validate_input_node: state={state}")
     query = state.get("query", "")
     if not query or len(query.strip()) < 1:
+        logger.warning("Empty query received")
         return {"error": "Empty query"}
 
     cleaned = format_stt_query(query)

@@ -24,19 +24,24 @@ def format_output_node(state: ChatState) -> dict:  # type: ignore[return-value]
     Returns:
         dict: Updated state with formatted_response
     """
+    logger.info(f"format_output_node: state={state}")
     error = state.get("error")
     if error:
+        logger.warning(f"Error in state: {error}")
         return {"formatted_response": f"Error: {error}"}
 
     agent_response = state.get("agent_response")
     if not agent_response:
+        logger.error("No agent response in state")
         return {
             "error": "No agent response",
             "formatted_response": "I apologize, but I couldn't generate a response.",
         }
 
     formatted = format_tts_phrase(agent_response)
-    logger.info(f"Output formatting: '{agent_response}' -> '{formatted}'")
+    logger.info(
+        f"Output formatting: '{agent_response[:100]}...' -> '{formatted[:100]}...'"
+    )
     return {"formatted_response": formatted}
 
 

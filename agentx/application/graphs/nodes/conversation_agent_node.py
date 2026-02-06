@@ -26,13 +26,18 @@ def conversation_agent_node(state: ChatState) -> dict:  # type: ignore[return-va
     Returns:
         dict: Updated state with agent_response and conversation_history
     """
+    logger.info(f"conversation_agent_node: state={state}")
     session_manager = get_session_manager()
     session = session_manager.get_or_create_session(
         state.get("session_id", ""), state.get("user_id", "default")
     )
+    logger.info(
+        f"Got session: {session.session_id}, agent type: {type(session.agent).__name__}"
+    )
 
     agent = session.agent
     query = state.get("query", "")
+    logger.info(f"Calling agent with query: {query}")
     result: dspy.Prediction = agent(question=query)  # type: ignore[assignment]
 
     session_manager.add_assistant_message(state.get("session_id", ""), query, result)
