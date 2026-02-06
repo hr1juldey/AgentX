@@ -359,13 +359,19 @@ export function VoiceButton() {
               break;
 
             case 'unknown':
-              // Unknown command after trigger - don't echo
-              console.log('[Kyutai Direct] Unknown command, not echoing');
-              // Close STT and don't continue to TTS
-              sttWs.close();
-              sttWebSocketRef.current = null;
-              setState('idle');
-              return;
+              // Unknown command after trigger - fall through to echo if enabled
+              console.log('[Kyutai Direct] Unknown command, checking echo mode');
+              if (echoMode !== 'echo') {
+                console.log('[Kyutai Direct] Echo mode is OFF, not echoing');
+                // Close STT and don't continue to TTS
+                sttWs.close();
+                sttWebSocketRef.current = null;
+                setState('idle');
+                return;
+              }
+              // Echo mode is ON - echo the original transcription as fallback
+              textToSpeak = transcription;
+              break;
 
             case 'no_trigger':
               // No trigger word - check if echo mode is enabled
