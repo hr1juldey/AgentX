@@ -560,9 +560,70 @@ async def voice_websocket(websocket: WebSocket):
 
 ## Voice Client (C010 - External Kyutai Integration)
 
-**Architecture**: AGENTX uses external kyutai voice-server integration via `VoiceGatewayService` for STT/TTS.
+**Architecture**: AGENTX uses external kyutai voice-server integration for STT/TTS with LangGraph conversation orchestration.
 
-**Implementation**: See `openspec/changes/c010-voice-client/` for complete implementation details.
+**Implementation**: See `openspec/changes/c010-voice-client/` and `openspec/changes/conversation-voice-memory/` for complete implementation details.
+
+### Conversation Flow Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          VOICE CONVERSATION FLOW                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Frontend (Voice Button)                                                    │
+│  │  ┌─────────────┐    ┌──────────────────┐    ┌─────────────┐            │
+│  │  │ Voice       │    │ useVoiceMode     │    │ Kyutai      │            │
+│  │  │ Commands    │───▶│ Hook (mode       │───▶│ STT Direct  │            │
+│  │  │ (agent on)  │    │  switching)      │    │ Connection  │            │
+│  │  └─────────────┘    └──────────────────┘    └─────────────┘            │
+│  │                           │                                          │
+│  │                           ▼                                          │
+│  │                    ┌─────────────────┐                               │
+│  │                    │ BackendChat     │                               │
+│  │                    │ Service         │                               │
+│  │                    │ (/ws/chat)      │                               │
+│  │                    └────────┬─────────┘                               │
+│  └─────────────────────────────┼─────────────────────────────────────────│
+│                                │                                          │
+│  Backend (LangGraph)            ▼                                          │
+│  │  ┌───────────────────────────────────────────────────────────────┐   │
+│  │  │  LangGraph Conversation Graph                                 │   │
+│  │  │  ┌──────────────┐    ┌─────────────┐    ┌──────────────┐     │   │
+│  │  │  │ Validate     │───▶│ Conversation│───▶│ Format       │     │   │
+│  │  │  │ Input        │    │ Agent       │    │ Output       │     │   │
+│  │  │  │ (STT clean)  │    │ (DSPy)      │    │ (TTS phrase)  │     │   │
+│  │  │  └──────────────┘    └─────────────┘    └──────────────┘     │   │
+│  │  │         │                   │                   │             │   │
+│  │  │         └───────────────────┴───────────────────┘             │   │
+│  │  │                             ▼                                 │   │
+│  │  │                    ┌─────────────────┐                         │   │
+│  │  │                    │ Mem0AI Memory  │                         │   │
+│  │  │                    │ (Qdrant)        │                         │   │
+│  │  │                    └─────────────────┘                         │   │
+│  │  └───────────────────────────────────────────────────────────────┘   │
+│  │                                                                       │
+│  └───────────────────────────────────────────────────────────────────────│
+│                                │                                          │
+│  Response Path                                                        │
+│  └─────────────────────────────┼─────────────────────────────────────────│
+│                                ▼                                          │
+│                    ┌─────────────────┐                                   │
+│                    │ BackendChat     │                                   │
+│                    │ Response (text) │                                   │
+│                    └────────┬─────────┘                                   │
+│                             │                                             │
+│  Frontend                    ▼                                             │
+│  │                    ┌─────────────────┐                               │
+│  │                    │ Kyutai TTS      │                               │
+│  │                    │ Direct          │                               │
+│  │                    │ Connection      │                               │
+│  │                    └─────────────────┘                               │
+│  │                           │                                          │
+│  └───────────────────────────┴─────────────────────────────────────────│
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ### Voice Gateway Service
 

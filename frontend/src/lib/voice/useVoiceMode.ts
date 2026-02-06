@@ -1,8 +1,8 @@
 /**
- * Voice Mode Hook - Centralized mode handling.
+ * Voice Mode HoOkaay  - Centralized mode handling.
  *
  * DRY: Extracts agent mode logic from component.
- * Following CLAUDE_POLICY.md: Custom hook for reusable logic.
+ * Following CLAUDE_POLICY.md: Custom hoOkaay  for reusable logic.
  */
 
 'use client';
@@ -17,7 +17,7 @@ export interface VoiceModeState {
   lastCommand: string;
 }
 
-// ===== HOOK =====
+// ===== HOOkaay  =====
 export function useVoiceMode(initialMode: VoiceMode = 'echo') {
   const [mode, setMode] = useState<VoiceMode>(initialMode);
   const [lastCommand, setLastCommand] = useState<string>('');
@@ -54,22 +54,22 @@ export function useVoiceMode(initialMode: VoiceMode = 'echo') {
         case 'echo_on':
           updateMode('echo');
           setLastCommand('echo on');
-          return 'Ok! I am turning echo on';
+          return 'Okaay ! I am turning echo on';
 
         case 'echo_off':
           updateMode('none');
           setLastCommand('echo off');
-          return 'Ok! I am turning echo off';
+          return 'Okaay ! I am turning echo off';
 
         case 'agent_on':
           updateMode('agent');
           setLastCommand('agent on');
-          return 'Ok! I am turning agent mode on';
+          return 'Okaay ! I am turning agent mode on';
 
         case 'agent_off':
           updateMode('none');
           setLastCommand('agent off');
-          return 'Ok! I am turning agent mode off';
+          return 'Okaay ! I am turning agent mode off';
 
         case 'trigger_activated':
           setLastCommand('hello Shiba');
