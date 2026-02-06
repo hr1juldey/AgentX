@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 import dspy
 
 from agentx.application.agents.conversation import ConversationAgent
+from agentx.core.config import settings
 from agentx.domain.entities.session import SessionState
 
 logger = logging.getLogger(__name__)
@@ -14,9 +15,9 @@ logger = logging.getLogger(__name__)
 class SessionStateManager:
     """Manages voice conversation session state in memory."""
 
-    def __init__(self, session_timeout_seconds: int = 300) -> None:
+    def __init__(self) -> None:
         self._sessions: dict[str, SessionState] = {}
-        self._session_timeout = timedelta(seconds=session_timeout_seconds)
+        self._session_timeout = timedelta(seconds=settings.session_timeout_seconds)
 
     def get_or_create_session(
         self, session_id: str, user_id: str = "default"

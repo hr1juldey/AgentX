@@ -19,7 +19,7 @@ def check_ollama_health() -> None:
     try:
         response = requests.get(
             ollama_health_url,
-            timeout=600,
+            timeout=settings.llm_timeout,
         )
         response.raise_for_status()
         logger.info(f"Ollama is available at {settings.llm_api_base}")
@@ -32,7 +32,7 @@ def check_ollama_health() -> None:
         raise ConnectionError(msg) from e
     except requests.exceptions.Timeout as e:
         msg = (
-            f"Ollama at {settings.llm_api_base} timed out after 600 seconds. "
+            f"Ollama at {settings.llm_api_base} timed out after {settings.llm_timeout} seconds. "
             f"The model '{settings.llm_model}' may still be loading. "
             f"Try pulling the model first: ollama pull {settings.llm_model}"
         )

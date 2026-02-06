@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from agentx.core.config import settings
 
 if TYPE_CHECKING:
     from agentx.infrastructure.memory.session_state_manager import SessionStateManager
@@ -24,8 +23,7 @@ def get_session_manager() -> SessionStateManager:
     global _session_manager
 
     if _session_manager is None:
-        timeout = int(getattr(settings, "session_timeout_seconds", 300))
-        _session_manager = SessionStateManager(session_timeout_seconds=timeout)
+        _session_manager = SessionStateManager()
         logger.info("SessionStateManager initialized")
 
     return _session_manager
