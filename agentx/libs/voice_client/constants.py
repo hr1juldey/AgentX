@@ -3,10 +3,10 @@
 # =============================================================================
 # Audio Constants
 # =============================================================================
-DEFAULT_SAMPLE_RATE = 24000
+DEFAULT_SAMPLE_RATE = 16000  # Frontend sends 16kHz PCM for Whisper (R015)
 DEFAULT_CHANNELS = 1
 DEFAULT_BYTES_PER_SAMPLE = 2  # int16
-OPTIMAL_CHUNK_SIZE = 4096  # bytes, ~85ms at 24kHz
+OPTIMAL_CHUNK_SIZE = 6400  # bytes, ~200ms at 16kHz
 
 # File format constants
 WAV_RIFF_HEADER_SIZE = 12

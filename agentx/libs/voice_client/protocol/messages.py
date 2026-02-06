@@ -36,12 +36,12 @@ class AudioMessage(Message):
 
     Attributes:
         format: Audio format (default: "pcm_int16")
-        sample_rate: Sample rate in Hz (default: 24000)
+        sample_rate: Sample rate in Hz (default: 16000)
         channels: Number of audio channels (default: 1)
     """
 
     format: str = "pcm_int16"
-    sample_rate: int = 24000
+    sample_rate: int = 16000  # Frontend sends 16kHz PCM for Whisper (R015)
     channels: int = 1
 
 
