@@ -20,10 +20,10 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 
 // Backend API configuration - supports both localhost and network IP
 const BACKEND_URL = 'http://localhost:8015/api/v1';
-const BACKEND_WS_URL = 'ws://localhost:8015/api/v1/ws/root';
+const BACKEND_WS_URL = 'ws://localhost:8015/api/v1/ws/chat';  // Chat endpoint for text
 // Alternative: Use network IP for mobile access
 // const BACKEND_URL = 'http://192.168.1.4:8015/api/v1';
-// const BACKEND_WS_URL = 'ws://192.168.1.4:8015/api/v1/ws';
+// const BACKEND_WS_URL = 'ws://192.168.1.4:8015/api/v1/ws/chat';
 
 /**
  * Main page component.
@@ -38,9 +38,8 @@ export default function HomePage() {
   const [query, setQuery] = useState('');
   const [threadId, setThreadId] = useState<string | null>(null);
 
-  // TODO: WebSocket connection for real-time chat updates
-  // Currently disabled - voice endpoint is for voice mode only, not text chat
-  // const { isConnected, sendMessage } = useWebSocket(BACKEND_WS_URL);
+  // WebSocket connection for real-time chat updates
+  const { isConnected, sendMessage } = useWebSocket(BACKEND_WS_URL);
 
   // LangGraph stream integration (C007)
   const { thread, values } = useStream({
