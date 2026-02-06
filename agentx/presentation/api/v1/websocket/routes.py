@@ -2,37 +2,46 @@
 
 import logging
 import uuid
-from typing import Optional
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
-from fastapi import WebSocket as WebSocketType
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from agentx.core.dependencies import get_voice_gateway
+
 
 router = APIRouter(prefix="/ws", tags=["websocket"])
 
 logger = logging.getLogger(__name__)
 
 
-@router.websocket("/")
-async def root_websocket(
-    websocket: WebSocketType,
-    session_id: Optional[str] = Query(None, description="Session identifier (auto-generated if not provided)"),
-) -> None:
-    """Generic WebSocket endpoint - routes to voice gateway.
+@router.websocket("/test")
+async def test_websocket(websocket: WebSocket) -> None:
+    """Simple test WebSocket endpoint - no dependencies."""
+    await websocket.accept()
+    logger.info("Test WebSocket connected successfully!")
+    await websocket.send_json({"message": "WebSocket test successful"})
+    await websocket.close()
+
+
+@router.websocket("/root")
+async def root_websocket(websocket: WebSocket) -> None:
+    """Root WebSocket endpoint - routes to voice gateway.
 
     This is the primary endpoint for voice conversations with memory.
     Coordinates STT → Agent → TTS flow through VoiceGatewayService.
 
     Args:
         websocket: WebSocket connection
-        session_id: Session identifier for conversation state (auto-generated if not provided)
+
+    Query Params:
+        session_id: Optional session identifier (auto-generated if not provided)
     """
-    # Generate session_id if not provided
+    await websocket.accept()
+
+    # Get session_id from query params, generate if not provided
+    session_id = websocket.query_params.get("session_id")
     if not session_id:
         session_id = str(uuid.uuid4())
         logger.info(f"Generated new session_id: {session_id}")
-    await websocket.accept()
     logger.info(f"WebSocket connected: session_id={session_id}")
 
     voice_gateway = get_voice_gateway()

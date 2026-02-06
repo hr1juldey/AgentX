@@ -26,6 +26,7 @@ type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
 
 const KYUTAI_STT_URL = 'ws://localhost:16000/api/v1/ws/stt';
 const KYUTAI_TTS_URL = 'ws://localhost:16000/api/v1/ws/tts';
+const BACKEND_WS_URL = 'ws://localhost:8015/api/v1/ws/root';
 
 interface OrbitingBlob {
   id: number;
