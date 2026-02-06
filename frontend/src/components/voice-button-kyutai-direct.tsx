@@ -21,12 +21,12 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { tokens, motion } from '@/lib/design-tokens';
 import { AudioProcessor } from '@/lib/audio/AudioProcessor';
 import { getVoiceCommandHandler, type VoiceMode } from '@/lib/voice/VoiceCommandHandler';
+import { useVoiceMode } from '@/lib/voice/useVoiceMode';
 
 type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
 
 const KYUTAI_STT_URL = 'ws://localhost:16000/api/v1/ws/stt';
 const KYUTAI_TTS_URL = 'ws://localhost:16000/api/v1/ws/tts';
-const BACKEND_WS_URL = 'ws://localhost:8015/api/v1/ws/root';
 
 interface OrbitingBlob {
   id: number;
@@ -48,8 +48,7 @@ export function VoiceButton() {
   const [platform, setPlatform] = useState<'mobile' | 'desktop'>('desktop');
   const [blobs, setBlobs] = useState<OrbitingBlob[]>([]);
   const [audioLevel, setAudioLevel] = useState(0);
-  const [echoMode, setEchoMode] = useState<VoiceMode>('echo'); // Default to echo mode ON
-  const [lastCommand, setLastCommand] = useState<string>('');
+  const { mode, lastCommand, handleCommandResult } = useVoiceMode('echo');
 
   const audioProcessorRef = useRef<AudioProcessor | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -323,71 +322,8 @@ export function VoiceButton() {
 
           let textToSpeak: string | null = null;
 
-          // Handle voice commands
-          switch (commandResult.type) {
-            case 'echo_on':
-              setEchoMode('echo');
-              setLastCommand('echo on');
-              textToSpeak = 'Ok! I am turning echo on';
-              console.log('[Kyutai Direct] Echo mode ON');
-              break;
-
-            case 'echo_off':
-              setEchoMode('none');
-              setLastCommand('echo off');
-              textToSpeak = 'Ok! I am turning echo off';
-              console.log('[Kyutai Direct] Echo mode OFF');
-              break;
-
-            case 'agent_on':
-              setEchoMode('agent');
-              setLastCommand('agent on');
-              textToSpeak = 'Ok! I am turning agent mode on';
-              console.log('[Kyutai Direct] Agent mode ON (future feature)');
-              break;
-
-            case 'agent_off':
-              setEchoMode('none');
-              setLastCommand('agent off');
-              textToSpeak = 'Ok! I am turning agent mode off';
-              console.log('[Kyutai Direct] Agent mode OFF');
-              break;
-
-            case 'trigger_activated':
-              setLastCommand('hello Shiba');
-              textToSpeak = 'Yes, I am listening';
-              console.log('[Kyutai Direct] Trigger word detected');
-              break;
-
-            case 'unknown':
-              // Unknown command after trigger - fall through to echo if enabled
-              console.log('[Kyutai Direct] Unknown command, checking echo mode');
-              if (echoMode !== 'echo') {
-                console.log('[Kyutai Direct] Echo mode is OFF, not echoing');
-                // Close STT and don't continue to TTS
-                sttWs.close();
-                sttWebSocketRef.current = null;
-                setState('idle');
-                return;
-              }
-              // Echo mode is ON - echo the original transcription as fallback
-              textToSpeak = transcription;
-              break;
-
-            case 'no_trigger':
-              // No trigger word - check if echo mode is enabled
-              if (echoMode !== 'echo') {
-                console.log('[Kyutai Direct] Echo mode is OFF, not echoing');
-                // Close STT and don't continue to TTS
-                sttWs.close();
-                sttWebSocketRef.current = null;
-                setState('idle');
-                return;
-              }
-              // Echo mode is ON - continue with normal echo
-              textToSpeak = transcription;
-              break;
-          }
+          // === HANDLE COMMANDS VIA HOOK (includes agent mode) ===
+          textToSpeak = await handleCommandResult(commandResult.type, transcription, sessionIdRef.current);
 
           // Close STT connection
           sttWs.close();
@@ -755,9 +691,9 @@ export function VoiceButton() {
           <span className="flex flex-col items-center gap-1">
             <span>Tap to speak</span>
             <span className="text-xs opacity-70">
-              {echoMode === 'echo' && ' Echo ON'}
-              {echoMode === 'none' && ' Echo OFF'}
-              {echoMode === 'agent' && ' Agent ON'}
+              {mode === 'echo' && ' Echo ON'}
+              {mode === 'none' && ' Echo OFF'}
+              {mode === 'agent' && ' Agent ON'}
             </span>
           </span>
         )}
