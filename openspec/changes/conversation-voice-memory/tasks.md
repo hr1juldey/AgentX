@@ -248,37 +248,174 @@ Implementation tasks organized by phase as defined in design.md.
 
 ---
 
-## Post-Implementation
+## Phase 5: LangGraph Conversation Orchestration
 
-### 19. Quality Checks
+### 22. Application Graphs Layer - LangGraph Integration
 
-- [ ] 19.1 Run ruff checks
+- [ ] 22.1 Define ChatState TypedDict
+  - File: `agentx/application/graphs/presets/conversation_graph.py`
+  - Create `ChatState` TypedDict with fields: query, user_id, session_id, input_mode, conversation_history (Optional[dspy.History]), agent_response, formatted_response, error
+  - Follow codebase pattern from `BackendLangGraphState` and `FrontendLangGraphState`
+  - Add `input_mode` field for routing: "text" or "voice"
+
+- [ ] 22.2 Implement validate_input_node
+  - File: `agentx/application/graphs/presets/conversation_graph.py`
+  - Create node function that accepts ChatState and returns dict
+  - Call `format_stt_query()` to clean input
+  - Validate query is non-empty, return error state if empty
+
+- [ ] 22.3 Implement conversation_agent_node
+  - File: `agentx/application/graphs/presets/conversation_graph.py`
+  - Create node function that gets session via `get_session_manager()`
+  - Call ConversationAgent as callable: `result = agent(question=query)` (CORRECT DSPy pattern)
+  - NEVER call `.forward()` directly (DSPy anti-pattern)
+  - Store interaction via `session_manager.add_assistant_message()`
+  - Return dict with agent_response and conversation_history
+
+- [ ] 22.4 Implement format_output_node
+  - File: `agentx/application/graphs/presets/conversation_graph.py`
+  - Create node function that handles error state if present
+  - Call `format_tts_phrase()` on agent_response
+  - Return formatted_response
+
+- [ ] 22.5 Implement build_conversation_graph()
+  - File: `agentx/application/graphs/presets/conversation_graph.py`
+  - Create StateGraph with ChatState
+  - Add nodes: validate_input, conversation_agent, format_output
+  - Add edges: START → validate_input → conversation_agent → format_output → END
+  - Compile with MemorySaver checkpointer
+
+### 23. Core Dependencies Layer
+
+- [ ] 23.1 Export build_conversation_graph from dependencies
+  - File: `agentx/core/dependencies.py`
+  - Add import: `from agentx.application.graphs.presets.conversation_graph import build_conversation_graph`
+  - Add to `__all__` list
+
+### 24. Presentation Layer - WebSocket Chat
+
+- [ ] 24.1 Implement /ws/chat WebSocket endpoint
+  - File: `agentx/presentation/api/v1/websocket/routes.py`
+  - Create `@router.websocket("/chat")` endpoint
+  - Accept WebSocket, extract session_id from query params
+  - Import `build_conversation_graph` and `GraphRecursionError`
+  - Get compiled graph: `chat_graph = build_conversation_graph()`
+  - Replace TODO echo implementation with graph.invoke()
+  - Pass config with thread_id for checkpointer: `{"configurable": {"thread_id": session_id}}`
+  - Invoke with `input_mode="text"` for chat mode
+  - Handle GraphRecursionError and general exceptions
+
+### 25. Voice Gateway Integration
+
+- [ ] 25.1 Connect voice gateway to LangGraph graph
+  - File: `agentx/infrastructure/voice/voice_gateway.py`
+  - After STT transcription and format_stt_query(), invoke conversation graph
+  - Pass `input_mode="voice"` to graph
+  - Route formatted_response to TTS for audio output
+  - Stream audio chunks back to voice WebSocket
+  - Ensure session_id consistency between voice and text modes
+
+### 26. Quality Checks
+
+- [ ] 26.1 Run ruff checks
 
   ```bash
   ruff check agentx/ --fix
   ruff format agentx/
   ```
 
-- [ ] 19.2 Run pyrefly type checking
+- [ ] 26.2 Run pyrefly type checking
 
   ```bash
   pyrefly check agentx/ --summarize-errors
   ```
 
-- [ ] 19.3 Fix any remaining errors
+- [ ] 26.3 Fix any remaining errors
   - Address ruff violations
   - Address pyrefly type errors
   - Ensure all checks pass
 
-### 20. Documentation
+### 27. Testing
 
-- [ ] 20.1 Update CLAUDE.md with voice conversation patterns
-- [ ] 20.2 Add README for running voice conversation
-- [ ] 20.3 Document environment variables (.env.example)
+- [ ] 27.1 Manual testing - Basic chat flow
+  - Start backend: `python agentx/main.py`
+  - Open frontend, type message in text box
+  - Verify response comes from agent (not echo)
+  - Check logs for graph execution
 
-### 21. Deployment Verification
+- [ ] 27.2 Manual testing - Input validation
+  - Send query with filler words: "um like uh hello there"
+  - Verify cleaned output: "Hello there"
 
-- [ ] 21.1 Start all services: Ollama, Qdrant (docker-compose), Kyutai voice-server
-- [ ] 21.2 Run agentx backend: `python agentx/main.py`
-- [ ] 21.3 Test voice conversation end-to-end
-- [ ] 21.4 Verify memory persistence across sessions
+- [ ] 27.3 Manual testing - Output formatting
+  - Trigger agent response with markdown
+  - Verify markdown is removed in formatted response
+
+- [ ] 27.4 Manual testing - Session persistence
+  - Send message with session_id="test-123"
+  - Disconnect WebSocket
+  - Reconnect with same session_id
+  - Send follow-up question
+  - Verify agent remembers context via DSPy History
+
+- [ ] 27.5 Manual testing - Error handling
+  - Send empty query, verify error response
+  - Send invalid JSON, verify error handling
+
+- [ ] 27.6 Manual testing - Voice/Text mode unification in same session
+  - Start conversation in text mode with session_id="test-456"
+  - Switch to voice mode with same session_id
+  - Verify agent remembers context from text interaction
+  - Switch back to text mode
+  - Verify agent remembers context from voice interaction
+  - Confirm memory continuity across mode switches in same session
+
+## File Changes Summary (Phase 5)
+
+| File | Action | Lines Changed |
+|------|--------|---------------|
+| `agentx/application/graphs/presets/conversation_graph.py` | Implement | ~150 |
+| `agentx/core/dependencies.py` | Modify | ~5 |
+| `agentx/presentation/api/v1/websocket/routes.py` | Modify | ~40 |
+| `agentx/infrastructure/voice/voice_gateway.py` | Modify | ~30 |
+
+**Total:** ~4 files, ~225 lines of code
+
+---
+
+## Post-Implementation
+
+### 28. Quality Checks
+
+- [ ] 28.1 Run ruff checks
+
+  ```bash
+  ruff check agentx/ --fix
+  ruff format agentx/
+  ```
+
+- [ ] 28.2 Run pyrefly type checking
+
+  ```bash
+  pyrefly check agentx/ --summarize-errors
+  ```
+
+- [ ] 28.3 Fix any remaining errors
+  - Address ruff violations
+  - Address pyrefly type errors
+  - Ensure all checks pass
+
+### 29. Documentation
+
+- [ ] 29.1 Update CLAUDE.md with voice conversation patterns
+- [ ] 29.2 Add README for running voice conversation
+- [ ] 29.3 Document environment variables (.env.example)
+
+### 30. Deployment Verification
+
+- [ ] 30.1 Start all services: Ollama, Qdrant (docker-compose), Kyutai voice-server
+- [ ] 30.2 Run agentx backend: `python agentx/main.py`
+- [ ] 30.3 Test voice conversation end-to-end
+- [ ] 30.4 Test text chat end-to-end
+- [ ] 30.5 Test voice/text switching in same session
+- [ ] 30.6 Verify memory persistence across sessions and modes
