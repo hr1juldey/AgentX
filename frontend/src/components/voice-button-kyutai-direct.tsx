@@ -4,6 +4,12 @@
  * This version bypasses the AgentX backend and connects directly to Kyutai
  * for STT → Echo text → TTS to verify the full pipeline works.
  *
+ * Voice commands are intercepted before echo:
+ * - "hello Shiba echo off" → Turns off echo mode, responds "Ok! I am turning echo off"
+ * - "hello Shiba echo on" → Turns on echo mode, responds "Ok! I am turning echo on"
+ * - "hello Shiba agent on" → Turns on AgentX mode (future)
+ * - "hello Shiba agent off" → Turns off AgentX mode (future)
+ *
  * Connections are opened on-demand to avoid Kyutai's 60-second timeout.
  *
  * @see agentx_organic_ui_design_system.md
@@ -14,6 +20,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { tokens, motion } from '@/lib/design-tokens';
 import { AudioProcessor } from '@/lib/audio/AudioProcessor';
+import { getVoiceCommandHandler, type VoiceMode } from '@/lib/voice/VoiceCommandHandler';
 
 type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
 
@@ -40,6 +47,8 @@ export function VoiceButton() {
   const [platform, setPlatform] = useState<'mobile' | 'desktop'>('desktop');
   const [blobs, setBlobs] = useState<OrbitingBlob[]>([]);
   const [audioLevel, setAudioLevel] = useState(0);
+  const [echoMode, setEchoMode] = useState<VoiceMode>('echo'); // Default to echo mode ON
+  const [lastCommand, setLastCommand] = useState<string>('');
 
   const audioProcessorRef = useRef<AudioProcessor | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -50,6 +59,9 @@ export function VoiceButton() {
   const ttsWebSocketRef = useRef<WebSocket | null>(null);
   const transcriptionRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+
+  // Initialize voice command handler
+  const commandHandlerRef = useRef(getVoiceCommandHandler());
 
   // Detect platform
   useEffect(() => {
@@ -182,12 +194,13 @@ export function VoiceButton() {
 
       sttWs.onopen = () => {
         console.log('[Kyutai Direct] STT connected');
-        // Send config message with session_id
+        // Send config message with session_id - force English language
         sttWs.send(JSON.stringify({
           type: 'Config',
           data: {
             streaming_mode: 'both',
             input_format: 'int16',
+            language: 'en',  // Force English language to prevent Hindi misdetection
           },
           session_id: sessionId,
         }));
@@ -264,11 +277,17 @@ export function VoiceButton() {
           onChunk: (pcmBase64: string) => {
             // Stream chunk to STT
             if (sttWebSocketRef.current?.readyState === WebSocket.OPEN) {
-              sttWebSocketRef.current.send(JSON.stringify({
+              const audioMsg = {
                 type: 'Audio',
                 data: pcmBase64,
                 session_id: sessionIdRef.current,
-              }));
+              };
+              sttWebSocketRef.current.send(JSON.stringify(audioMsg));
+              // Truncate audio data in logs
+              console.log('[Kyutai Direct] Sent audio chunk:', {
+                ...audioMsg,
+                data: `[base64 audio data: ${pcmBase64.length} chars]`
+              });
             }
           },
           onError: (error: Error) => {
@@ -280,22 +299,101 @@ export function VoiceButton() {
 
       audioProcessorRef.current = processor;
 
-      // Set up STT message handler
+      // Set up STT message handler with voice command interception
       sttWs.onmessage = async (event) => {
         const msg = JSON.parse(event.data);
-        console.log('[Kyutai Direct] STT message:', msg);
+        // Log STT messages - show full text, truncate audio data only
+        if (msg.type === 'Text') {
+          console.log(`[Kyutai Direct] STT ${msg.is_final ? 'FINAL' : 'partial'}:`, msg.data);
+        } else if (msg.type === 'Audio') {
+          console.log('[Kyutai Direct] STT audio chunk received');
+        } else {
+          console.log('[Kyutai Direct] STT message:', msg.type);
+        }
 
         if (msg.type === 'Text' && msg.is_final) {
           // Got final transcription
           const transcription = msg.data;
           transcriptionRef.current = transcription;
-          console.log('[Kyutai Direct] Transcription:', transcription);
+
+          // === VOICE COMMAND INTERCEPTION ===
+          const commandResult = commandHandlerRef.current.processTranscription(transcription);
+          console.log('[Kyutai Direct] Command result:', commandResult);
+
+          let textToSpeak: string | null = null;
+
+          // Handle voice commands
+          switch (commandResult.type) {
+            case 'echo_on':
+              setEchoMode('echo');
+              setLastCommand('echo on');
+              textToSpeak = 'Ok! I am turning echo on';
+              console.log('[Kyutai Direct] Echo mode ON');
+              break;
+
+            case 'echo_off':
+              setEchoMode('none');
+              setLastCommand('echo off');
+              textToSpeak = 'Ok! I am turning echo off';
+              console.log('[Kyutai Direct] Echo mode OFF');
+              break;
+
+            case 'agent_on':
+              setEchoMode('agent');
+              setLastCommand('agent on');
+              textToSpeak = 'Ok! I am turning agent mode on';
+              console.log('[Kyutai Direct] Agent mode ON (future feature)');
+              break;
+
+            case 'agent_off':
+              setEchoMode('none');
+              setLastCommand('agent off');
+              textToSpeak = 'Ok! I am turning agent mode off';
+              console.log('[Kyutai Direct] Agent mode OFF');
+              break;
+
+            case 'trigger_activated':
+              setLastCommand('hello Shiba');
+              textToSpeak = 'Yes, I am listening';
+              console.log('[Kyutai Direct] Trigger word detected');
+              break;
+
+            case 'unknown':
+              // Unknown command after trigger - don't echo
+              console.log('[Kyutai Direct] Unknown command, not echoing');
+              // Close STT and don't continue to TTS
+              sttWs.close();
+              sttWebSocketRef.current = null;
+              setState('idle');
+              return;
+
+            case 'no_trigger':
+              // No trigger word - check if echo mode is enabled
+              if (echoMode !== 'echo') {
+                console.log('[Kyutai Direct] Echo mode is OFF, not echoing');
+                // Close STT and don't continue to TTS
+                sttWs.close();
+                sttWebSocketRef.current = null;
+                setState('idle');
+                return;
+              }
+              // Echo mode is ON - continue with normal echo
+              textToSpeak = transcription;
+              break;
+          }
 
           // Close STT connection
           sttWs.close();
           sttWebSocketRef.current = null;
 
-          // Now connect to TTS and send text
+          // If there's nothing to speak, return to idle
+          if (!textToSpeak) {
+            console.log('[Kyutai Direct] Nothing to speak');
+            setState('idle');
+            return;
+          }
+
+          // === CONTINUE TO TTS ===
           setState('processing');
           const ttsWs = await connectTTS(sessionId);
 
@@ -306,7 +404,14 @@ export function VoiceButton() {
 
           ttsWs.onmessage = async (event) => {
             const ttsMsg = JSON.parse(event.data);
-            console.log('[Kyutai Direct] TTS message type:', ttsMsg.type, 'full:', ttsMsg);
+            // Log TTS messages - show text, truncate audio data only
+            if (ttsMsg.type === 'Audio') {
+              console.log('[Kyutai Direct] TTS audio chunk received');
+            } else if (ttsMsg.type === 'Eos') {
+              console.log('[Kyutai Direct] TTS EOS received');
+            } else {
+              console.log('[Kyutai Direct] TTS message:', ttsMsg.type, ttsMsg.data || '');
+            }
 
             if (ttsMsg.type === 'Audio') {
               setState('speaking');
@@ -410,9 +515,10 @@ export function VoiceButton() {
           };
 
           // Send text to TTS with session_id
+          console.log('[Kyutai Direct] Sending to TTS:', textToSpeak);
           ttsWs.send(JSON.stringify({
             type: 'Text',
-            data: transcription,
+            data: textToSpeak,
             session_id: sessionIdRef.current,
           }));
         } else if (msg.type === 'Eos') {
@@ -638,7 +744,16 @@ export function VoiceButton() {
         className="absolute -bottom-8 text-sm font-medium"
         style={{ color: tokens.color.cytoplasm }}
       >
-        {state === 'idle' && 'Tap to speak'}
+        {state === 'idle' && (
+          <span className="flex flex-col items-center gap-1">
+            <span>Tap to speak</span>
+            <span className="text-xs opacity-70">
+              {echoMode === 'echo' && ' Echo ON'}
+              {echoMode === 'none' && ' Echo OFF'}
+              {echoMode === 'agent' && ' Agent ON'}
+            </span>
+          </span>
+        )}
         {state === 'listening' && 'Listening...'}
         {state === 'processing' && 'Processing...'}
         {state === 'speaking' && 'Speaking...'}
