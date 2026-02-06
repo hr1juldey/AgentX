@@ -18,6 +18,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { tokens, motion } from '@/lib/design-tokens';
 import { VoiceClient } from '@/lib/voice/client';
 import { VoiceMessageType } from '@/lib/voice/types';
+import { AudioProcessor } from '@/lib/audio/AudioProcessor';
 
 type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking';
 
@@ -46,8 +47,7 @@ export function VoiceButton() {
   const [audioLevel, setAudioLevel] = useState(0);
 
   const voiceClientRef = useRef<VoiceClient | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const audioProcessorRef = useRef<AudioProcessor | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | null>(null);
@@ -255,6 +255,31 @@ export function VoiceButton() {
   // Start listening with audio analysis
   const startListening = useCallback(async () => {
     try {
+      // Create audio processor for 16kHz PCM streaming
+      const processor = new AudioProcessor(
+        {
+          targetSampleRate: 16000, // Whisper requirement
+          channels: 1, // Mono
+          chunkDurationMs: 200, // 200ms chunks
+        },
+        {
+          onChunk: (pcmBase64: string) => {
+            // Stream chunk to backend
+            voiceClientRef.current?.sendAudioChunk(pcmBase64, {
+              sampleRate: 16000,
+              channels: 1,
+            });
+          },
+          onError: (error: Error) => {
+            console.error('[VoiceButton] Audio processor error:', error);
+            setState('idle');
+          },
+        }
+      );
+
+      audioProcessorRef.current = processor;
+
+      // Also create analyser for visualization
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
       if (!audioContextRef.current) {
@@ -268,28 +293,10 @@ export function VoiceButton() {
       source.connect(analyser);
       analyserRef.current = analyser;
 
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      audioChunksRef.current = [];
-
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const arrayBuffer = await audioBlob.arrayBuffer();
-        const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
-        voiceClientRef.current?.sendAudio(base64);
-        setState('processing');
-        stream.getTracks().forEach(track => track.stop());
-
-        if (analyserRef.current) {
-          analyserRef.current = null;
-        }
-      };
-
-      mediaRecorderRef.current.start();
+      // Start recording
+      await processor.start();
       setState('listening');
+      console.log('[VoiceButton] Started listening with 16kHz PCM streaming');
     } catch (error) {
       console.error('[VoiceButton] Failed to access microphone:', error);
     }
@@ -297,14 +304,32 @@ export function VoiceButton() {
 
   // Stop listening
   const stopListening = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
+    if (audioProcessorRef.current && audioProcessorRef.current.recording) {
+      audioProcessorRef.current.stop();
+
+      // Send EOS to signal end of stream
+      voiceClientRef.current?.sendEos('user_done');
+      setState('processing');
+      console.log('[VoiceButton] Stopped listening, sent EOS');
+
+      // Cleanup analyser
+      if (analyserRef.current) {
+        analyserRef.current = null;
+      }
     }
   }, []);
 
   // Interrupt current operation
   const interrupt = useCallback(() => {
+    // Stop audio processor if recording
+    if (audioProcessorRef.current && audioProcessorRef.current.recording) {
+      audioProcessorRef.current.stop();
+    }
+
+    // Stop listening
     stopListening();
+
+    // Send interrupt to backend
     voiceClientRef.current?.sendInterrupt();
     setState('idle');
   }, [stopListening]);

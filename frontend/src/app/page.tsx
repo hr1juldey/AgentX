@@ -15,7 +15,7 @@ import { LoadExternalComponent } from '@/components/ui/LoadExternalComponent';
 
 import { tokens } from '@/lib/design-tokens';
 import { MetaballBackground } from '@/components/metaball-canvas';
-import { VoiceButton } from '@/components/voice-button';
+import { VoiceButton } from '@/components/voice-button-kyutai-direct';
 import { useWebSocket } from '@/hooks/useWebSocket';
 
 // Backend API configuration - supports both localhost and network IP

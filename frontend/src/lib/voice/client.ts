@@ -93,6 +93,30 @@ export class VoiceClient {
     this.send(message);
   }
 
+  sendAudioChunk(pcmBase64: string, metadata?: { sampleRate: number; channels: number }): void {
+    const message: VoiceMessage = {
+      type: VoiceMessageType.AUDIO,
+      data: {
+        audio: pcmBase64,
+        format: 'pcm_int16',
+        ...metadata,
+      },
+      sessionId: this.config.sessionId,
+      timestamp: Date.now() / 1000,
+    };
+    this.send(message);
+  }
+
+  sendEos(reason: string = 'user_done'): void {
+    const message: VoiceMessage = {
+      type: VoiceMessageType.EOS,
+      data: { reason },
+      sessionId: this.config.sessionId,
+      timestamp: Date.now() / 1000,
+    };
+    this.send(message);
+  }
+
   sendInterrupt(): void {
     const message: VoiceMessage = {
       type: VoiceMessageType.INTERRUPT,
