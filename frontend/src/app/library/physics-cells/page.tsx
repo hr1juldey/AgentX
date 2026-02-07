@@ -8,10 +8,31 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LibraryHeader } from '@/components/layout/library-header';
 import { PhysicsCellsVoice } from '@/components/physics-cells-voice';
 import { ColorSchemeWrapper } from '@/components/physics-cells/color-scheme-wrapper';
+
+/**
+ * localStorage key for physics cells settings.
+ */
+const PHYSICS_SETTINGS_KEY = 'physics-cells-settings';
+
+/**
+ * Default physics settings.
+ */
+const DEFAULT_SETTINGS = {
+  cellCount: 8,
+  blur: 16,
+  debug: false,
+  energyGain: 0.05,
+  energyDecay: 0.98,
+  audioThresholdSlider: 69,
+  baseDistance: 0.15,
+  maxDistance: 2.5,
+  viscousAdhesion: 0.80,
+  colorScheme: 'ai',
+};
 
 /**
  * Demo container component.
@@ -75,16 +96,64 @@ function DemoContainer({
  * Physics Cells demo page component.
  */
 export default function PhysicsCellsDemoPage() {
-  const [cellCount, setCellCount] = useState(8);
-  const [blur, setBlur] = useState(16);
-  const [debug, setDebug] = useState(false);
-  const [energyGain, setEnergyGain] = useState(0.05);
-  const [energyDecay, setEnergyDecay] = useState(0.98);
-  const [audioThresholdSlider, setAudioThresholdSlider] = useState(69); // ~120 dB
-  const [baseDistance, setBaseDistance] = useState(0.15);
-  const [maxDistance, setMaxDistance] = useState(2.5);
-  const [viscousAdhesion, setViscousAdhesion] = useState(0.0);
-  const [colorScheme, setColorScheme] = useState('ai');
+  // Track if we're on client side (after mount)
+  const [isClient, setIsClient] = useState(false);
+
+  // Initialize all state with defaults first (SSR-safe)
+  const [cellCount, setCellCount] = useState(DEFAULT_SETTINGS.cellCount);
+  const [blur, setBlur] = useState(DEFAULT_SETTINGS.blur);
+  const [debug, setDebug] = useState(DEFAULT_SETTINGS.debug);
+  const [energyGain, setEnergyGain] = useState(DEFAULT_SETTINGS.energyGain);
+  const [energyDecay, setEnergyDecay] = useState(DEFAULT_SETTINGS.energyDecay);
+  const [audioThresholdSlider, setAudioThresholdSlider] = useState(DEFAULT_SETTINGS.audioThresholdSlider);
+  const [baseDistance, setBaseDistance] = useState(DEFAULT_SETTINGS.baseDistance);
+  const [maxDistance, setMaxDistance] = useState(DEFAULT_SETTINGS.maxDistance);
+  const [viscousAdhesion, setViscousAdhesion] = useState(DEFAULT_SETTINGS.viscousAdhesion);
+  const [colorScheme, setColorScheme] = useState(DEFAULT_SETTINGS.colorScheme);
+
+  // Load from localStorage only on client side after mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    setIsClient(true);
+
+    const saved = localStorage.getItem(PHYSICS_SETTINGS_KEY);
+    if (saved) {
+      try {
+        const settings = JSON.parse(saved);
+        if (settings.cellCount !== undefined) setCellCount(settings.cellCount);
+        if (settings.blur !== undefined) setBlur(settings.blur);
+        if (settings.debug !== undefined) setDebug(settings.debug);
+        if (settings.energyGain !== undefined) setEnergyGain(settings.energyGain);
+        if (settings.energyDecay !== undefined) setEnergyDecay(settings.energyDecay);
+        if (settings.audioThresholdSlider !== undefined) setAudioThresholdSlider(settings.audioThresholdSlider);
+        if (settings.baseDistance !== undefined) setBaseDistance(settings.baseDistance);
+        if (settings.maxDistance !== undefined) setMaxDistance(settings.maxDistance);
+        if (settings.viscousAdhesion !== undefined) setViscousAdhesion(settings.viscousAdhesion);
+        if (settings.colorScheme !== undefined) setColorScheme(settings.colorScheme);
+      } catch (e) {
+        console.error('Failed to parse saved settings:', e);
+      }
+    }
+  }, []);
+
+  // Save all settings to localStorage whenever any value changes (after mount)
+  useEffect(() => {
+    if (!isClient || typeof window === 'undefined') return;
+    const settings = {
+      cellCount,
+      blur,
+      debug,
+      energyGain,
+      energyDecay,
+      audioThresholdSlider,
+      baseDistance,
+      maxDistance,
+      viscousAdhesion,
+      colorScheme,
+    };
+    localStorage.setItem(PHYSICS_SETTINGS_KEY, JSON.stringify(settings));
+  }, [isClient, cellCount, blur, debug, energyGain, energyDecay, audioThresholdSlider, baseDistance, maxDistance, viscousAdhesion, colorScheme]);
 
   // Logarithmic mapping: slider (1-100) → threshold (1-1000, dB-like scale)
   const audioThreshold = Math.round(Math.pow(10, (audioThresholdSlider * 3 / 100)));
