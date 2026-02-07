@@ -17,12 +17,13 @@ export enum ComponentCategory {
 /**
  * Library component metadata.
  * Used for component cards in library index.
+ *
+ * Note: Thumbnails are rendered as live previews, not static images.
  */
 export interface LibraryComponent {
   id: string;
   title: string;
   description: string;
-  thumbnail: string;
   slug: string;
   category: ComponentCategory;
 }

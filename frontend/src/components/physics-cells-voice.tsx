@@ -220,7 +220,7 @@ export function PhysicsCellsVoice({
     <div className="relative" style={{ width: '100%', height: '100%', minHeight: '200px' }}>
       {/* Debug: Show cell count */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="absolute top-0 left-0 text-xs text-cytoplasm z-50 pointer-events-none">
+        <div className="absolute top-2 left-2 text-xs text-cytoplasm z-50 pointer-events-none">
           Cells: {cells.length} | ViewBox: {Math.round(viewBoxSize)}
         </div>
       )}

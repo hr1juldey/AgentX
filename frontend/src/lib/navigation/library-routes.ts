@@ -21,7 +21,6 @@ export const LIBRARY_COMPONENTS: LibraryComponent[] = [
     title: 'Physics Cells',
     description:
       'Audio-reactive cell division with physics-based orbit mechanics. Speaking splits cells apart, silence merges them back.',
-    thumbnail: '/library/thumbnails/physics-cells.webp',
     slug: 'physics-cells',
     category: ComponentCategory.PHYSICS,
   },
