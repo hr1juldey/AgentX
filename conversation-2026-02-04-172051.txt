@@ -742,7 +742,7 @@
       using="colbert",
       limit=top_k,
   )
-
+ 
   Future Solution
 
   To make this work with DSPy, we'd need to create a custom retriever class:
