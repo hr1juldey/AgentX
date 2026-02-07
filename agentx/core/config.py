@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     llm_provider: str = "ollama"
     llm_model: str = "gemma3:4b"
     llm_api_base: str = "http://localhost:11434"
-    llm_timeout: int = 600
+    llm_timeout: int = 1200
     llm_temperature: float = 0.7
     llm_max_tokens: int = 16384
 
