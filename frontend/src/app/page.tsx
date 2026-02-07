@@ -10,6 +10,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Link from 'next/link';
 import { useStream } from '@/hooks/useLangGraph';
 import { LoadExternalComponent } from '@/components/ui/LoadExternalComponent';
 
@@ -102,7 +103,17 @@ export default function HomePage() {
                 Organic AI Assistant
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/library"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:opacity-80"
+                style={{
+                  backgroundColor: 'rgba(0, 217, 255, 0.1)',
+                  color: tokens.color.enzyme,
+                }}
+              >
+                Design Library
+              </Link>
               <div
                 className={`w-2 h-2 rounded-full transition-colors ${
                   isConnected ? 'bg-enzyme' : 'bg-vacuole'
