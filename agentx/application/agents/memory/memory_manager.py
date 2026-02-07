@@ -71,9 +71,7 @@ class MemoryManager:
                         asyncio.set_event_loop(loop)
                         try:
                             memories = loop.run_until_complete(
-                                mem0_client.search_memory(
-                                    question, self.user_id, limit=5
-                                )  # type: ignore[no-untyped-call]
+                                mem0_client.search_memory(question, self.user_id, limit=5)  # type: ignore[no-untyped-call]
                             )
                             result.extend(memories)
                         finally:
