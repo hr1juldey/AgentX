@@ -40,6 +40,8 @@ export interface PhysicsCellsConfig {
   maxDistance?: number;
   energyGainRate?: number;
   energyDecayRate?: number;
+  /** Viscous adhesion - friction when returning to base [0.0, 1.0] */
+  viscousAdhesion?: number;
 }
 
 /**
@@ -51,6 +53,7 @@ const DEFAULT_CONFIG: Required<PhysicsCellsConfig> = {
   maxDistance: 0.75,
   energyGainRate: 0.08,
   energyDecayRate: 0.96,
+  viscousAdhesion: 0.0,
 };
 
 /**
@@ -158,9 +161,16 @@ export function usePhysicsCells(config: PhysicsCellsConfig = {}): PhysicsCellsAP
       deltaTime,
     );
 
-    // Update all cells
+    // Build spring config with viscous adhesion
+    const springConfig = {
+      stiffness: 0.15,
+      damping: 0.85,
+      viscousAdhesion: cfg.viscousAdhesion,
+    };
+
+    // Update all cells with spring config
     const newCells = cellsRef.current.map((cell) =>
-      updateCell(cell, newEnergy, cfg.maxDistance),
+      updateCell(cell, newEnergy, cfg.maxDistance, springConfig),
     );
 
     // Update state

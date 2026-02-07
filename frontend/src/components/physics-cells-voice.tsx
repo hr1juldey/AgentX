@@ -39,6 +39,8 @@ export interface PhysicsCellsVoiceProps {
   baseDistance?: number;
   /** Max distance - cells expand to here (0.5-2.0) */
   maxDistance?: number;
+  /** Viscous adhesion - friction when returning to base (0.0-1.0) */
+  viscousAdhesion?: number;
   /** Use CSS variables for colors from color scheme */
   useSchemeColors?: boolean;
 }
@@ -58,6 +60,7 @@ export function PhysicsCellsVoice({
   audioThreshold = 30,
   baseDistance = 0.15,
   maxDistance = 0.75,
+  viscousAdhesion = 0.0,
   useSchemeColors = false,
 }: PhysicsCellsVoiceProps) {
   const [micEnabled, setMicEnabled] = useState(false);
@@ -75,6 +78,7 @@ export function PhysicsCellsVoice({
     maxDistance,
     energyGainRate,
     energyDecayRate,
+    viscousAdhesion,
   });
 
   // Debug: log actual cells array

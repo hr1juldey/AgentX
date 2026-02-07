@@ -83,6 +83,7 @@ export default function PhysicsCellsDemoPage() {
   const [audioThresholdSlider, setAudioThresholdSlider] = useState(69); // ~120 dB
   const [baseDistance, setBaseDistance] = useState(0.15);
   const [maxDistance, setMaxDistance] = useState(2.5);
+  const [viscousAdhesion, setViscousAdhesion] = useState(0.0);
   const [colorScheme, setColorScheme] = useState('ai');
 
   // Logarithmic mapping: slider (1-100) → threshold (1-1000, dB-like scale)
@@ -287,6 +288,22 @@ Enable the microphone to see audio reactivity, or use debug mode to visualize th
               className="w-full"
             />
           </div>
+
+          {/* Viscous Adhesion */}
+          <div>
+            <label className="block text-caption mb-2 text-cytoplasm">
+              Viscous Adhesion: {viscousAdhesion.toFixed(2)} (friction when returning)
+            </label>
+            <input
+              type="range"
+              min={0.0}
+              max={1.0}
+              step={0.05}
+              value={viscousAdhesion}
+              onChange={(e) => setViscousAdhesion(Number(e.target.value))}
+              className="w-full"
+            />
+          </div>
         </div>
       }
     >
@@ -301,6 +318,7 @@ Enable the microphone to see audio reactivity, or use debug mode to visualize th
         audioThreshold={audioThreshold}
         baseDistance={baseDistance}
         maxDistance={maxDistance}
+        viscousAdhesion={viscousAdhesion}
         useSchemeColors={true}
       />
     </DemoContainer>

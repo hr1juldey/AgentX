@@ -70,18 +70,20 @@ export function initializeCells(
  * @param cell - Cell to update
  * @param energy - Current energy level [0.0, 1.0]
  * @param maxDistance - Maximum orbit distance
+ * @param springConfig - Spring configuration for friction
  * @returns Updated cell
  */
 export function updateCell(
   cell: OrbitingCell,
   energy: number,
   maxDistance: number,
+  springConfig?: import('./spring-damping').SpringConfig,
 ): OrbitingCell {
   // Target distance expands with energy
   const targetDistance = cell.baseDistance + energy * (maxDistance - cell.baseDistance);
 
-  // Update velocity with spring physics
-  const newVelocity = springDamped(targetDistance, cell.distance, cell.velocity);
+  // Update velocity with spring physics (pass maxDistance for viscous adhesion)
+  const newVelocity = springDamped(targetDistance, cell.distance, cell.velocity, springConfig, maxDistance);
 
   // Apply velocity to distance
   const newDistance = cell.distance + newVelocity;
