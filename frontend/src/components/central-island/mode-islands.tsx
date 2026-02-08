@@ -18,6 +18,7 @@ import { Mic, MessageCircle, FileText, Camera } from 'lucide-react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 
 export type ModeType = 'voice' | 'chat' | 'file' | 'camera';
+export type ColorSchemeType = 'raycast' | 'ai' | 'warm' | 'minimal' | 'custom';
 
 export interface ModeIslandsProps {
   /** Whether longpress is active (show islands) */
@@ -25,7 +26,7 @@ export interface ModeIslandsProps {
   /** Callback when mode is selected - now includes current position */
   onModeSelect?: (mode: ModeType, currentPosition: { x: number; y: number }) => void;
   /** Color scheme from physics-cells (default: 'ai') */
-  colorScheme?: 'raycast' | 'ai' | 'warm' | 'minimal' | 'custom';
+  colorScheme?: ColorSchemeType;
   /** Whether collapse animation is active */
   isCollapsing?: boolean;
   /** Which mode was selected (for collapse animation) */
@@ -92,7 +93,7 @@ export function ModeIslands({
   selectedMode = null,
   collapseProgress = 0,
   collapseComplete = false,
-  currentPositions = {},
+  currentPositions,
   shouldShowIslands = true,
 }: ModeIslandsProps) {
   const [hoveredMode, setHoveredMode] = useState<ModeType | null>(null);

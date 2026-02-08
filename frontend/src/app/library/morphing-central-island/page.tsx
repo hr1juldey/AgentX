@@ -14,7 +14,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { LibraryHeader } from '@/components/layout/library-header';
 import { Nucleus } from '@/components/central-island/nucleus';
-import { ModeIslands, ModeType } from '@/components/central-island/mode-islands';
+import { ModeIslands, ModeType, ColorSchemeType } from '@/components/central-island/mode-islands';
 import { MetaballWrapper } from '@/components/central-island/metaball-wrapper';
 import { useLongpress } from '@/lib/longpress/use-longpress';
 import { ColorSchemeWrapper } from '@/components/physics-cells/color-scheme-wrapper';
@@ -22,7 +22,7 @@ import { ColorSchemeWrapper } from '@/components/physics-cells/color-scheme-wrap
 const DEMO_SETTINGS_KEY = 'morphing-central-island-settings';
 
 const DEFAULT_SETTINGS = {
-  colorScheme: 'ai',
+  colorScheme: 'ai' as ColorSchemeType,
 };
 
 /**
@@ -39,7 +39,7 @@ function DemoContainer({
   description: string;
   children: React.ReactNode;
   controls?: React.ReactNode;
-  scheme?: string;
+  scheme?: ColorSchemeType;
 }) {
   return (
     <div className="min-h-screen bg-void text-nucleus">
@@ -78,7 +78,7 @@ function DemoContainer({
  */
 export default function MorphingCentralIslandDemoPage() {
   const [isClient, setIsClient] = useState(false);
-  const [colorScheme, setColorScheme] = useState(DEFAULT_SETTINGS.colorScheme);
+  const [colorScheme, setColorScheme] = useState<ColorSchemeType>(DEFAULT_SETTINGS.colorScheme);
   const [selectedMode, setSelectedMode] = useState<ModeType | null>(null);
   const [selectedModeCurrentPosition, setSelectedModeCurrentPosition] = useState<{ x: number; y: number } | null>(null);
   const [nucleusState, setNucleusState] = useState<'idle' | 'longpress' | 'mode-selected'>('idle');

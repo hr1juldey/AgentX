@@ -14,6 +14,7 @@
 
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { ColorSchemeType } from './mode-islands';
 
 export interface NucleusProps {
   /** Current nucleus state for attribute tracking */
@@ -25,7 +26,7 @@ export interface NucleusProps {
   /** Enable/disable hover effects */
   interactive?: boolean;
   /** Color scheme from physics-cells (default: 'ai') */
-  colorScheme?: 'raycast' | 'ai' | 'warm' | 'minimal' | 'custom';
+  colorScheme?: ColorSchemeType;
   /** Longpress handlers from useLongpress hook */
   onMouseDown?: (e: React.MouseEvent) => void;
   onMouseUp?: () => void;
