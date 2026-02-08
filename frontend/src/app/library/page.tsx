@@ -62,6 +62,35 @@ function LivePreview({ componentId }: LivePreviewProps) {
         },
       }))
     ),
+    'morphing-central-island': lazy(() =>
+      import('@/components/central-island/nucleus').then((mod) => ({
+        default: () => {
+          const Nucleus = mod.Nucleus;
+          return (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-enzyme/20 to-microtubule/20">
+              <div className="relative scale-75">
+                <Nucleus state="idle" interactive={false} colorScheme="ai" />
+                {/* Decorative mode islands (static for preview) */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                  <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full bg-[#A78BFA] opacity-60 flex items-center justify-center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+                  </div>
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-20 w-12 h-12 rounded-full bg-[#6366F1] opacity-60 flex items-center justify-center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </div>
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-20 w-12 h-12 rounded-full bg-[#22D3EE] opacity-60 flex items-center justify-center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </div>
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 translate-y-20 w-12 h-12 rounded-full bg-[#EC4899] opacity-60 flex items-center justify-center">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        },
+      }))
+    ),
   };
 
   const PreviewComponent = previewComponents[componentId];
