@@ -112,6 +112,14 @@ export function ModeIslands({
   const [isDraggingActive, setIsDraggingActive] = useState(false);
   const didDragRef = useRef(false); // Track if drag actually occurred
 
+  // Ref to track current dragOffsets (to avoid stale closures in collapse calculation)
+  const dragOffsetsRef = useRef(dragOffsets);
+
+  // Keep dragOffsetsRef in sync with dragOffsets state
+  useEffect(() => {
+    dragOffsetsRef.current = dragOffsets;
+  }, [dragOffsets]);
+
   // Refs to track current prop values (to avoid stale closures)
   const isCollapsingRef = useRef(isCollapsing);
   const collapseCompleteRef = useRef(collapseComplete);
@@ -268,7 +276,8 @@ export function ModeIslands({
             // During collapse, non-selected islands animate toward SELECTED island's CURRENT position
             if (isCollapsing && selectedMode && !isSelected) {
               // Get selected mode's CURRENT position (original + drag offset)
-              const selectedOffset = dragOffsets[selectedMode] || { x: 0, y: 0 };
+              // Use ref to avoid stale closure
+              const selectedOffset = dragOffsetsRef.current[selectedMode] || { x: 0, y: 0 };
               const selectedOriginalPos = MODES[selectedMode].position;
               const targetPos = {
                 x: selectedOriginalPos.x + selectedOffset.x,
