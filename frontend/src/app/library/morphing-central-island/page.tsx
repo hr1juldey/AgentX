@@ -6,6 +6,8 @@
  * - Mode selection triggers sequential collapse
  * - Voice/chat modes with cell widgets and cilia typing
  *
+ * Uses Zustand store for state management to avoid stale closures.
+ *
  * @see openspec/changes/morphing-central-island
  */
 
@@ -14,10 +16,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { LibraryHeader } from '@/components/layout/library-header';
 import { Nucleus } from '@/components/central-island/nucleus';
-import { ModeIslands, ModeType, ColorSchemeType } from '@/components/central-island/mode-islands';
+import { ModeIslands, type ColorSchemeType } from '@/components/central-island/mode-islands';
 import { MetaballWrapper } from '@/components/central-island/metaball-wrapper';
 import { useLongpress } from '@/lib/longpress/use-longpress';
 import { ColorSchemeWrapper } from '@/components/physics-cells/color-scheme-wrapper';
+import { useMorphingIslandStore, type ModeType } from '@/components/central-island/store';
 
 const DEMO_SETTINGS_KEY = 'morphing-central-island-settings';
 
@@ -79,35 +82,27 @@ function DemoContainer({
 export default function MorphingCentralIslandDemoPage() {
   const [isClient, setIsClient] = useState(false);
   const [colorScheme, setColorScheme] = useState<ColorSchemeType>(DEFAULT_SETTINGS.colorScheme);
-  const [selectedMode, setSelectedMode] = useState<ModeType | null>(null);
-  const [selectedModeCurrentPosition, setSelectedModeCurrentPosition] = useState<{ x: number; y: number } | null>(null);
   const [nucleusState, setNucleusState] = useState<'idle' | 'longpress' | 'mode-selected'>('idle');
-  const [isCollapsing, setIsCollapsing] = useState(false);
-  const [collapseProgress, setCollapseProgress] = useState(0);
-  const [collapseComplete, setCollapseComplete] = useState(false);
-  const [shouldShowIslands, setShouldShowIslands] = useState(false); // Control island visibility
+  const [shouldShowIslands, setShouldShowIslands] = useState(false);
 
   // Refs to track animation state
   const collapseAnimationRef = useRef<number | null>(null);
   const isCollapseAnimatingRef = useRef(false);
 
-  // Mode colors from physics-cells scheme
-  const modeColors = {
-    voice: 'var(--scheme-cell-3, #A78BFA)',
-    chat: 'var(--scheme-cell-2, #6366F1)',
-    file: 'var(--scheme-cell-1, #22D3EE)',
-    camera: 'var(--scheme-cell-5, #EC4899)',
-  };
+  // Get state from store (for read-only display)
+  const selectedMode = useMorphingIslandStore((state) => state.selectedMode);
+  const isCollapsing = useMorphingIslandStore((state) => state.isCollapsing);
+  const collapseComplete = useMorphingIslandStore((state) => state.collapseComplete);
+  const collapseProgress = useMorphingIslandStore((state) => state.collapseProgress);
 
-  // Mode positions relative to nucleus
-  const modePositions = {
-    voice: { x: 0, y: -80 },
-    chat: { x: -80, y: 0 },
-    file: { x: 80, y: 0 },
-    camera: { x: 0, y: 80 },
-  };
-
-  const allModes: ModeType[] = ['voice', 'chat', 'file', 'camera'];
+  // Get store actions
+  const setSelectedMode = useMorphingIslandStore((state) => state.setSelectedMode);
+  const setIsCollapsing = useMorphingIslandStore((state) => state.setCollapsing);
+  const setCollapseProgress = useMorphingIslandStore((state) => state.setCollapseProgress);
+  const setCollapseComplete = useMorphingIslandStore((state) => state.setCollapseComplete);
+  const resetCollapse = useMorphingIslandStore((state) => state.resetCollapse);
+  const resetDragOffsets = useMorphingIslandStore((state) => state.resetDragOffsets);
+  const calculateCollapseOrder = useMorphingIslandStore((state) => state.calculateCollapseOrder);
 
   // Load from localStorage on client
   useState(() => {
@@ -122,7 +117,7 @@ export default function MorphingCentralIslandDemoPage() {
       // Only spawn islands if we're not already in a completed state
       if (!collapseComplete && !selectedMode) {
         setNucleusState('longpress');
-        setShouldShowIslands(true); // Show islands on longpress
+        setShouldShowIslands(true);
       }
     },
     onCancel: () => {
@@ -133,19 +128,22 @@ export default function MorphingCentralIslandDemoPage() {
     },
   });
 
-  // Handle mode selection - now includes current position
-  const handleModeSelect = (mode: ModeType, currentPosition: { x: number; y: number }) => {
+  // Handle mode selection - store position in Zustand store and calculate collapse order
+  const handleModeSelect = useCallback((mode: ModeType, currentPosition: { x: number; y: number }) => {
     console.log(`[Demo] Mode selected: ${mode} at current position:`, currentPosition);
-    setSelectedMode(mode);
-    setSelectedModeCurrentPosition(currentPosition);
+
+    // Update store with selected mode and position
+    setSelectedMode(mode, currentPosition);
+
+    // Calculate collapse order based on distances
+    calculateCollapseOrder();
+
     setNucleusState('mode-selected');
     setIsCollapsing(true);
     setCollapseProgress(0);
-  };
+  }, [setSelectedMode, calculateCollapseOrder, setIsCollapsing, setCollapseProgress]);
 
   // Animate collapse progress - two phases using refs for reliable tracking
-  // Phase 1 (progress 0-1): Non-selected islands and nucleus collapse toward selected island
-  // Phase 2 (progress 1-2): Selected island moves to center
   const startCollapseAnimation = useCallback(() => {
     if (isCollapseAnimatingRef.current || !selectedMode) {
       console.log('[Demo] Collapse animation already running or no mode selected');
@@ -160,8 +158,8 @@ export default function MorphingCentralIslandDemoPage() {
       if (!startTime) startTime = timestamp;
       const elapsed = timestamp - startTime;
 
-      // Phase 1: Collapse toward selected island (0-1 over 1 second)
-      const phase1Progress = Math.min(elapsed / 1000, 1);
+      // Phase 1: Collapse toward selected island (0-1 over 2.5 seconds - slower)
+      const phase1Progress = Math.min(elapsed / 2500, 1);
       setCollapseProgress(phase1Progress);
 
       console.log(`[Demo] Phase 1 progress: ${(phase1Progress * 100).toFixed(0)}%`);
@@ -179,14 +177,14 @@ export default function MorphingCentralIslandDemoPage() {
         setTimeout(() => {
           setCollapseComplete(true);
 
-          // Phase 2: Animate selected island to center (1-2 over 500ms)
+          // Phase 2: Animate selected island to center (1-2 over 1 second - slower)
           let phase2StartTime: number | null = null;
           const animatePhase2 = (timestamp: number) => {
             if (!phase2StartTime) phase2StartTime = timestamp;
             const phase2Elapsed = timestamp - phase2StartTime;
 
             // Progress from 1 to 2
-            const phase2Progress = Math.min(phase2Elapsed / 500, 1);
+            const phase2Progress = Math.min(phase2Elapsed / 1000, 1);
             setCollapseProgress(1 + phase2Progress);
 
             console.log(`[Demo] Phase 2 progress: ${(phase2Progress * 100).toFixed(0)}%`);
@@ -227,14 +225,11 @@ export default function MorphingCentralIslandDemoPage() {
   // Reset to idle
   const handleReset = () => {
     console.log('[Demo] Resetting to idle');
-    setSelectedMode(null);
-    setSelectedModeCurrentPosition(null);
+    resetCollapse(); // Reset all collapse state in store
+    resetDragOffsets(); // Reset drag offsets in store
     setNucleusState('idle');
-    setIsCollapsing(false);
-    setCollapseComplete(false);
-    setCollapseProgress(0);
-    setShouldShowIslands(false); // Hide islands on reset
-    isCollapseAnimatingRef.current = false; // Reset animation flag
+    setShouldShowIslands(false);
+    isCollapseAnimatingRef.current = false;
   };
 
   // Handle collapse complete
@@ -305,29 +300,22 @@ Longpress progress: ${(longpressProgress * 100).toFixed(0)}%`;
           {/* Mode Islands - spawns on longpress, collapses when mode selected */}
           {shouldShowIslands && (
             <ModeIslands
-              key={`islands-${selectedMode || 'none'}`} // Force remount on mode change
+              key={`islands-${selectedMode || 'none'}`}
               isLongpressActive={isLongpressActive}
               onModeSelect={handleModeSelect}
               colorScheme={colorScheme}
-              isCollapsing={isCollapsing}
-              selectedMode={selectedMode}
               collapseProgress={collapseProgress}
-              collapseComplete={collapseComplete}
               shouldShowIslands={shouldShowIslands}
             />
           )}
 
           {/* Central Nucleus - main interaction point */}
           <Nucleus
-            key={`nucleus-${nucleusState}`} // Force remount when state changes
+            key={`nucleus-${nucleusState}`}
             state={nucleusState}
             colorScheme={colorScheme}
-            interactive={!selectedMode || collapseComplete} // Disable during collapse
-            selectedMode={selectedMode}
-            isCollapsing={isCollapsing}
+            interactive={!selectedMode || collapseComplete}
             collapseProgress={collapseProgress}
-            collapseComplete={collapseComplete}
-            selectedModeCurrentPosition={selectedModeCurrentPosition}
             {...bind}
           />
         </MetaballWrapper>
@@ -338,9 +326,6 @@ Longpress progress: ${(longpressProgress * 100).toFixed(0)}%`;
             <div>Longpress Active: {isLongpressActive ? 'YES' : 'NO'}</div>
             <div>Longpress Progress: {(longpressProgress * 100).toFixed(0)}%</div>
             <div>Selected Mode: {selectedMode || 'none'}</div>
-            {selectedModeCurrentPosition && (
-              <div>Selected Mode Position: ({selectedModeCurrentPosition.x.toFixed(0)}, {selectedModeCurrentPosition.y.toFixed(0)})</div>
-            )}
             <div>Is Collapsing: {isCollapsing ? 'YES' : 'NO'}</div>
             <div>Collapse Complete: {collapseComplete ? 'YES' : 'NO'}</div>
             <div>Collapse Progress: {collapseProgress.toFixed(2)}</div>

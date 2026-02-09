@@ -8,6 +8,8 @@
  * Emerges with spring physics like biological cell division.
  * Draggable with spring physics during idle state.
  *
+ * Uses Zustand store for state management to avoid stale closure issues.
+ *
  * @see openspec/changes/morphing-central-island/specs/mode-island-spawn
  */
 
@@ -16,8 +18,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MessageCircle, FileText, Camera } from 'lucide-react';
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useMorphingIslandStore, type ModeType } from './store';
 
-export type ModeType = 'voice' | 'chat' | 'file' | 'camera';
 export type ColorSchemeType = 'raycast' | 'ai' | 'warm' | 'minimal' | 'custom';
 
 export interface ModeIslandsProps {
@@ -27,19 +29,14 @@ export interface ModeIslandsProps {
   onModeSelect?: (mode: ModeType, currentPosition: { x: number; y: number }) => void;
   /** Color scheme from physics-cells (default: 'ai') */
   colorScheme?: ColorSchemeType;
-  /** Whether collapse animation is active */
-  isCollapsing?: boolean;
-  /** Which mode was selected (for collapse animation) */
-  selectedMode?: ModeType | null;
   /** Collapse progress (0-1 for Phase 1, 1-2 for Phase 2) */
   collapseProgress?: number;
-  /** Whether collapse is complete (selected island moves to center) */
-  collapseComplete?: boolean;
-  /** Current positions of all islands (including drag offsets) */
-  currentPositions?: Record<ModeType, { x: number; y: number }>;
   /** Whether islands should be shown (controlled by parent for reset) */
   shouldShowIslands?: boolean;
 }
+
+// Re-export ModeType for convenience
+export type { ModeType };
 
 /**
  * Mode configuration with colors and positions.
@@ -84,97 +81,89 @@ const MODES = {
  * Collapse behavior: All non-selected islands slide toward and merge
  * into the SELECTED island (not nucleus center). After merge completes,
  * selected island moves to center position.
+ *
+ * Uses Zustand store for state management to avoid stale closure issues.
  */
 export function ModeIslands({
   isLongpressActive,
   onModeSelect,
   colorScheme = 'ai',
-  isCollapsing = false,
-  selectedMode = null,
   collapseProgress = 0,
-  collapseComplete = false,
-  currentPositions,
   shouldShowIslands = true,
 }: ModeIslandsProps) {
+  // Local UI state only
   const [hoveredMode, setHoveredMode] = useState<ModeType | null>(null);
   const [pressedMode, setPressedMode] = useState<ModeType | null>(null);
 
-  // Drag state - persistent offsets for each mode
+  // Store state - drag offsets, collapse state, selected mode
+  const dragOffsets = useMorphingIslandStore((state) => state.dragOffsets);
+  const selectedMode = useMorphingIslandStore((state) => state.selectedMode);
+  const isCollapsing = useMorphingIslandStore((state) => state.isCollapsing);
+  const collapseComplete = useMorphingIslandStore((state) => state.collapseComplete);
+  const collapseIslands = useMorphingIslandStore((state) => state.collapseIslands);
+  const collapseIslandsCount = useMorphingIslandStore((state) => state.collapseIslandsCount);
+
+  // Store actions
+  const setDragOffset = useMorphingIslandStore((state) => state.setDragOffset);
+  const setSelectedMode = useMorphingIslandStore((state) => state.setSelectedMode);
+  const getSelectedModeCurrentPosition = useMorphingIslandStore((state) => state.getSelectedModeCurrentPosition);
+  const getCollapseIsland = useMorphingIslandStore((state) => state.getCollapseIsland);
+
+  // Local drag state (not in store as it's only for active drag)
   const [draggingMode, setDraggingMode] = useState<ModeType | null>(null);
-  const [dragOffsets, setDragOffsets] = useState<Record<ModeType, { x: number; y: number }>>({
-    voice: { x: 0, y: 0 },
-    chat: { x: 0, y: 0 },
-    file: { x: 0, y: 0 },
-    camera: { x: 0, y: 0 },
-  });
-  const dragStartRef = useRef({ x: 0, y: 0 });
-  const dragStartOffsetRef = useRef({ x: 0, y: 0 }); // Store the offset when drag starts
   const [isDraggingActive, setIsDraggingActive] = useState(false);
-  const didDragRef = useRef(false); // Track if drag actually occurred
-
-  // Ref to track current dragOffsets (to avoid stale closures in collapse calculation)
-  const dragOffsetsRef = useRef(dragOffsets);
-
-  // Keep dragOffsetsRef in sync with dragOffsets state
-  useEffect(() => {
-    dragOffsetsRef.current = dragOffsets;
-  }, [dragOffsets]);
-
-  // Refs to track current prop values (to avoid stale closures)
-  const isCollapsingRef = useRef(isCollapsing);
-  const collapseCompleteRef = useRef(collapseComplete);
-
-  // Keep refs in sync with props
-  useEffect(() => {
-    isCollapsingRef.current = isCollapsing;
-  }, [isCollapsing]);
-
-  useEffect(() => {
-    collapseCompleteRef.current = collapseComplete;
-  }, [collapseComplete]);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const dragStartOffsetRef = useRef({ x: 0, y: 0 });
+  const didDragRef = useRef(false);
 
   // Handle drag start
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent, mode: ModeType) => {
-    // Check refs instead of closure values to get fresh state
-    if (isCollapsingRef.current || collapseCompleteRef.current) return;
+    // Get fresh state from store to avoid stale closures
+    const storeState = useMorphingIslandStore.getState();
+    if (storeState.isCollapsing || storeState.collapseComplete) return;
 
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
     dragStartRef.current = { x: clientX, y: clientY };
-    dragStartOffsetRef.current = dragOffsets[mode]; // Remember current offset
-    didDragRef.current = false; // Reset drag flag
+    dragStartOffsetRef.current = storeState.dragOffsets[mode];
+    didDragRef.current = false;
     setDraggingMode(mode);
     setIsDraggingActive(false);
     setPressedMode(mode);
-  }, [isCollapsing, collapseComplete, dragOffsets]);
+  }, []);
 
   // Handle document-level drag move
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!draggingMode || (isCollapsing || collapseComplete)) return;
+      if (!draggingMode) return;
+
+      // Check fresh state from store
+      const storeState = useMorphingIslandStore.getState();
+      if (storeState.isCollapsing || storeState.collapseComplete) return;
 
       const dx = e.clientX - dragStartRef.current.x;
       const dy = e.clientY - dragStartRef.current.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance > 5) { // Drag threshold
-        didDragRef.current = true; // Mark as drag occurred
+      if (distance > 5) {
+        didDragRef.current = true;
         setIsDraggingActive(true);
 
-        // Update offset: starting offset + current drag delta
-        setDragOffsets(prev => ({
-          ...prev,
-          [draggingMode]: {
-            x: dragStartOffsetRef.current.x + dx,
-            y: dragStartOffsetRef.current.y + dy,
-          },
-        }));
+        // Update offset in store
+        const newOffset = {
+          x: dragStartOffsetRef.current.x + dx,
+          y: dragStartOffsetRef.current.y + dy,
+        };
+        setDragOffset(draggingMode, newOffset);
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!draggingMode || (isCollapsing || collapseComplete)) return;
+      if (!draggingMode) return;
+
+      const storeState = useMorphingIslandStore.getState();
+      if (storeState.isCollapsing || storeState.collapseComplete) return;
 
       const touch = e.touches[0];
       const dx = touch.clientX - dragStartRef.current.x;
@@ -185,13 +174,11 @@ export function ModeIslands({
         didDragRef.current = true;
         setIsDraggingActive(true);
 
-        setDragOffsets(prev => ({
-          ...prev,
-          [draggingMode]: {
-            x: dragStartOffsetRef.current.x + dx,
-            y: dragStartOffsetRef.current.y + dy,
-          },
-        }));
+        const newOffset = {
+          x: dragStartOffsetRef.current.x + dx,
+          y: dragStartOffsetRef.current.y + dy,
+        };
+        setDragOffset(draggingMode, newOffset);
       }
     };
 
@@ -204,37 +191,39 @@ export function ModeIslands({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('touchmove', handleTouchMove);
     };
-  }, [draggingMode, isCollapsing, collapseComplete]);
+  }, [draggingMode, setDragOffset]);
 
   // Handle drag end
   const handleDragEnd = useCallback(() => {
     if (draggingMode) {
       const wasDragging = didDragRef.current;
-      console.log(`[ModeIslands] Drag ended: ${draggingMode}, wasDragging: ${wasDragging}, final offset:`, dragOffsets[draggingMode]);
+      const currentOffset = useMorphingIslandStore.getState().dragOffsets[draggingMode];
+      console.log(`[ModeIslands] Drag ended: ${draggingMode}, wasDragging: ${wasDragging}, final offset:`, currentOffset);
       setDraggingMode(null);
       setIsDraggingActive(false);
       setPressedMode(null);
-      // Don't reset didDragRef here - let the click handler check it
-      // Don't reset dragOffsets - keep the position where dropped
     }
-  }, [draggingMode, dragOffsets]);
+  }, [draggingMode]);
 
   // Handle click - only fire if not dragging, pass current position
   const handleClick = useCallback((mode: ModeType) => {
-    // Use refs to get fresh prop values instead of stale closure values
-    if (!didDragRef.current && !isCollapsingRef.current && !collapseCompleteRef.current) {
-      // Calculate current position (original + drag offset)
-      const currentPos = {
-        x: MODES[mode].position.x + dragOffsets[mode].x,
-        y: MODES[mode].position.y + dragOffsets[mode].y,
-      };
-      console.log(`[ModeIslands] Click detected (not drag): ${mode} at current position:`, currentPos);
-      console.log(`[ModeIslands] State check - isCollapsing: ${isCollapsingRef.current}, collapseComplete: ${collapseCompleteRef.current}`);
-      onModeSelect?.(mode, currentPos);
-    } else {
-      console.log(`[ModeIslands] Click ignored - was drag: ${mode}, didDrag: ${didDragRef.current}, isCollapsing: ${isCollapsingRef.current}, collapseComplete: ${collapseCompleteRef.current}`);
+    if (didDragRef.current) {
+      console.log(`[ModeIslands] Click ignored - was drag: ${mode}`);
+      return;
     }
-  }, [onModeSelect, dragOffsets]); // Remove isCollapsing and collapseComplete from deps
+
+    // Get fresh state from store
+    const storeState = useMorphingIslandStore.getState();
+    if (storeState.isCollapsing || storeState.collapseComplete) {
+      console.log(`[ModeIslands] Click ignored - collapsing: ${mode}`);
+      return;
+    }
+
+    // Calculate current position using store's getter (synchronous, no stale closures)
+    const currentPos = useMorphingIslandStore.getState().getCurrentPosition(mode);
+    console.log(`[ModeIslands] Click detected (not drag): ${mode} at current position:`, currentPos);
+    onModeSelect?.(mode, currentPos);
+  }, [onModeSelect]);
 
   return (
     <AnimatePresence>
@@ -246,22 +235,20 @@ export function ModeIslands({
             const isPressed = pressedMode === mode;
             const isSelected = mode === selectedMode;
             const isDraggingThis = draggingMode === mode && isDraggingActive;
-            const storedOffset = dragOffsets[mode as ModeType]; // Get stored offset for this mode
+            const storedOffset = dragOffsets[mode as ModeType];
 
             // HIDE non-selected islands after collapse completes
-            // Only the selected island should remain visible
-            // Also hide all islands if no mode is selected but collapseComplete is true (reset state)
             if (collapseComplete && !isSelected) {
               return null;
             }
 
-            // Also hide islands if we're in collapsed state but no mode selected (shouldn't happen but safety check)
+            // Also hide islands if we're in collapsed state but no mode selected
             if (collapseComplete && !selectedMode) {
               return null;
             }
 
             // Calculate position during collapse
-            let currentX = config.position.x + storedOffset.x; // Apply stored offset
+            let currentX = config.position.x + storedOffset.x;
             let currentY = config.position.y + storedOffset.y;
             let currentScale = 1;
             let currentOpacity = 1;
@@ -273,32 +260,64 @@ export function ModeIslands({
               currentScale = 1.05;
             }
 
-            // During collapse, non-selected islands animate toward SELECTED island's CURRENT position
+            // During collapse, non-selected islands animate TOWARD SELECTED island's CURRENT position
+            // SEQUENTIAL COLLAPSE: Each island waits its turn based on distance (closest first)
             if (isCollapsing && selectedMode && !isSelected) {
-              // Get selected mode's CURRENT position (original + drag offset)
-              // Use ref to avoid stale closure
-              const selectedOffset = dragOffsetsRef.current[selectedMode] || { x: 0, y: 0 };
-              const selectedOriginalPos = MODES[selectedMode].position;
-              const targetPos = {
-                x: selectedOriginalPos.x + selectedOffset.x,
-                y: selectedOriginalPos.y + selectedOffset.y,
-              };
-              const progress = Math.min(1, collapseProgress * 1.5); // Speed up collapse
+              const targetPos = getSelectedModeCurrentPosition();
+              const collapseInfo = getCollapseIsland(mode as ModeType);
 
-              // Animate from THIS island's current position toward selected island's current position
-              const thisCurrentX = config.position.x + storedOffset.x;
-              const thisCurrentY = config.position.y + storedOffset.y;
+              if (targetPos && collapseInfo) {
+                const { order, distance } = collapseInfo;
+                const totalIslands = collapseIslandsCount;
 
-              currentX = thisCurrentX + (targetPos.x - thisCurrentX) * progress;
-              currentY = thisCurrentY + (targetPos.y - thisCurrentY) * progress;
+                // Sequential collapse: each island gets a slice of the collapse progress
+                // Phase 1 is divided into equal parts for each island
+                // Example: 3 islands, each gets 1/3 of progress = 0.33 each
+                const progressPerIsland = 1 / totalIslands;
 
-              // Scale down as it approaches selected island
-              if (progress > 0.8) {
-                currentScale = 1 - ((progress - 0.8) / 0.2); // Scale 1 → 0 at 80%+ progress
-                currentOpacity = currentScale;
+                // Calculate this island's start and end progress within Phase 1
+                const startProgress = order * progressPerIsland;
+                const endProgress = startProgress + progressPerIsland;
+
+                // Map overall collapseProgress to this island's local progress
+                // Overall progress 0-1 maps to Phase 1, so we use collapseProgress directly
+                const overallProgress = Math.min(1, collapseProgress * 1.5);
+                let localProgress = 0;
+
+                // Island waits for its turn, then animates
+                if (overallProgress >= startProgress) {
+                  // This island's turn has started
+                  localProgress = Math.min(1, (overallProgress - startProgress) / progressPerIsland);
+                } else {
+                  // This island hasn't started collapsing yet - stay at original position
+                  localProgress = 0;
+                }
+
+                // Animate from THIS island's current position toward selected island's current position
+                const thisCurrentX = config.position.x + storedOffset.x;
+                const thisCurrentY = config.position.y + storedOffset.y;
+
+                currentX = thisCurrentX + (targetPos.x - thisCurrentX) * localProgress;
+                currentY = thisCurrentY + (targetPos.y - thisCurrentY) * localProgress;
+
+                // Scale down as it approaches selected island (during animation)
+                if (localProgress > 0) {
+                  // Start scaling once animation begins
+                  const scaleProgress = Math.max(0, localProgress - 0.7) / 0.3; // Scale only in last 30%
+                  currentScale = 1 - scaleProgress;
+                  currentOpacity = 1 - scaleProgress;
+                }
+
+                // Keep island visible but small after collapse (don't hide completely)
+                // This allows Phase 2 to show the merged state before selected island moves to center
+                if (localProgress >= 1) {
+                  // Island has reached target - stay small but visible at merged position
+                  currentScale = 0.3;
+                  currentOpacity = 0.8;
+                }
+
+                console.log(`[ModeIslands] ${mode}: order=${order}/${totalIslands - 1}, dist=${distance.toFixed(0)}px, overall=${overallProgress.toFixed(2)}, local=${localProgress.toFixed(2)}, my pos=(${currentX.toFixed(0)}, ${currentY.toFixed(0)})`);
               }
-
-              console.log(`[ModeIslands] ${mode}: collapsing toward ${selectedMode} (current pos: ${targetPos.x.toFixed(0)}, ${targetPos.y.toFixed(0)}), progress=${progress.toFixed(2)}, my pos=(${currentX.toFixed(0)}, ${currentY.toFixed(0)})`);
             }
 
             // After collapse complete, selected island moves from ITS CURRENT position to center
@@ -306,11 +325,11 @@ export function ModeIslands({
               // Animate from THIS island's CURRENT position (where user dragged it) to center (0, 0)
               const thisCurrentX = config.position.x + storedOffset.x;
               const thisCurrentY = config.position.y + storedOffset.y;
-              const centerMoveProgress = Math.min(1, (collapseProgress - 1) * 2); // Speed up final move
+              const centerMoveProgress = Math.min(1, (collapseProgress - 1) * 2);
 
               currentX = thisCurrentX + (0 - thisCurrentX) * centerMoveProgress;
               currentY = thisCurrentY + (0 - thisCurrentY) * centerMoveProgress;
-              currentZIndex = 50; // Selected island on top during final move
+              currentZIndex = 50;
 
               console.log(`[ModeIslands] ${mode}: moving to center from (${thisCurrentX.toFixed(0)}, ${thisCurrentY.toFixed(0)}), progress=${centerMoveProgress.toFixed(2)}, pos=(${currentX.toFixed(0)}, ${currentY.toFixed(0)})`);
             }
@@ -327,32 +346,30 @@ export function ModeIslands({
                 onMouseUp={handleDragEnd}
                 onTouchStart={(e) => handleDragStart(e, mode as ModeType)}
                 onTouchEnd={handleDragEnd}
-                className="absolute left-1/2 top-1/2 pointer-events-auto flex items-center justify-center rounded-full"
+                className="pointer-events-auto flex items-center justify-center rounded-full"
                 style={{
                   width: '48px',
                   height: '48px',
                   backgroundColor: `var(${config.colorVar}, ${config.fallbackColor})`,
-                  // Position based on collapse state
-                  x: '-50%',
-                  y: '-50%',
-                  marginLeft: currentX,
-                  marginTop: currentY,
                   boxShadow: isDraggingThis ? '0 10px 30px rgba(0, 0, 0, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.2)',
                   border: 'none',
                   outline: 'none',
                   cursor: (isCollapsing || collapseComplete) ? 'default' : (isDraggingThis ? 'grabbing' : 'grab'),
-                  opacity: currentOpacity,
                   zIndex: isDraggingThis ? 50 : currentZIndex,
                 }}
-                // Emergence animation with stagger
-                initial={{ scale: 0, opacity: 0 }}
+                // Animate position, scale, and opacity with Framer Motion for smooth transitions
+                initial={{ scale: 0, opacity: 0, x: 0, y: 0 }}
                 animate={{
+                  x: currentX,
+                  y: currentY,
                   scale: isDraggingThis ? 1.05 : (isPressed ? 0.95 : isHovered ? 1.05 : currentScale),
                   opacity: currentOpacity,
                 }}
                 exit={{
                   scale: 0,
                   opacity: 0,
+                  x: 0,
+                  y: 0,
                   transition: {
                     duration: 0.15,
                   },
@@ -362,6 +379,9 @@ export function ModeIslands({
                   stiffness: 200,
                   damping: 25,
                   delay: index * 0.05, // Stagger: 50ms between each
+                  // Smooth position transitions during collapse
+                  x: { type: 'spring', stiffness: 150, damping: 20 },
+                  y: { type: 'spring', stiffness: 150, damping: 20 },
                 }}
               >
                 {/* Mode icon */}

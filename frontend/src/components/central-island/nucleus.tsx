@@ -7,6 +7,8 @@
  * Uses physics-cells color scheme variables for consistency.
  * Draggable with spring physics when idle.
  *
+ * Uses Zustand store for state management to sync with ModeIslands.
+ *
  * @see openspec/changes/morphing-central-island/specs/nucleus-idle-state
  */
 
@@ -14,7 +16,9 @@
 
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { ColorSchemeType } from './mode-islands';
+import { useMorphingIslandStore, type ModeType } from './store';
+
+export type ColorSchemeType = 'raycast' | 'ai' | 'warm' | 'minimal' | 'custom';
 
 export interface NucleusProps {
   /** Current nucleus state for attribute tracking */
@@ -33,16 +37,8 @@ export interface NucleusProps {
   onMouseLeave?: () => void;
   onTouchStart?: (e: React.TouchEvent) => void;
   onTouchEnd?: () => void;
-  /** Selected mode (for color display and collapse target) */
-  selectedMode?: 'voice' | 'chat' | 'file' | 'camera' | null;
-  /** Whether collapse is active (for pulse and position animation) */
-  isCollapsing?: boolean;
   /** Collapse progress for pulse timing */
   collapseProgress?: number;
-  /** Whether collapse is complete (nucleus absorbed) */
-  collapseComplete?: boolean;
-  /** Current position of selected mode (for collapse target) */
-  selectedModeCurrentPosition?: { x: number; y: number } | null;
 }
 
 /**
@@ -54,6 +50,8 @@ export interface NucleusProps {
  *
  * During collapse: Nucleus slides toward selected island and merges with it.
  * After collapse complete: Nucleus is absorbed into selected island.
+ *
+ * Uses Zustand store for sync with ModeIslands state.
  */
 export function Nucleus({
   state = 'idle',
@@ -66,57 +64,67 @@ export function Nucleus({
   onMouseLeave,
   onTouchStart,
   onTouchEnd,
-  selectedMode,
-  isCollapsing = false,
   collapseProgress = 0,
-  collapseComplete = false,
-  selectedModeCurrentPosition = null,
 }: NucleusProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  // Mode colors and positions from physics-cells scheme
-  const modeColors = {
+  // Get collapse state from store
+  const selectedMode = useMorphingIslandStore((state) => state.selectedMode);
+  const isCollapsing = useMorphingIslandStore((state) => state.isCollapsing);
+  const collapseComplete = useMorphingIslandStore((state) => state.collapseComplete);
+  const collapseIslandsCount = useMorphingIslandStore((state) => state.collapseIslandsCount);
+  const getSelectedModeCurrentPosition = useMorphingIslandStore((state) => state.getSelectedModeCurrentPosition);
+
+  // Mode colors from physics-cells scheme
+  const modeColors: Record<ModeType, string> = {
     voice: 'var(--scheme-cell-3, #A78BFA)',
     chat: 'var(--scheme-cell-2, #6366F1)',
     file: 'var(--scheme-cell-1, #22D3EE)',
     camera: 'var(--scheme-cell-5, #EC4899)',
   };
 
-  const modePositions = {
-    voice: { x: 0, y: -80 },
-    chat: { x: -80, y: 0 },
-    file: { x: 80, y: 0 },
-    camera: { x: 0, y: 80 },
-  };
-
   // Get nucleus color based on state and selected mode
   const getNucleusColor = () => {
     if (state === 'mode-selected' && selectedMode) {
-      // Show selected mode's color
       return modeColors[selectedMode];
     }
-    // Use CSS variables from color scheme - fallback to 'ai' scheme colors
-    const inactiveColor = 'var(--scheme-nucleus-inactive, #22D3EE)';
-    return inactiveColor;
+    return 'var(--scheme-nucleus-inactive, #22D3EE)';
   };
 
   // Calculate nucleus position (slides toward selected island during collapse)
+  // SEQUENTIAL: Nucleus moves AFTER all islands have collapsed
   const getNucleusPosition = () => {
     // Start from center (0, 0)
-    let posX = dragOffset.x;
-    let posY = dragOffset.y;
+    let posX = 0;
+    let posY = 0;
 
     if (isCollapsing && selectedMode) {
-      // Slide toward selected island's CURRENT position (where user dragged it)
-      // Use provided current position if available, otherwise fall back to original position
-      const targetPos = selectedModeCurrentPosition || modePositions[selectedMode];
-      const progress = Math.min(1, collapseProgress * 1.5);
-      posX = 0 + (targetPos.x - 0) * progress;
-      posY = 0 + (targetPos.y - 0) * progress;
+      // Use the position that was captured when mode was selected (from store)
+      const targetPos = getSelectedModeCurrentPosition();
+      if (targetPos) {
+        // Nucleus waits for islands to collapse first
+        // Islands collapse in Phase 1 (progress 0-1), nucleus moves at the END
+        const overallProgress = Math.min(1, collapseProgress * 1.5);
 
-      console.log(`[Nucleus] Collapsing toward ${selectedMode} at (${targetPos.x.toFixed(0)}, ${targetPos.y.toFixed(0)}), progress=${progress.toFixed(2)}, my pos=(${posX.toFixed(0)}, ${posY.toFixed(0)})`);
+        // Nucleus moves only in the last portion of Phase 1 (after islands are done)
+        // If there are 3 islands, each gets 1/3 of progress. Nucleus moves in the final 1/3.
+        const islandCollapsePortion = Math.min(1, collapseIslandsCount / 4); // Islands get most of the time
+        const nucleusMoveStart = islandCollapsePortion; // Nucleus starts after islands
+
+        if (overallProgress >= nucleusMoveStart) {
+          // Calculate nucleus movement progress
+          const nucleusProgress = (overallProgress - nucleusMoveStart) / (1 - nucleusMoveStart);
+          const clampedProgress = Math.min(1, nucleusProgress);
+
+          posX = 0 + (targetPos.x - 0) * clampedProgress;
+          posY = 0 + (targetPos.y - 0) * clampedProgress;
+
+          console.log(`[Nucleus] Moving toward ${selectedMode} at (${targetPos.x.toFixed(0)}, ${targetPos.y.toFixed(0)}), nucleusProgress=${clampedProgress.toFixed(2)}, my pos=(${posX.toFixed(0)}, ${posY.toFixed(0)})`);
+        } else {
+          console.log(`[Nucleus] Waiting for islands... overall=${overallProgress.toFixed(2)}, start at=${nucleusMoveStart.toFixed(2)}`);
+        }
+      }
     }
 
     return { x: posX, y: posY };
@@ -125,11 +133,9 @@ export function Nucleus({
   // Calculate nucleus scale (pulse during collapse, scales down when complete)
   const getNucleusScale = () => {
     if (collapseComplete) {
-      // Nucleus absorbed - scale down to 0
       return 0;
     }
     if (isCollapsing && collapseProgress > 0) {
-      // Pulse when absorbing: scale 1 → 1.15 → 1
       const pulse = 1 + Math.sin(collapseProgress * Math.PI) * 0.15;
       return pulse;
     }
@@ -188,30 +194,31 @@ export function Nucleus({
       onMouseUp={handleMouseUp}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className="relative flex items-center justify-center rounded-full"
+      className="absolute top-1/2 left-1/2 flex items-center justify-center rounded-full"
       style={{
         width: '60px',
         height: '60px',
         backgroundColor: getNucleusColor(),
-        position: 'absolute', // Changed from 'fixed' to 'absolute' for container positioning
-        top: '50%', // Center vertically
-        left: '50%', // Center horizontally
-        marginLeft: nucleusPosition.x, // Apply X offset during collapse/drag
-        marginTop: nucleusPosition.y, // Apply Y offset during collapse/drag
-        transform: 'translate(-50%, -50%)', // Offset by half width/height
         boxShadow: isPressed ? '0 2px 8px rgba(0, 0, 0, 0.15)' : '0 4px 12px rgba(0, 0, 0, 0.15)',
         cursor: (isCollapsing || collapseComplete) ? 'default' : 'pointer',
         border: 'none',
         outline: 'none',
-        opacity: getNucleusOpacity(),
       }}
+      // Animate position with Framer Motion for smooth movement
+      initial={{ x: 0, y: 0 }}
       animate={{
+        x: nucleusPosition.x,
+        y: nucleusPosition.y,
         scale: getNucleusScale(),
+        opacity: getNucleusOpacity(),
       }}
       transition={{
         type: 'spring',
         stiffness: 400,
         damping: 20,
+        // Smooth position transitions during collapse
+        x: { type: 'spring', stiffness: 150, damping: 20 },
+        y: { type: 'spring', stiffness: 150, damping: 20 },
       }}
     >
       {/* Breathing pulse animation - only visible in idle state */}
